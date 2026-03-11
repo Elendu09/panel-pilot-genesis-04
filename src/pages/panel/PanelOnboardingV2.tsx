@@ -73,6 +73,8 @@ const PanelOnboardingV2 = () => {
   const createdPanelIdRef = useRef<string | null>(null);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
   const [trialStarted, setTrialStarted] = useState(false);
+  const [trialSlideUnlocked, setTrialSlideUnlocked] = useState(false);
+  const [trialPlan, setTrialPlan] = useState<'basic' | 'pro' | null>(null);
   const [currency, setCurrency] = useState('USD');
   const [domainVerificationState, setDomainVerificationState] = useState<{ step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }>({ step: 'configure', token: null });
   
@@ -178,6 +180,7 @@ const PanelOnboardingV2 = () => {
             if (savedData.secondaryColor) setSecondaryColor(savedData.secondaryColor);
             if (savedData.paymentCompleted) setPaymentCompleted(savedData.paymentCompleted);
             if (savedData.trialStarted) setTrialStarted(savedData.trialStarted);
+            if (savedData.trialPlan) setTrialPlan(savedData.trialPlan);
             if (savedData.selectedTheme) setSelectedTheme(savedData.selectedTheme);
             if (savedData.brandingMode) setBrandingMode(savedData.brandingMode);
             if (savedData.seoTitle) setSeoTitle(savedData.seoTitle);
@@ -503,18 +506,31 @@ const PanelOnboardingV2 = () => {
 
   const handlePaymentSuccess = async () => {
     setPaymentCompleted(true);
+    setTrialStarted(false);
     markStepComplete(currentStep);
-    // Persist paymentCompleted to DB
+    // Persist paymentCompleted to DB + write panel_subscriptions
     if (createdPanelIdRef.current) {
+      const planPrices = { basic: 5, pro: 15 };
       const progressData = {
         panelName, description, selectedPlan, subdomain, customDomain,
         domainType, primaryColor, secondaryColor, paymentCompleted: true,
+        trialStarted: false,
         selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
       };
       await supabase.from('panels').update({
         onboarding_data: progressData,
         subscription_status: 'active',
+        subscription_tier: selectedPlan,
       }).eq('id', createdPanelIdRef.current);
+      
+      // Upsert panel_subscriptions for immediate billing sync
+      await supabase.from('panel_subscriptions').upsert({
+        panel_id: createdPanelIdRef.current,
+        plan_type: selectedPlan,
+        price: planPrices[selectedPlan as 'basic' | 'pro'],
+        status: 'active' as any,
+        started_at: new Date().toISOString(),
+      }, { onConflict: 'panel_id' });
     }
     // Don't auto-advance — user clicks Next
   };
@@ -776,7 +792,21 @@ const PanelOnboardingV2 = () => {
           >
             <OnboardingPlanSelector
               selectedPlan={selectedPlan}
-              onSelectPlan={setSelectedPlan}
+              onSelectPlan={(plan) => {
+                // If payment was completed, lock plan selection
+                if (paymentCompleted) {
+                  toast({ variant: 'destructive', title: 'Plan Locked', description: `You've already paid for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan. Continue with your current plan.` });
+                  return;
+                }
+                // If user changes plan while on trial, reset trial state
+                if (trialStarted && plan !== trialPlan) {
+                  setTrialStarted(false);
+                  setTrialSlideUnlocked(false);
+                  setTrialPlan(null);
+                }
+                setSelectedPlan(plan);
+              }}
+              lockedPlan={paymentCompleted ? selectedPlan : null}
             />
           </motion.div>
         );
@@ -796,23 +826,42 @@ const PanelOnboardingV2 = () => {
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
               trialStarted={trialStarted}
+              onSlideUnlocked={() => setTrialSlideUnlocked(true)}
+              slideUnlocked={trialSlideUnlocked}
               onSkip={async () => {
                 // Trial: mark trial started but NOT payment completed
                 setTrialStarted(true);
                 setPaymentCompleted(false);
+                setTrialPlan(selectedPlan as 'basic' | 'pro');
+                setTrialSlideUnlocked(false);
                 markStepComplete(currentStep);
                 // Persist to DB
                 if (createdPanelIdRef.current) {
+                  const planPrices = { basic: 5, pro: 15 };
                   const progressData = {
                     panelName, description, selectedPlan, subdomain, customDomain,
                     domainType, primaryColor, secondaryColor, paymentCompleted: false,
-                    trialStarted: true,
+                    trialStarted: true, trialPlan: selectedPlan,
                     selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
                   };
                   await supabase.from('panels').update({
                     onboarding_data: progressData,
                     subscription_status: 'trial',
+                    subscription_tier: selectedPlan,
                   }).eq('id', createdPanelIdRef.current);
+                  
+                  // Upsert trial subscription record
+                  const trialEndsAt = new Date();
+                  trialEndsAt.setDate(trialEndsAt.getDate() + 3);
+                  await supabase.from('panel_subscriptions').upsert({
+                    panel_id: createdPanelIdRef.current,
+                    plan_type: selectedPlan,
+                    price: planPrices[selectedPlan as 'basic' | 'pro'],
+                    status: 'trial' as any,
+                    started_at: new Date().toISOString(),
+                    expires_at: trialEndsAt.toISOString(),
+                    trial_ends_at: trialEndsAt.toISOString(),
+                  }, { onConflict: 'panel_id' });
                 }
               }}
             />
@@ -1268,7 +1317,7 @@ const PanelOnboardingV2 = () => {
   const isLastStep = currentStepKey === STEP_KEYS.COMPLETE;
   const isPaymentStep = currentStepKey === STEP_KEYS.PAYMENT;
   const isDomainStep = currentStepKey === STEP_KEYS.DOMAIN;
-  const isNextDisabled = (isPaymentStep && !paymentCompleted) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
+  const isNextDisabled = (isPaymentStep && !paymentCompleted && !trialSlideUnlocked) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-24 sm:pb-8">

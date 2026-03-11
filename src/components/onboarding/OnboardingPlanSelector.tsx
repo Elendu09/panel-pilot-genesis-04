@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Crown, Sparkles, Clock } from "lucide-react";
+import { Check, Zap, Crown, Sparkles, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -90,9 +90,10 @@ const plans: Plan[] = [
 interface OnboardingPlanSelectorProps {
   selectedPlan: 'free' | 'basic' | 'pro';
   onSelectPlan: (plan: 'free' | 'basic' | 'pro') => void;
+  lockedPlan?: 'free' | 'basic' | 'pro' | null;
 }
 
-export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: OnboardingPlanSelectorProps) => {
+export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan, lockedPlan }: OnboardingPlanSelectorProps) => {
   return (
     <div className="space-y-6">
       <div className="text-center">
@@ -100,10 +101,20 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
         <p className="text-muted-foreground">Select a plan that fits your business needs</p>
       </div>
 
+      {lockedPlan && (
+        <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center gap-3">
+          <Lock className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            You've already subscribed to the <strong className="text-foreground">{lockedPlan.charAt(0).toUpperCase() + lockedPlan.slice(1)}</strong> plan. Continue with your current plan.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {plans.map((plan) => {
           const Icon = plan.icon;
           const isSelected = selectedPlan === plan.id;
+          const isLocked = !!lockedPlan && plan.id !== lockedPlan;
           
           return (
             <motion.div
@@ -122,13 +133,14 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
               )}
               <Card 
                 className={cn(
-                  "bg-card/60 backdrop-blur-xl border-2 h-full cursor-pointer transition-all duration-300",
-                  plan.highlighted && "border-primary/50 shadow-lg shadow-primary/10",
-                  isSelected && "ring-2 ring-primary border-primary",
-                  !isSelected && "border-border/50 hover:border-primary/30",
-                  plan.glowColor
+                  "bg-card/60 backdrop-blur-xl border-2 h-full transition-all duration-300",
+                  isLocked ? "cursor-not-allowed opacity-50" : "cursor-pointer",
+                  plan.highlighted && !isLocked && "border-primary/50 shadow-lg shadow-primary/10",
+                  isSelected && !isLocked && "ring-2 ring-primary border-primary",
+                  !isSelected && !isLocked && "border-border/50 hover:border-primary/30",
+                  !isLocked && plan.glowColor
                 )}
-                onClick={() => onSelectPlan(plan.id)}
+                onClick={() => !isLocked && onSelectPlan(plan.id)}
               >
                 <div className={cn(
                   "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30",
@@ -175,12 +187,18 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan }: Onboardin
                   <Button
                     className={cn(
                       "w-full gap-2",
-                      isSelected && "bg-primary"
+                      isSelected && !isLocked && "bg-primary",
+                      lockedPlan === plan.id && "bg-emerald-600 hover:bg-emerald-600"
                     )}
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
+                    disabled={isLocked}
                   >
-                    {isSelected ? 'Selected' : 'Select Plan'}
+                    {lockedPlan === plan.id ? (
+                      <><Lock className="w-3 h-3" /> Paid</>
+                    ) : isLocked ? (
+                      <><Lock className="w-3 h-3" /> Locked</>
+                    ) : isSelected ? 'Selected' : 'Select Plan'}
                   </Button>
                 </CardContent>
               </Card>

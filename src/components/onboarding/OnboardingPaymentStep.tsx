@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock } from "lucide-react";
+import { SlideToUnlock } from './SlideToUnlock';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from "@/lib/utils";
@@ -25,6 +26,8 @@ interface OnboardingPaymentStepProps {
   onSkip?: () => void;
   paymentCompleted?: boolean;
   trialStarted?: boolean;
+  onSlideUnlocked?: () => void;
+  slideUnlocked?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -38,7 +41,8 @@ const planGradient = {
 };
 
 export const OnboardingPaymentStep = ({ 
-  selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false
+  selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false,
+  onSlideUnlocked, slideUnlocked = false
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -362,13 +366,13 @@ export const OnboardingPaymentStep = ({
             <CheckCircle2 className="w-4 h-4" />
           </Button>
         ) : trialStarted ? (
-          <Button 
-            className="flex-1 gap-2 bg-amber-600 hover:bg-amber-600 cursor-default"
-            disabled
-          >
-            <Clock className="w-4 h-4" />
-            Trial Active — Click Next to continue
-          </Button>
+          <div className="flex-1 space-y-3">
+            <SlideToUnlock 
+              onUnlock={() => onSlideUnlocked?.()}
+              unlocked={slideUnlocked}
+              label="Slide right to continue"
+            />
+          </div>
         ) : (
           <Button 
             className={cn(
