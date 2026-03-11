@@ -505,18 +505,31 @@ const PanelOnboardingV2 = () => {
 
   const handlePaymentSuccess = async () => {
     setPaymentCompleted(true);
+    setTrialStarted(false);
     markStepComplete(currentStep);
-    // Persist paymentCompleted to DB
+    // Persist paymentCompleted to DB + write panel_subscriptions
     if (createdPanelIdRef.current) {
+      const planPrices = { basic: 5, pro: 15 };
       const progressData = {
         panelName, description, selectedPlan, subdomain, customDomain,
         domainType, primaryColor, secondaryColor, paymentCompleted: true,
+        trialStarted: false,
         selectedTheme, brandingMode, seoTitle, seoDescription, seoKeywords, currency
       };
       await supabase.from('panels').update({
         onboarding_data: progressData,
         subscription_status: 'active',
+        subscription_tier: selectedPlan,
       }).eq('id', createdPanelIdRef.current);
+      
+      // Upsert panel_subscriptions for immediate billing sync
+      await supabase.from('panel_subscriptions').upsert({
+        panel_id: createdPanelIdRef.current,
+        plan_type: selectedPlan,
+        price: planPrices[selectedPlan as 'basic' | 'pro'],
+        status: 'active' as any,
+        started_at: new Date().toISOString(),
+      }, { onConflict: 'panel_id' });
     }
     // Don't auto-advance — user clicks Next
   };
