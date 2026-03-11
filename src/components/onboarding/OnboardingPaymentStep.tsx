@@ -25,6 +25,8 @@ interface OnboardingPaymentStepProps {
   onSkip?: () => void;
   paymentCompleted?: boolean;
   trialStarted?: boolean;
+  onSlideUnlocked?: () => void;
+  slideUnlocked?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
