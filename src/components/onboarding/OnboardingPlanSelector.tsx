@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Zap, Crown, Sparkles, Clock } from "lucide-react";
+import { Check, Zap, Crown, Sparkles, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
