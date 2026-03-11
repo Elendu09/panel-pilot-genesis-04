@@ -578,10 +578,15 @@ serve(async (req) => {
 
         console.log(`Processed: ${result.servicesUpdated} updated, ${result.newServices} new, ${result.pricesChanged} price changes`);
 
-        // Update provider sync timestamp
+        // Update provider sync_status
+        const syncStatus = result.errors.length === 0 ? 'synced' : 'error';
         await supabase
           .from('providers')
-          .update({ updated_at: new Date().toISOString() })
+          .update({ 
+            updated_at: new Date().toISOString(),
+            sync_status: syncStatus,
+            last_sync_at: new Date().toISOString(),
+          })
           .eq('id', provider.id);
 
       } catch (error: any) {
