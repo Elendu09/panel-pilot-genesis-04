@@ -466,6 +466,7 @@ const TenantContent = () => {
   }
 
   // If this is a tenant domain but no panel found, show clean subdomain claim CTA
+  const isPanelPending = error === 'panel_pending';
   if (isTenantDomain && !panel) {
     const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
     const requestedSubdomain = hostname.split('.')[0];
