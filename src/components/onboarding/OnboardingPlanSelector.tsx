@@ -187,12 +187,18 @@ export const OnboardingPlanSelector = ({ selectedPlan, onSelectPlan, lockedPlan 
                   <Button
                     className={cn(
                       "w-full gap-2",
-                      isSelected && "bg-primary"
+                      isSelected && !isLocked && "bg-primary",
+                      lockedPlan === plan.id && "bg-emerald-600 hover:bg-emerald-600"
                     )}
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
+                    disabled={isLocked}
                   >
-                    {isSelected ? 'Selected' : 'Select Plan'}
+                    {lockedPlan === plan.id ? (
+                      <><Lock className="w-3 h-3" /> Paid</>
+                    ) : isLocked ? (
+                      <><Lock className="w-3 h-3" /> Locked</>
+                    ) : isSelected ? 'Selected' : 'Select Plan'}
                   </Button>
                 </CardContent>
               </Card>

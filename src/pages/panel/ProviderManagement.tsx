@@ -630,6 +630,12 @@ const ProviderManagement = () => {
       });
 
       if (error) throw new Error(error.message);
+      
+      // Check for errors in results
+      const allErrors = (data.results || []).flatMap((r: any) => r.errors || []);
+      if (allErrors.length > 0) {
+        console.warn('[Import] Sync errors:', allErrors);
+      }
 
       setImportStep("processing");
       setImportProgress(70);
@@ -643,10 +649,20 @@ const ProviderManagement = () => {
       setImportProgress(100);
       setImportResult(data);
       
-      toast({ 
-        title: "Services Imported", 
-        description: `${summary.totalNew} new services added, ${summary.totalUpdated} updated` 
-      });
+      if (summary.totalNew === 0 && summary.totalUpdated === 0) {
+        const errorMsg = allErrors.length > 0 ? allErrors[0] : 'No services were imported. Check provider API key and connection.';
+        console.error('[Import] Zero services imported. Full response:', JSON.stringify(data));
+        toast({ 
+          variant: "destructive", 
+          title: "Import Warning", 
+          description: errorMsg
+        });
+      } else {
+        toast({ 
+          title: "Services Imported", 
+          description: `${summary.totalNew} new services added, ${summary.totalUpdated} updated${allErrors.length > 0 ? ` (${allErrors.length} warnings)` : ''}` 
+        });
+      }
 
       setTimeout(() => {
         setImportDialogOpen(false);

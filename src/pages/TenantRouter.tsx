@@ -518,7 +518,7 @@ const TenantContent = () => {
                   
                   <div className="space-y-4">
                     <button 
-                      onClick={() => window.location.href = `https://${platformDomain}/auth?subdomain=${requestedSubdomain}`}
+                      onClick={() => window.location.href = `https://homeofsmm.com/auth?subdomain=${requestedSubdomain}`}
                       className="flex items-center justify-center gap-3 w-full px-8 py-4 bg-white text-slate-900 font-semibold rounded-xl hover:bg-slate-100 hover:-translate-y-0.5 transition-all duration-300 group"
                     >
                       <Sparkles className="w-5 h-5 group-hover:scale-110 transition-transform" />

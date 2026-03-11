@@ -461,6 +461,15 @@ export function useTenant(): TenantDetectionResult {
         }
 
         if (panelData) {
+          // Block storefront for unlaunched panels (pending status)
+          if (panelData.status === 'pending') {
+            console.log('[useTenant] Panel found but status is pending — blocking storefront');
+            tenantCache.set(hostname, { panel: null, timestamp: Date.now() });
+            if (isMounted) {
+              setPanel(null);
+              setError('panel_pending');
+            }
+          } else {
           console.log('[useTenant] Panel found:', panelData.name, panelData.status);
           const branding = panelData.custom_branding;
           const settings = panelData.settings;
@@ -500,6 +509,7 @@ export function useTenant(): TenantDetectionResult {
           
           if (isMounted) {
             setPanel(resolvedPanel);
+          }
           }
         } else {
           console.warn('[useTenant] No panel found for:', { hostname, subdomain, searchAttempts });
