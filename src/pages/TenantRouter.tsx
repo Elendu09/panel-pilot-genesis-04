@@ -502,9 +502,11 @@ const TenantContent = () => {
                     <Rocket className="w-12 h-12 text-emerald-400" />
                   </div>
                   
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
+                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-emerald-400 text-sm font-medium">Available for Registration</span>
+                    <span className="text-emerald-400 text-sm font-medium">
+                      {isPanelPending ? 'Panel Being Set Up' : 'Available for Registration'}
+                    </span>
                   </div>
                   
                   <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">
@@ -514,7 +516,10 @@ const TenantContent = () => {
                     .{platformDomain}
                   </p>
                   <p className="text-slate-500 mb-10 leading-relaxed">
-                    This subdomain is not yet configured. Be the first to claim it and start your SMM business today.
+                    {isPanelPending 
+                      ? 'This panel is currently being set up by its owner. Check back soon!'
+                      : 'This subdomain is not yet configured. Be the first to claim it and start your SMM business today.'
+                    }
                   </p>
                   
                   <div className="space-y-4">

@@ -180,6 +180,7 @@ const PanelOnboardingV2 = () => {
             if (savedData.secondaryColor) setSecondaryColor(savedData.secondaryColor);
             if (savedData.paymentCompleted) setPaymentCompleted(savedData.paymentCompleted);
             if (savedData.trialStarted) setTrialStarted(savedData.trialStarted);
+            if (savedData.trialPlan) setTrialPlan(savedData.trialPlan);
             if (savedData.selectedTheme) setSelectedTheme(savedData.selectedTheme);
             if (savedData.brandingMode) setBrandingMode(savedData.brandingMode);
             if (savedData.seoTitle) setSeoTitle(savedData.seoTitle);
