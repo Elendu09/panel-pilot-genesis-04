@@ -791,7 +791,21 @@ const PanelOnboardingV2 = () => {
           >
             <OnboardingPlanSelector
               selectedPlan={selectedPlan}
-              onSelectPlan={setSelectedPlan}
+              onSelectPlan={(plan) => {
+                // If payment was completed, lock plan selection
+                if (paymentCompleted) {
+                  toast({ variant: 'destructive', title: 'Plan Locked', description: `You've already paid for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan. Continue with your current plan.` });
+                  return;
+                }
+                // If user changes plan while on trial, reset trial state
+                if (trialStarted && plan !== trialPlan) {
+                  setTrialStarted(false);
+                  setTrialSlideUnlocked(false);
+                  setTrialPlan(null);
+                }
+                setSelectedPlan(plan);
+              }}
+              lockedPlan={paymentCompleted ? selectedPlan : null}
             />
           </motion.div>
         );
