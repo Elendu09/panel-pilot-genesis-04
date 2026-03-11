@@ -1270,7 +1270,7 @@ const PanelOnboardingV2 = () => {
   const isLastStep = currentStepKey === STEP_KEYS.COMPLETE;
   const isPaymentStep = currentStepKey === STEP_KEYS.PAYMENT;
   const isDomainStep = currentStepKey === STEP_KEYS.DOMAIN;
-  const isNextDisabled = (isPaymentStep && !paymentCompleted) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
+  const isNextDisabled = (isPaymentStep && !paymentCompleted && !trialSlideUnlocked) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-24 sm:pb-8">
