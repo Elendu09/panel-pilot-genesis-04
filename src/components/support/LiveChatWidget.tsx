@@ -54,7 +54,7 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
   const [ownerTyping, setOwnerTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Create or get chat session
   useEffect(() => {

@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Debounced batch impression tracker
 const pendingImpressions = new Map<string, { panelId: string; adType: string }>();
-let impressionTimer: NodeJS.Timeout | null = null;
+let impressionTimer: ReturnType<typeof setTimeout> | null = null;
 
 export async function trackAdImpression(panelId: string, adType: string) {
   const key = `${panelId}:${adType}`;

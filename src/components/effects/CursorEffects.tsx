@@ -54,7 +54,7 @@ const CursorEffectsComponent = () => {
     if (!isReady) return;
     
     let lastTime = 0;
-    let moveTimeout: NodeJS.Timeout;
+    let moveTimeout: ReturnType<typeof setTimeout>;
 
     const handleMouseMove = (e: MouseEvent) => {
       const now = Date.now();

@@ -27,7 +27,7 @@ export function useDesignHistory<T>(
   const [present, setPresent] = useState<T>(initialState);
   const [future, setFuture] = useState<T[]>([]);
   
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedState = useRef<T>(initialState);
   const isUndoRedo = useRef(false);
 
