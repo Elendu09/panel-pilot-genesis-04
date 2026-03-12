@@ -47,7 +47,7 @@ function cleanCategoryString(input: string): string {
     .trim();
 }
 
-// Valid database enum categories - COMPLETE list including 29 new categories
+// Valid database enum categories - COMPLETE list including all enum values
 const VALID_CATEGORIES = [
   // Original 47
   'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram',
@@ -62,9 +62,12 @@ const VALID_CATEGORIES = [
   'caffeine', 'dlive', 'nimotv', 'bigo', 'douyin', 'xiaohongshu', 'qq', 'wechat',
   'kuaishou', 'youtubemusic', 'pandora', 'googlebusiness', 'trustpilot', 'yelp',
   'tripadvisor', 'behance', 'dribbble', 'deviantart', 'flickr', 'vero', 'podcast', 'momo',
-  // Misc
+  // Misc — now in DB enum
   'google', 'website', 'other'
 ] as const;
+
+// Safety set for runtime validation against DB enum
+const VALID_CATEGORY_SET = new Set<string>(VALID_CATEGORIES);
 
 type ValidCategory = typeof VALID_CATEGORIES[number];
 
