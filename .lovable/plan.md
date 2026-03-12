@@ -1,99 +1,66 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Payment Success Detection, Admin Transaction Management, Service Import Fix
 
-## Overview
+## Issues Identified
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+### 1. Payment Success Not Auto-Detected on Return
+**Root cause**: The URL from Flutterwave is `?payment=success?success=true&transaction_id=...` — note the double `?`. The code checks `params.get('payment') === 'success'` but the second `?` makes the parser treat everything after it as part of the value of `payment`, so it gets `success?success=true&...` instead of `success`. Additionally, even if the URL is parsed correctly, the polling only checks `subscription_status` on the `panels` table, but the webhook may not have fired yet. The polling should also check the `transactions` table directly for the transaction ID in the URL.
 
----
+**Fix in `PanelOnboardingV2.tsx`**:
+- Parse the return URL more robustly: check if `payment` param starts with `success` (not exact match)
+- Also extract `transaction_id` and `tx_ref` from the URL params
+- Poll the `transactions` table for the specific transaction ID to check if status is `completed`
+- Increase polling from 3 attempts to 6 attempts at 5s intervals (30s total)
+- When payment confirmed: set `paymentCompleted = true`, update DB immediately, show success toast
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+**Fix in `OnboardingPaymentStep.tsx`**:
+- Add a "Payment Processing" state between submitting and confirmed — shows a spinner with "Verifying payment..." message
+- Add a "Payment Failed" state with retry button
+- When `paymentCompleted` is true, the realtime subscription can stop
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+### 2. Plan Not Locked After Successful Payment
+**Root cause**: `handlePaymentSuccess` sets `paymentCompleted = true` and persists it, but the `lockedPlan` prop already uses `paymentCompleted ? selectedPlan : null`. The issue is that on return from payment gateway, `selectedPlan` may not be restored yet when `paymentCompleted` fires because state restore is async. Also the payment detection `useEffect` runs before `restoringState` completes.
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+**Fix in `PanelOnboardingV2.tsx`**:
+- In the payment return detection useEffect, also read `selectedPlan` from the panel's `onboarding_data` to ensure the correct plan is locked
+- After payment is confirmed, persist both `paymentCompleted: true` and `selectedPlan` to `onboarding_data`
+- On state restore, if `paymentCompleted` is true, also read `subscription_tier` from the panel and force-set `selectedPlan` to match
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+### 3. No Admin Transaction Management Page
+**Current state**: `PaymentManagement.tsx` already has a "Transactions" tab that shows all transactions. But there's no ability to manually update transaction status.
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+**Fix in `PaymentManagement.tsx`**:
+- In the transaction detail modal or inline, add an "Update Status" dropdown for admins to manually change transaction status to `completed` or `failed`
+- When marking a transaction as `completed`, also trigger the same logic as the webhook: update `panels.subscription_status` if it's a subscription transaction, or credit balance if it's a deposit
+- Add a "Retry Webhook" button that re-processes the transaction's metadata
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+### 4. Service Import — Batch Insert Failures (CRITICAL)
+**Root cause**: The edge function's `VALID_CATEGORIES` includes `google` and `website`, but the database `service_category` enum does NOT include these values. When the function maps a service to `google` or `website` and inserts a batch of 100 services, the entire batch fails with a PostgreSQL enum constraint error. This is why the progress bar completes but zero services actually appear.
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+**Fix — two-pronged**:
+1. **Database migration**: Add `google` and `website` to the `service_category` enum
+2. **Edge function**: Add a safety fallback — if a mapped category is not in the DB enum, fall back to `other`. Also log the actual batch insert errors so they surface to the UI.
+3. **Edge function**: Return per-batch error details in the response so the UI can display exactly what failed
+4. **UI (`ProviderManagement.tsx`)**: Show actual error messages from failed batches, not just "0 services imported"
 
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
+### 5. Custom Domain Sync to Tenant Pages
+**Current state**: The `useTenant` hook already uses realtime subscriptions on the `panels` table. Custom domains are stored in `panel_domains` and resolved in the tenant router. This should already work — the domain just needs to be in `panel_domains` with `verification_status = 'verified'` and `dns_configured = true`. No code changes needed unless there's a specific bug reported.
 
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
+## Files to Create/Modify
 
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
+| File | Action |
+|------|---------|
+| `src/pages/panel/PanelOnboardingV2.tsx` | Fix URL parsing for payment return, robust polling with transaction_id, lock plan on restore |
+| `src/components/onboarding/OnboardingPaymentStep.tsx` | Add "Verifying Payment" spinner state, better payment status display |
+| `src/pages/admin/PaymentManagement.tsx` | Add admin transaction status update capability |
+| `supabase/functions/sync-provider-services/index.ts` | Map `google`→`googlebusiness`, `website`→`other` as fallbacks, surface batch errors |
+| **DB Migration** | `ALTER TYPE service_category ADD VALUE 'google'; ALTER TYPE service_category ADD VALUE 'website';` |
 
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
-
----
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+## Implementation Order
+1. DB migration (add missing enum values)
+2. Fix edge function category mapping fallback
+3. Fix payment return URL parsing + polling
+4. Add admin transaction management
+5. Verify custom domain sync (read-only check)
 
