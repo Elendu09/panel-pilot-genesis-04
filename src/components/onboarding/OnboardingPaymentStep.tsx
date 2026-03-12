@@ -28,6 +28,7 @@ interface OnboardingPaymentStepProps {
   trialStarted?: boolean;
   onSlideUnlocked?: () => void;
   slideUnlocked?: boolean;
+  verifying?: boolean;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -42,7 +43,7 @@ const planGradient = {
 
 export const OnboardingPaymentStep = ({ 
   selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false,
-  onSlideUnlocked, slideUnlocked = false
+  onSlideUnlocked, slideUnlocked = false, verifying = false
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -207,17 +208,36 @@ export const OnboardingPaymentStep = ({
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
-          {paymentCompleted ? 'Payment Confirmed' : trialStarted ? 'Trial Active' : 'Complete Payment'}
+          {paymentCompleted ? 'Payment Confirmed' : verifying ? 'Verifying Payment...' : trialStarted ? 'Trial Active' : 'Complete Payment'}
         </h2>
         <p className="text-muted-foreground">
           {paymentCompleted 
             ? `Your ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Click Next to continue.`
-            : trialStarted
-              ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
-              : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
+            : verifying
+              ? 'Please wait while we confirm your payment with the gateway...'
+              : trialStarted
+                ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
+                : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
           }
         </p>
       </div>
+
+      {/* Payment Verifying spinner */}
+      {verifying && !paymentCompleted && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-blue-600">Verifying Payment</p>
+            <p className="text-xs text-muted-foreground">Checking with payment gateway... This may take up to 30 seconds.</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Payment confirmed banner */}
       {paymentCompleted && (

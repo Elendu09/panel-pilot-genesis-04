@@ -4521,6 +4521,8 @@ export type Database = {
         | "vero"
         | "podcast"
         | "momo"
+        | "google"
+        | "website"
       subscription_plan: "free" | "basic" | "pro"
       subscription_status: "active" | "expired" | "cancelled" | "pending"
       theme_type: "dark_gradient" | "professional" | "vibrant"
@@ -4742,6 +4744,8 @@ export const Constants = {
         "vero",
         "podcast",
         "momo",
+        "google",
+        "website",
       ],
       subscription_plan: ["free", "basic", "pro"],
       subscription_status: ["active", "expired", "cancelled", "pending"],
