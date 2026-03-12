@@ -43,7 +43,7 @@ const planGradient = {
 
 export const OnboardingPaymentStep = ({ 
   selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false,
-  onSlideUnlocked, slideUnlocked = false
+  onSlideUnlocked, slideUnlocked = false, verifying = false
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
