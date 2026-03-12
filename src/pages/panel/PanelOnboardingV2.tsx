@@ -231,20 +231,101 @@ const PanelOnboardingV2 = () => {
   }, [user, profile, navigate]);
 
   // Detect payment=success return from gateway — runs immediately
+  // Flutterwave returns URLs like ?payment=success?success=true&transaction_id=...
+  // The double ? means URLSearchParams gives us "success?success=true&..." for payment param
   const paymentDetectedRef = useRef(false);
+  const [paymentVerifying, setPaymentVerifying] = useState(false);
   useEffect(() => {
     if (paymentDetectedRef.current) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      paymentDetectedRef.current = true;
-      setPaymentCompleted(true);
-      markStepComplete(2);
-      if (!restoringState) {
-        setCurrentStep(3);
-      }
-      window.history.replaceState({}, '', '/panel/onboarding');
-      toast({ title: 'Payment Successful', description: 'Your subscription payment has been confirmed.' });
+    const fullSearch = window.location.search;
+    const params = new URLSearchParams(fullSearch);
+    const paymentParam = params.get('payment');
+    // Robust check: payment param starts with 'success' (handles double-? URLs)
+    const isPaymentReturn = paymentParam?.startsWith('success');
+    
+    if (!isPaymentReturn) return;
+    paymentDetectedRef.current = true;
+    setPaymentVerifying(true);
+    
+    // Extract transaction_id from either proper params or mangled URL
+    const txId = params.get('transaction_id') || params.get('tx_ref');
+    // Also try parsing after the second ? if present
+    let fallbackTxId: string | null = null;
+    if (!txId && paymentParam?.includes('transaction_id=')) {
+      const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
+      fallbackTxId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
     }
+    const finalTxId = txId || fallbackTxId;
+    
+    // Clean URL immediately
+    window.history.replaceState({}, '', '/panel/onboarding');
+    
+    // Set step to payment (2) so user sees the verifying state
+    setCurrentStep(2);
+    
+    // Poll for payment confirmation (6 attempts, 5s intervals = 30s)
+    let attempts = 0;
+    const maxAttempts = 6;
+    const pollInterval = setInterval(async () => {
+      attempts++;
+      let confirmed = false;
+      
+      // Check transaction status if we have the ID
+      if (finalTxId) {
+        const { data: txData } = await supabase
+          .from('transactions')
+          .select('status')
+          .or(`id.eq.${finalTxId},payment_id.eq.${finalTxId}`)
+          .maybeSingle();
+        if (txData?.status === 'completed') confirmed = true;
+      }
+      
+      // Also check panel subscription status
+      if (!confirmed && createdPanelIdRef.current) {
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('subscription_status, subscription_tier, onboarding_data')
+          .eq('id', createdPanelIdRef.current)
+          .single();
+        if (panelData?.subscription_status === 'active') {
+          confirmed = true;
+          // Restore selectedPlan from DB if not yet set
+          if (panelData.subscription_tier) {
+            setSelectedPlan(panelData.subscription_tier as 'free' | 'basic' | 'pro');
+          }
+        }
+      }
+      
+      if (confirmed) {
+        clearInterval(pollInterval);
+        setPaymentVerifying(false);
+        setPaymentCompleted(true);
+        setTrialStarted(false);
+        markStepComplete(2);
+        toast({ title: 'Payment Successful', description: 'Your subscription payment has been confirmed.' });
+        // Persist to DB
+        if (createdPanelIdRef.current) {
+          const { data: panelInfo } = await supabase.from('panels').select('onboarding_data').eq('id', createdPanelIdRef.current).single();
+          const existingData = (panelInfo?.onboarding_data as Record<string, any>) || {};
+          await supabase.from('panels').update({
+            onboarding_data: { ...existingData, paymentCompleted: true, trialStarted: false },
+            subscription_status: 'active',
+          }).eq('id', createdPanelIdRef.current);
+        }
+      }
+      
+      if (attempts >= maxAttempts) {
+        clearInterval(pollInterval);
+        setPaymentVerifying(false);
+        // Even if polling didn't confirm, mark as needing manual check
+        toast({ 
+          title: 'Payment Processing', 
+          description: 'Your payment is being processed. It may take a moment to confirm. You can proceed or wait.',
+        });
+      }
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
   }, [restoringState]);
 
   // Advance after state restore if payment was detected

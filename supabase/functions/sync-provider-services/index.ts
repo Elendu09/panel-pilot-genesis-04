@@ -501,11 +501,16 @@ serve(async (req) => {
             const markupMultiplier = 1 + (markupPercent / 100);
             const finalPrice = costUsd * markupMultiplier;
 
-            // Enhanced category detection with cleaned strings
-            const detectedCategory = mapCategory(
+            // Enhanced category detection with cleaned strings + safety fallback
+            let detectedCategory = mapCategory(
               providerService.category || '',
               providerService.name || ''
             );
+            // Safety: if mapped category somehow not in DB enum, fall back to 'other'
+            if (!VALID_CATEGORY_SET.has(detectedCategory)) {
+              console.warn(`Category '${detectedCategory}' not in DB enum, falling back to 'other'`);
+              detectedCategory = 'other';
+            }
 
             const serviceData = {
               panel_id: panelId,
