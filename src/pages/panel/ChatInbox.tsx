@@ -115,7 +115,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const [chatSheetOpen, setChatSheetOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Sponsored panels for promotions
   const [sponsoredPanels, setSponsoredPanels] = useState<{
