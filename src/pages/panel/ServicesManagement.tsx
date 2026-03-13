@@ -343,9 +343,9 @@ const ServicesManagement = () => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
   });
   
-  // Service limit - Maximum 10,000 services per panel
-  const SERVICE_LIMIT = 10000;
-  const WARNING_THRESHOLD = 9000;
+  // Service limit - plan-aware limits
+  const SERVICE_LIMIT = serviceLimit;
+  const WARNING_THRESHOLD = Math.floor(serviceLimit * 0.9);
   const isNearLimit = totalCount >= WARNING_THRESHOLD;
   const isAtLimit = totalCount >= SERVICE_LIMIT;
   
