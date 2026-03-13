@@ -32,7 +32,7 @@ const plans: Plan[] = [
     glowColor: '',
     features: [
       'Subdomain only',
-      '1 Active Service',
+      'Up to 100 Services',
       '100 Orders/month',
       'Basic Analytics',
       'Email Support'
@@ -51,7 +51,7 @@ const plans: Plan[] = [
     color: 'from-blue-500 to-blue-600',
     glowColor: 'shadow-[0_0_30px_rgba(59,130,246,0.3)]',
     features: [
-      '10 Active Services',
+      'Up to 5,000 Services',
       'Full Analytics Dashboard',
       'Priority Email Support',
       'Custom Domain',
@@ -72,7 +72,7 @@ const plans: Plan[] = [
     color: 'from-amber-500 to-amber-600',
     glowColor: 'shadow-[0_0_30px_rgba(245,158,11,0.3)]',
     features: [
-      'Unlimited Services',
+      'Up to 10,000 Services',
       'Advanced Analytics + Reports',
       '24/7 Priority Support',
       'Multiple Custom Domains',

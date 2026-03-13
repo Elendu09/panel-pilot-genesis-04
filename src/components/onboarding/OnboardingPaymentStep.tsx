@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock } from "lucide-react";
+import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock, Timer } from "lucide-react";
 import { SlideToUnlock } from './SlideToUnlock';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +29,8 @@ interface OnboardingPaymentStepProps {
   onSlideUnlocked?: () => void;
   slideUnlocked?: boolean;
   verifying?: boolean;
+  verificationSecondsLeft?: number;
+  onCancelVerification?: () => void;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -43,7 +45,8 @@ const planGradient = {
 
 export const OnboardingPaymentStep = ({ 
   selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false,
-  onSlideUnlocked, slideUnlocked = false, verifying = false
+  onSlideUnlocked, slideUnlocked = false, verifying = false, verificationSecondsLeft = 0,
+  onCancelVerification
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -53,11 +56,10 @@ export const OnboardingPaymentStep = ({
 
   useEffect(() => { fetchPaymentProviders(); }, []);
 
-  // Realtime subscription + polling for payment status sync
+  // Realtime subscription for payment status sync (only triggers on 'active', not 'trial')
   useEffect(() => {
     if (!panelId || paymentCompleted) return;
 
-    // Realtime subscription
     const channel = supabase
       .channel(`panel-payment-${panelId}`)
       .on('postgres_changes', {
@@ -67,31 +69,11 @@ export const OnboardingPaymentStep = ({
         filter: `id=eq.${panelId}`
       }, (payload: any) => {
         const status = payload.new?.subscription_status;
-        if (status === 'active' || status === 'trial') {
+        if (status === 'active') {
           onPaymentSuccess();
         }
       })
       .subscribe();
-
-    // Polling fallback (3 attempts, 5s intervals) for gateway return
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
-        const { data } = await supabase
-          .from('panels')
-          .select('subscription_status')
-          .eq('id', panelId)
-          .single();
-        if (data?.subscription_status === 'active' || data?.subscription_status === 'trial') {
-          clearInterval(poll);
-          onPaymentSuccess();
-        }
-        if (attempts >= 3) clearInterval(poll);
-      }, 5000);
-      return () => { clearInterval(poll); supabase.removeChannel(channel); };
-    }
 
     return () => { supabase.removeChannel(channel); };
   }, [panelId, paymentCompleted, onPaymentSuccess]);
@@ -204,40 +186,59 @@ export const OnboardingPaymentStep = ({
     );
   }
 
+  // While verifying: only show verifying card, hide everything else
+  if (verifying && !paymentCompleted) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Verifying Payment...</h2>
+          <p className="text-muted-foreground">
+            Please wait while we confirm your payment with the gateway.
+          </p>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="p-6 rounded-xl border border-primary/30 bg-primary/5 flex flex-col items-center gap-4"
+        >
+          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold">Verifying Payment</p>
+            <p className="text-sm text-muted-foreground mt-1">Checking with payment gateway...</p>
+          </div>
+          {/* Countdown Timer */}
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50 border border-border/50">
+            <Timer className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-mono font-medium">
+              {verificationSecondsLeft > 0 ? `${verificationSecondsLeft}s remaining` : 'Finalizing...'}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            This may take up to 30 seconds. Press <strong>Cancel</strong> below to stop and change your plan.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
-          {paymentCompleted ? 'Payment Confirmed' : verifying ? 'Verifying Payment...' : trialStarted ? 'Trial Active' : 'Complete Payment'}
+          {paymentCompleted ? 'Payment Confirmed' : trialStarted ? 'Trial Active' : 'Complete Payment'}
         </h2>
         <p className="text-muted-foreground">
           {paymentCompleted 
             ? `Your ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Click Next to continue.`
-            : verifying
-              ? 'Please wait while we confirm your payment with the gateway...'
-              : trialStarted
-                ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
-                : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
+            : trialStarted
+              ? `Your 3-day trial for the ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan is active. Subscribe anytime to continue after the trial.`
+              : `Subscribe to ${selectedPlan.charAt(0).toUpperCase() + selectedPlan.slice(1)} plan`
           }
         </p>
       </div>
-
-      {/* Payment Verifying spinner */}
-      {verifying && !paymentCompleted && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/10 flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-blue-600">Verifying Payment</p>
-            <p className="text-xs text-muted-foreground">Checking with payment gateway... This may take up to 30 seconds.</p>
-          </div>
-        </motion.div>
-      )}
 
       {/* Payment confirmed banner */}
       {paymentCompleted && (
@@ -256,7 +257,7 @@ export const OnboardingPaymentStep = ({
         </motion.div>
       )}
 
-      {/* Trial Active banner — amber, NOT green */}
+      {/* Trial Active banner */}
       {trialStarted && !paymentCompleted && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
