@@ -217,11 +217,11 @@ const ServicesManagement = () => {
   const { panel, resolvedTier, loading: panelLoading } = usePanel();
 
   const SERVICE_LIMITS: Record<string, number> = {
-    free: 50,
+    free: 100,
     basic: 5000,
     pro: 10000,
   };
-  const serviceLimit = SERVICE_LIMITS[resolvedTier] || 1;
+  const serviceLimit = SERVICE_LIMITS[resolvedTier] || 100;
   const [searchParams, setSearchParams] = useSearchParams();
   const [services, setServices] = useState<ServiceItem[]>([]);
   
@@ -343,9 +343,9 @@ const ServicesManagement = () => {
     return (localStorage.getItem('services-view-mode') as "list" | "kanban") || "list";
   });
   
-  // Service limit - Maximum 10,000 services per panel
-  const SERVICE_LIMIT = 10000;
-  const WARNING_THRESHOLD = 9000;
+  // Service limit - plan-aware limits
+  const SERVICE_LIMIT = serviceLimit;
+  const WARNING_THRESHOLD = Math.floor(serviceLimit * 0.9);
   const isNearLimit = totalCount >= WARNING_THRESHOLD;
   const isAtLimit = totalCount >= SERVICE_LIMIT;
   
@@ -1607,109 +1607,171 @@ const ServicesManagement = () => {
     }
   };
 
+  // Valid DB enum categories for normalization
+  const VALID_DB_CATEGORIES = new Set([
+    'instagram', 'facebook', 'twitter', 'youtube', 'tiktok', 'linkedin', 'telegram',
+    'threads', 'snapchat', 'pinterest', 'whatsapp', 'twitch', 'discord', 'spotify',
+    'soundcloud', 'audiomack', 'reddit', 'vk', 'kick', 'rumble', 'dailymotion',
+    'deezer', 'shazam', 'tidal', 'reverbnation', 'mixcloud', 'quora', 'tumblr',
+    'clubhouse', 'likee', 'kwai', 'trovo', 'odysee', 'bilibili', 'lemon8', 'bereal',
+    'weibo', 'line', 'patreon', 'medium', 'roblox', 'steam', 'applemusic', 'amazonmusic',
+    'napster', 'iheart', 'gettr', 'truthsocial', 'parler', 'mastodon', 'bluesky', 'gab',
+    'minds', 'caffeine', 'dlive', 'nimotv', 'bigo', 'douyin', 'xiaohongshu', 'qq', 'wechat',
+    'kuaishou', 'youtubemusic', 'pandora', 'googlebusiness', 'trustpilot', 'yelp',
+    'tripadvisor', 'behance', 'dribbble', 'deviantart', 'flickr', 'vero', 'podcast', 'momo',
+    'google', 'website', 'other'
+  ]);
+
+  const normalizeCategory = (cat: string): string => {
+    const cleaned = (cat || 'other').toLowerCase().trim();
+    return VALID_DB_CATEGORIES.has(cleaned) ? cleaned : 'other';
+  };
+
   // Import handler - stores to provider_services, normalized_services, and services tables
   const handleImport = async (importedServices: any[], markups: Record<number, number>, providerId?: string, providerName?: string) => {
     if (!panel?.id) return;
 
-    let servicesToImport = importedServices;
-    if (serviceLimit !== Infinity) {
-      const { count } = await supabase
-        .from('services')
-        .select('id', { count: 'exact', head: true })
-        .eq('panel_id', panel.id)
-        .eq('is_active', true);
-      const activeCount = count || 0;
-      const remaining = serviceLimit - activeCount;
-      if (remaining <= 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Service Limit Reached',
-          description: `Your ${resolvedTier} plan allows up to ${serviceLimit} active service${serviceLimit !== 1 ? 's' : ''}. Upgrade your plan to import more.`
-        });
-        return;
-      }
-      servicesToImport = importedServices.slice(0, remaining);
-      if (servicesToImport.length < importedServices.length) {
-        toast({
-          title: 'Import Limited',
-          description: `Only importing ${servicesToImport.length} of ${importedServices.length} services due to your ${resolvedTier} plan limit.`
-        });
-      }
+    // Plan-aware limit enforcement
+    const { count: currentCount } = await supabase
+      .from('services')
+      .select('id', { count: 'exact', head: true })
+      .eq('panel_id', panel.id);
+    
+    const activeCount = currentCount || 0;
+    const remaining = serviceLimit - activeCount;
+    
+    if (remaining <= 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Service Limit Reached',
+        description: `Your ${resolvedTier} plan allows up to ${serviceLimit.toLocaleString()} services. Upgrade your plan to import more.`
+      });
+      return;
     }
     
+    let servicesToImport = importedServices.slice(0, remaining);
+    if (servicesToImport.length < importedServices.length) {
+      toast({
+        title: 'Import Limited',
+        description: `Only importing ${servicesToImport.length} of ${importedServices.length} services due to your ${resolvedTier} plan limit (${serviceLimit.toLocaleString()}).`
+      });
+    }
+    
+    let successCount = 0;
+    let failCount = 0;
+    
     try {
-      const rawInserts = servicesToImport.map(service => ({
-        panel_id: panel.id,
-        provider_id: providerId || null,
-        external_service_id: String(service.id),
-        raw_name: service.name,
-        raw_category: service.category || 'other',
-        provider_rate: Number(service.price) || 0,
-        min_quantity: service.minQty || 100,
-        max_quantity: service.maxQty || 10000,
-        description: service.description || null,
-        is_active: true,
-        raw_data: service as any
-      }));
-
-      const { error: rawError } = await supabase
-        .from('provider_services')
-        .upsert(rawInserts, {
-          onConflict: 'panel_id,provider_id,external_service_id',
-          ignoreDuplicates: false
-        });
-
-      if (rawError) {
-        console.error('Batch raw service upsert error:', rawError);
-      }
-
-      const extIds = servicesToImport.map(s => String(s.id));
-      const refMap = new Map<string, string>();
-      const lookupQuery = supabase
-        .from('provider_services')
-        .select('id, external_service_id')
-        .eq('panel_id', panel.id)
-        .in('external_service_id', extIds);
-      if (providerId) {
-        lookupQuery.eq('provider_id', providerId);
-      } else {
-        lookupQuery.is('provider_id', null);
-      }
-      const { data: provServiceRows } = await lookupQuery;
-      (provServiceRows || []).forEach(r => refMap.set(r.external_service_id, r.id));
-
-      const normalizedInserts = servicesToImport
-        .filter(s => refMap.has(String(s.id)))
-        .map(s => ({
-          provider_service_id: refMap.get(String(s.id))!,
-          normalized_name: s.name,
-          detected_platform: s.category || 'other',
-          detected_service_type: 'other',
-          detected_delivery_type: 'instant',
-          buyer_friendly_category: s.category || 'other',
-          confidence_score: 0.8,
-          is_ai_processed: false
+      // Step 1: Upsert provider_services (only if we have a valid providerId)
+      if (providerId && providerId !== 'direct') {
+        const rawInserts = servicesToImport.map(service => ({
+          panel_id: panel.id,
+          provider_id: providerId,
+          external_service_id: String(service.id),
+          raw_name: service.name,
+          raw_category: normalizeCategory(service.category),
+          provider_rate: Number(service.price) || 0,
+          min_quantity: service.minQty || 100,
+          max_quantity: service.maxQty || 10000,
+          description: service.description || null,
+          is_active: true,
+          raw_data: service as any
         }));
 
-      if (normalizedInserts.length > 0) {
-        const { error: normError } = await supabase
-          .from('normalized_services')
-          .upsert(normalizedInserts, { onConflict: 'provider_service_id', ignoreDuplicates: false });
-        if (normError) console.error('Batch normalized upsert error:', normError);
+        // Chunk upserts to avoid payload limits
+        const chunkSize = 200;
+        for (let i = 0; i < rawInserts.length; i += chunkSize) {
+          const chunk = rawInserts.slice(i, i + chunkSize);
+          const { error: rawError } = await supabase
+            .from('provider_services')
+            .upsert(chunk, {
+              onConflict: 'panel_id,provider_id,external_service_id',
+              ignoreDuplicates: false
+            });
+          if (rawError) {
+            console.error(`Provider services batch ${i} error:`, rawError);
+          }
+        }
       }
 
-      const buyerInserts = servicesToImport.map((service, idx) => {
+      // Step 2: Lookup provider_service refs for normalized_services
+      if (providerId && providerId !== 'direct') {
+        const extIds = servicesToImport.map(s => String(s.id));
+        const refMap = new Map<string, string>();
+        
+        // Fetch in batches of 500
+        for (let i = 0; i < extIds.length; i += 500) {
+          const batch = extIds.slice(i, i + 500);
+          const { data: provServiceRows } = await supabase
+            .from('provider_services')
+            .select('id, external_service_id')
+            .eq('panel_id', panel.id)
+            .eq('provider_id', providerId)
+            .in('external_service_id', batch);
+          (provServiceRows || []).forEach(r => refMap.set(r.external_service_id, r.id));
+        }
+
+        const normalizedInserts = servicesToImport
+          .filter(s => refMap.has(String(s.id)))
+          .map(s => ({
+            provider_service_id: refMap.get(String(s.id))!,
+            normalized_name: s.name,
+            detected_platform: normalizeCategory(s.category),
+            detected_service_type: 'other',
+            detected_delivery_type: 'instant',
+            buyer_friendly_category: normalizeCategory(s.category),
+            confidence_score: 0.8,
+            is_ai_processed: false
+          }));
+
+        if (normalizedInserts.length > 0) {
+          for (let i = 0; i < normalizedInserts.length; i += 200) {
+            const chunk = normalizedInserts.slice(i, i + 200);
+            const { error: normError } = await supabase
+              .from('normalized_services')
+              .upsert(chunk, { onConflict: 'provider_service_id', ignoreDuplicates: false });
+            if (normError) console.error(`Normalized batch ${i} error:`, normError);
+          }
+        }
+      }
+
+      // Step 3: Fetch existing services to determine update vs insert
+      const serviceIdStrings = servicesToImport.map(s => String(s.id));
+      const existingMap = new Map<string, string>(); // provider_service_id -> service.id
+      
+      for (let i = 0; i < serviceIdStrings.length; i += 500) {
+        const batch = serviceIdStrings.slice(i, i + 500);
+        let query = supabase
+          .from('services')
+          .select('id, provider_service_id')
+          .eq('panel_id', panel.id)
+          .in('provider_service_id', batch);
+        
+        if (providerId && providerId !== 'direct') {
+          query = query.eq('provider_id', providerId);
+        }
+        
+        const { data } = await query;
+        (data || []).forEach(s => {
+          if (s.provider_service_id) existingMap.set(s.provider_service_id, s.id);
+        });
+      }
+
+      // Step 4: Build update and insert arrays
+      const toUpdate: any[] = [];
+      const toInsert: any[] = [];
+
+      servicesToImport.forEach((service, idx) => {
         const markupPercent = markups[service.id] ?? 25;
         const providerRate = Number(service.price) || 0;
         const finalPrice = providerRate * (1 + markupPercent / 100);
-        const detectedCategory = service.category || 'other';
+        const detectedCategory = normalizeCategory(service.category);
         const iconUrl = service.iconUrl || `icon:${detectedCategory}`;
-        const provServiceRef = refMap.get(String(service.id)) || null;
+        const provServiceIdStr = String(service.id);
 
-        const data: Record<string, any> = {
+        const serviceData: Record<string, any> = {
           panel_id: panel.id,
-          provider_id: providerId || null,
-          provider_service_id: String(service.id),
+          provider_id: (providerId && providerId !== 'direct') ? providerId : null,
+          provider_service_id: provServiceIdStr,
           name: service.name,
           category: detectedCategory,
           image_url: iconUrl,
@@ -1720,29 +1782,61 @@ const ServicesManagement = () => {
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,
-          display_order: services.length + idx + 1,
+          display_order: activeCount + idx + 1,
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
             provider_rate: providerRate,
           }),
+          updated_at: new Date().toISOString(),
         };
-        if (provServiceRef) data.provider_service_ref = provServiceRef;
-        return data;
+
+        const existingId = existingMap.get(provServiceIdStr);
+        if (existingId) {
+          toUpdate.push({ ...serviceData, id: existingId });
+        } else {
+          toInsert.push(serviceData);
+        }
       });
 
-      const { error: buyerError } = await supabase
-        .from('services')
-        .upsert(buyerInserts as any[], {
-          onConflict: 'panel_id,provider_service_id,provider_id',
-          ignoreDuplicates: false
-        });
+      // Step 5: Execute updates in chunks
+      const chunkSize = 200;
+      for (let i = 0; i < toUpdate.length; i += chunkSize) {
+        const chunk = toUpdate.slice(i, i + chunkSize);
+        const { error } = await supabase.from('services').upsert(chunk, { onConflict: 'id' });
+        if (error) {
+          console.error(`Update batch ${i} error:`, error);
+          failCount += chunk.length;
+        } else {
+          successCount += chunk.length;
+        }
+      }
 
-      if (buyerError) {
-        console.error('Batch service upsert error:', buyerError);
-        toast({ title: 'Some services may not have imported correctly', variant: 'destructive' });
+      // Step 6: Execute inserts in chunks
+      for (let i = 0; i < toInsert.length; i += chunkSize) {
+        const chunk = toInsert.slice(i, i + chunkSize);
+        const { error } = await supabase.from('services').insert(chunk);
+        if (error) {
+          console.error(`Insert batch ${i} error:`, error);
+          failCount += chunk.length;
+        } else {
+          successCount += chunk.length;
+        }
+      }
+
+      // Step 7: Sync categories
+      if (panel.id) {
+        await supabase.rpc('sync_panel_categories', { p_panel_id: panel.id });
+      }
+
+      if (failCount > 0) {
+        toast({ 
+          title: `${successCount} imported, ${failCount} failed`, 
+          description: 'Some services could not be imported. Check the console for details.',
+          variant: 'destructive' 
+        });
       } else {
-        toast({ title: `${servicesToImport.length} services imported successfully` });
+        toast({ title: `${successCount} services imported successfully` });
       }
 
       fetchServices();

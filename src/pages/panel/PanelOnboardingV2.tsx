@@ -75,6 +75,10 @@ const PanelOnboardingV2 = () => {
   const [trialStarted, setTrialStarted] = useState(false);
   const [trialSlideUnlocked, setTrialSlideUnlocked] = useState(false);
   const [trialPlan, setTrialPlan] = useState<'basic' | 'pro' | null>(null);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [verificationSecondsLeft, setVerificationSecondsLeft] = useState(0);
+  const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const verificationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [currency, setCurrency] = useState('USD');
   const [domainVerificationState, setDomainVerificationState] = useState<{ step: 'configure' | 'txt-pending' | 'dns-pending' | 'verified'; token: string | null }>({ step: 'configure', token: null });
   
@@ -233,53 +237,50 @@ const PanelOnboardingV2 = () => {
   // Detect payment=success return from gateway — runs immediately
   // Flutterwave returns URLs like ?payment=success?success=true&transaction_id=...
   // The double ? means URLSearchParams gives us "success?success=true&..." for payment param
-  const paymentDetectedRef = useRef(false);
-  const [paymentVerifying, setPaymentVerifying] = useState(false);
-  useEffect(() => {
-    if (paymentDetectedRef.current) return;
-    const fullSearch = window.location.search;
-    const params = new URLSearchParams(fullSearch);
-    const paymentParam = params.get('payment');
-    // Robust check: payment param starts with 'success' (handles double-? URLs)
-    const isPaymentReturn = paymentParam?.startsWith('success');
-    
-    if (!isPaymentReturn) return;
-    paymentDetectedRef.current = true;
-    setPaymentVerifying(true);
-    
-    // Extract transaction_id from either proper params or mangled URL
-    const txId = params.get('transaction_id') || params.get('tx_ref');
-    // Also try parsing after the second ? if present
-    let fallbackTxId: string | null = null;
-    if (!txId && paymentParam?.includes('transaction_id=')) {
-      const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
-      fallbackTxId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
-    }
-    const finalTxId = txId || fallbackTxId;
-    
-    // Clean URL immediately
-    window.history.replaceState({}, '', '/panel/onboarding');
-    
-    // Set step to payment (2) so user sees the verifying state
+  // Cancel payment verification
+  const cancelPaymentVerification = () => {
+    if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+    if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+    verificationPollRef.current = null;
+    verificationTimerRef.current = null;
+    setIsVerifyingPayment(false);
+    setVerificationSecondsLeft(0);
+    toast({ title: 'Verification Cancelled', description: 'You can now change your plan or retry payment.' });
+  };
+
+  // Start payment verification polling with countdown
+  const startPaymentVerification = (txId: string | null) => {
+    setIsVerifyingPayment(true);
+    setVerificationSecondsLeft(30);
     setCurrentStep(2);
-    
-    // Poll for payment confirmation (6 attempts, 5s intervals = 30s)
+
+    // Countdown timer
+    verificationTimerRef.current = setInterval(() => {
+      setVerificationSecondsLeft(prev => {
+        if (prev <= 1) {
+          if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Polling (6 attempts, 5s intervals)
     let attempts = 0;
-    const maxAttempts = 6;
-    const pollInterval = setInterval(async () => {
+    verificationPollRef.current = setInterval(async () => {
       attempts++;
       let confirmed = false;
-      
+
       // Check transaction status if we have the ID
-      if (finalTxId) {
+      if (txId) {
         const { data: txData } = await supabase
           .from('transactions')
           .select('status')
-          .or(`id.eq.${finalTxId},payment_id.eq.${finalTxId}`)
+          .or(`id.eq.${txId},payment_id.eq.${txId}`)
           .maybeSingle();
         if (txData?.status === 'completed') confirmed = true;
       }
-      
+
       // Also check panel subscription status
       if (!confirmed && createdPanelIdRef.current) {
         const { data: panelData } = await supabase
@@ -289,16 +290,19 @@ const PanelOnboardingV2 = () => {
           .single();
         if (panelData?.subscription_status === 'active') {
           confirmed = true;
-          // Restore selectedPlan from DB if not yet set
           if (panelData.subscription_tier) {
             setSelectedPlan(panelData.subscription_tier as 'free' | 'basic' | 'pro');
           }
         }
       }
-      
+
       if (confirmed) {
-        clearInterval(pollInterval);
-        setPaymentVerifying(false);
+        if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+        if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+        verificationPollRef.current = null;
+        verificationTimerRef.current = null;
+        setIsVerifyingPayment(false);
+        setVerificationSecondsLeft(0);
         setPaymentCompleted(true);
         setTrialStarted(false);
         markStepComplete(2);
@@ -313,26 +317,46 @@ const PanelOnboardingV2 = () => {
           }).eq('id', createdPanelIdRef.current);
         }
       }
-      
-      if (attempts >= maxAttempts) {
-        clearInterval(pollInterval);
-        setPaymentVerifying(false);
-        // Even if polling didn't confirm, mark as needing manual check
-        toast({ 
-          title: 'Payment Processing', 
+
+      if (attempts >= 6) {
+        if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+        if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+        verificationPollRef.current = null;
+        verificationTimerRef.current = null;
+        setIsVerifyingPayment(false);
+        setVerificationSecondsLeft(0);
+        toast({
+          title: 'Payment Processing',
           description: 'Your payment is being processed. It may take a moment to confirm. You can proceed or wait.',
         });
       }
     }, 5000);
-    
-    return () => clearInterval(pollInterval);
-  }, [restoringState]);
+  };
 
-  // Advance after state restore if payment was detected
+  // Detect payment=success return from gateway
+  const paymentDetectedRef = useRef(false);
   useEffect(() => {
-    if (!restoringState && paymentDetectedRef.current && currentStep === 2) {
-      setCurrentStep(3);
+    if (paymentDetectedRef.current) return;
+    const fullSearch = window.location.search;
+    const params = new URLSearchParams(fullSearch);
+    const paymentParam = params.get('payment');
+    const isPaymentReturn = paymentParam?.startsWith('success');
+
+    if (!isPaymentReturn) return;
+    paymentDetectedRef.current = true;
+
+    // Extract transaction_id robustly
+    let txId = params.get('transaction_id') || params.get('tx_ref');
+    if (!txId && paymentParam?.includes('transaction_id=')) {
+      const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
+      txId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
     }
+
+    // Clean URL
+    window.history.replaceState({}, '', '/panel/onboarding');
+
+    // Start verification
+    startPaymentVerification(txId);
   }, [restoringState]);
 
   // Auto-generate subdomain from panel name
@@ -907,7 +931,9 @@ const PanelOnboardingV2 = () => {
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
               trialStarted={trialStarted}
-              verifying={paymentVerifying}
+              verifying={isVerifyingPayment}
+              verificationSecondsLeft={verificationSecondsLeft}
+              onCancelVerification={cancelPaymentVerification}
               onSlideUnlocked={() => setTrialSlideUnlocked(true)}
               slideUnlocked={trialSlideUnlocked}
               onSkip={async () => {
@@ -1399,7 +1425,7 @@ const PanelOnboardingV2 = () => {
   const isLastStep = currentStepKey === STEP_KEYS.COMPLETE;
   const isPaymentStep = currentStepKey === STEP_KEYS.PAYMENT;
   const isDomainStep = currentStepKey === STEP_KEYS.DOMAIN;
-  const isNextDisabled = (isPaymentStep && !paymentCompleted && !trialSlideUnlocked) || (isPaymentStep && paymentVerifying) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
+  const isNextDisabled = (isPaymentStep && !paymentCompleted && !trialSlideUnlocked) || (isPaymentStep && isVerifyingPayment) || (isDomainStep && domainType === 'custom' && domainVerificationState.step !== 'verified');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-24 sm:pb-8">
@@ -1503,18 +1529,29 @@ const PanelOnboardingV2 = () => {
           </CardContent>
         </Card>
 
-        {/* Desktop Navigation Buttons - always show, label changes on payment step */}
+        {/* Desktop Navigation Buttons */}
         {!isLastStep && (
           <div className="hidden sm:flex justify-between mt-6">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
+            {isPaymentStep && isVerifyingPayment ? (
+              <Button
+                variant="destructive"
+                onClick={cancelPaymentVerification}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
+            )}
             <Button 
               onClick={handleNext} 
               className="gap-2"
@@ -1531,15 +1568,26 @@ const PanelOnboardingV2 = () => {
       {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border/50 p-4 pb-safe z-50">
           <div className="flex gap-3 max-w-3xl mx-auto">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className="flex-1 h-12"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
+            {isPaymentStep && isVerifyingPayment ? (
+              <Button
+                variant="destructive"
+                onClick={cancelPaymentVerification}
+                className="flex-1 h-12"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="flex-1 h-12"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            )}
             <Button 
               onClick={handleNext} 
               className="flex-1 h-12"
