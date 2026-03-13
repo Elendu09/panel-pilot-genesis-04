@@ -931,7 +931,9 @@ const PanelOnboardingV2 = () => {
               onPaymentSuccess={handlePaymentSuccess}
               paymentCompleted={paymentCompleted}
               trialStarted={trialStarted}
-              verifying={paymentVerifying}
+              verifying={isVerifyingPayment}
+              verificationSecondsLeft={verificationSecondsLeft}
+              onCancelVerification={cancelPaymentVerification}
               onSlideUnlocked={() => setTrialSlideUnlocked(true)}
               slideUnlocked={trialSlideUnlocked}
               onSkip={async () => {
