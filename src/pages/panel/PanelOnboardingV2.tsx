@@ -237,53 +237,50 @@ const PanelOnboardingV2 = () => {
   // Detect payment=success return from gateway — runs immediately
   // Flutterwave returns URLs like ?payment=success?success=true&transaction_id=...
   // The double ? means URLSearchParams gives us "success?success=true&..." for payment param
-  const paymentDetectedRef = useRef(false);
-  const [paymentVerifying, setPaymentVerifying] = useState(false);
-  useEffect(() => {
-    if (paymentDetectedRef.current) return;
-    const fullSearch = window.location.search;
-    const params = new URLSearchParams(fullSearch);
-    const paymentParam = params.get('payment');
-    // Robust check: payment param starts with 'success' (handles double-? URLs)
-    const isPaymentReturn = paymentParam?.startsWith('success');
-    
-    if (!isPaymentReturn) return;
-    paymentDetectedRef.current = true;
-    setPaymentVerifying(true);
-    
-    // Extract transaction_id from either proper params or mangled URL
-    const txId = params.get('transaction_id') || params.get('tx_ref');
-    // Also try parsing after the second ? if present
-    let fallbackTxId: string | null = null;
-    if (!txId && paymentParam?.includes('transaction_id=')) {
-      const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
-      fallbackTxId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
-    }
-    const finalTxId = txId || fallbackTxId;
-    
-    // Clean URL immediately
-    window.history.replaceState({}, '', '/panel/onboarding');
-    
-    // Set step to payment (2) so user sees the verifying state
+  // Cancel payment verification
+  const cancelPaymentVerification = () => {
+    if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+    if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+    verificationPollRef.current = null;
+    verificationTimerRef.current = null;
+    setIsVerifyingPayment(false);
+    setVerificationSecondsLeft(0);
+    toast({ title: 'Verification Cancelled', description: 'You can now change your plan or retry payment.' });
+  };
+
+  // Start payment verification polling with countdown
+  const startPaymentVerification = (txId: string | null) => {
+    setIsVerifyingPayment(true);
+    setVerificationSecondsLeft(30);
     setCurrentStep(2);
-    
-    // Poll for payment confirmation (6 attempts, 5s intervals = 30s)
+
+    // Countdown timer
+    verificationTimerRef.current = setInterval(() => {
+      setVerificationSecondsLeft(prev => {
+        if (prev <= 1) {
+          if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Polling (6 attempts, 5s intervals)
     let attempts = 0;
-    const maxAttempts = 6;
-    const pollInterval = setInterval(async () => {
+    verificationPollRef.current = setInterval(async () => {
       attempts++;
       let confirmed = false;
-      
+
       // Check transaction status if we have the ID
-      if (finalTxId) {
+      if (txId) {
         const { data: txData } = await supabase
           .from('transactions')
           .select('status')
-          .or(`id.eq.${finalTxId},payment_id.eq.${finalTxId}`)
+          .or(`id.eq.${txId},payment_id.eq.${txId}`)
           .maybeSingle();
         if (txData?.status === 'completed') confirmed = true;
       }
-      
+
       // Also check panel subscription status
       if (!confirmed && createdPanelIdRef.current) {
         const { data: panelData } = await supabase
@@ -293,16 +290,19 @@ const PanelOnboardingV2 = () => {
           .single();
         if (panelData?.subscription_status === 'active') {
           confirmed = true;
-          // Restore selectedPlan from DB if not yet set
           if (panelData.subscription_tier) {
             setSelectedPlan(panelData.subscription_tier as 'free' | 'basic' | 'pro');
           }
         }
       }
-      
+
       if (confirmed) {
-        clearInterval(pollInterval);
-        setPaymentVerifying(false);
+        if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+        if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+        verificationPollRef.current = null;
+        verificationTimerRef.current = null;
+        setIsVerifyingPayment(false);
+        setVerificationSecondsLeft(0);
         setPaymentCompleted(true);
         setTrialStarted(false);
         markStepComplete(2);
@@ -317,26 +317,46 @@ const PanelOnboardingV2 = () => {
           }).eq('id', createdPanelIdRef.current);
         }
       }
-      
-      if (attempts >= maxAttempts) {
-        clearInterval(pollInterval);
-        setPaymentVerifying(false);
-        // Even if polling didn't confirm, mark as needing manual check
-        toast({ 
-          title: 'Payment Processing', 
+
+      if (attempts >= 6) {
+        if (verificationPollRef.current) clearInterval(verificationPollRef.current);
+        if (verificationTimerRef.current) clearInterval(verificationTimerRef.current);
+        verificationPollRef.current = null;
+        verificationTimerRef.current = null;
+        setIsVerifyingPayment(false);
+        setVerificationSecondsLeft(0);
+        toast({
+          title: 'Payment Processing',
           description: 'Your payment is being processed. It may take a moment to confirm. You can proceed or wait.',
         });
       }
     }, 5000);
-    
-    return () => clearInterval(pollInterval);
-  }, [restoringState]);
+  };
 
-  // Advance after state restore if payment was detected
+  // Detect payment=success return from gateway
+  const paymentDetectedRef = useRef(false);
   useEffect(() => {
-    if (!restoringState && paymentDetectedRef.current && currentStep === 2) {
-      setCurrentStep(3);
+    if (paymentDetectedRef.current) return;
+    const fullSearch = window.location.search;
+    const params = new URLSearchParams(fullSearch);
+    const paymentParam = params.get('payment');
+    const isPaymentReturn = paymentParam?.startsWith('success');
+
+    if (!isPaymentReturn) return;
+    paymentDetectedRef.current = true;
+
+    // Extract transaction_id robustly
+    let txId = params.get('transaction_id') || params.get('tx_ref');
+    if (!txId && paymentParam?.includes('transaction_id=')) {
+      const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
+      txId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
     }
+
+    // Clean URL
+    window.history.replaceState({}, '', '/panel/onboarding');
+
+    // Start verification
+    startPaymentVerification(txId);
   }, [restoringState]);
 
   // Auto-generate subdomain from panel name
