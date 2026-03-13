@@ -1529,18 +1529,29 @@ const PanelOnboardingV2 = () => {
           </CardContent>
         </Card>
 
-        {/* Desktop Navigation Buttons - always show, label changes on payment step */}
+        {/* Desktop Navigation Buttons */}
         {!isLastStep && (
           <div className="hidden sm:flex justify-between mt-6">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
+            {isPaymentStep && isVerifyingPayment ? (
+              <Button
+                variant="destructive"
+                onClick={cancelPaymentVerification}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Button>
+            )}
             <Button 
               onClick={handleNext} 
               className="gap-2"
@@ -1557,15 +1568,26 @@ const PanelOnboardingV2 = () => {
       {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border/50 p-4 pb-safe z-50">
           <div className="flex gap-3 max-w-3xl mx-auto">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0}
-              className="flex-1 h-12"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
+            {isPaymentStep && isVerifyingPayment ? (
+              <Button
+                variant="destructive"
+                onClick={cancelPaymentVerification}
+                className="flex-1 h-12"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0}
+                className="flex-1 h-12"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+            )}
             <Button 
               onClick={handleNext} 
               className="flex-1 h-12"
