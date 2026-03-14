@@ -179,19 +179,24 @@ export const ServiceEditSheet = ({
     if (!service?.id || !panel?.id) return;
     setSaving(true);
     try {
+      // Preserve provider_id for imported services (never change it)
+      const isImported = !!(service?.provider_service_id || service?.provider_service_ref);
+      const updatePayload: Record<string, any> = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category as any,
+        min_quantity: formData.min_quantity,
+        max_quantity: formData.max_quantity,
+        price: calculatedPrice,
+        image_url: formData.image_url || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (!isImported) {
+        updatePayload.provider_id = formData.provider_id || null;
+      }
       const { error } = await supabase
         .from("services")
-        .update({
-          name: formData.name,
-          description: formData.description,
-          category: formData.category as any,
-          provider_id: formData.provider_id || null,
-          min_quantity: formData.min_quantity,
-          max_quantity: formData.max_quantity,
-          price: calculatedPrice,
-          image_url: formData.image_url || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", service.id);
 
       if (error) throw error;
