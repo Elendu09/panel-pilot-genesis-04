@@ -1430,6 +1430,7 @@ const ServicesManagement = () => {
       category: service.category,
       provider: service.provider,
       provider_id: service.providerId,
+      provider_service_id: service.providerServiceId || undefined,
       price: service.price,
       originalPrice: service.originalPrice,
       minQty: service.minQty,
