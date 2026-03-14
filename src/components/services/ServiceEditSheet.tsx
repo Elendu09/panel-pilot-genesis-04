@@ -354,22 +354,32 @@ export const ServiceEditSheet = ({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
-                        <Select
-                          value={formData.provider_id || "__none__"}
-                          onValueChange={(v) => handleChange("provider_id", v === "__none__" ? "" : v)}
-                        >
-                          <SelectTrigger className="bg-background/50">
-                            <SelectValue placeholder="Select provider" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">No Provider</SelectItem>
-                            {providers.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {/* Lock provider for imported services */}
+                        {service?.provider_service_id || service?.provider_service_ref ? (
+                          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border/50">
+                            <Badge variant="secondary" className="text-xs">
+                              {providerName || providers.find(p => p.id === formData.provider_id)?.name || 'Linked Provider'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground ml-auto">Imported — locked</span>
+                          </div>
+                        ) : (
+                          <Select
+                            value={formData.provider_id || "__none__"}
+                            onValueChange={(v) => handleChange("provider_id", v === "__none__" ? "" : v)}
+                          >
+                            <SelectTrigger className="bg-background/50">
+                              <SelectValue placeholder="Select provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">No Provider</SelectItem>
+                              {providers.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </CardContent>
                     </Card>
                     
