@@ -77,6 +77,7 @@ const PanelOnboardingV2 = () => {
   const [trialPlan, setTrialPlan] = useState<'basic' | 'pro' | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [verificationSecondsLeft, setVerificationSecondsLeft] = useState(0);
+  const [verificationTimedOut, setVerificationTimedOut] = useState(false);
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verificationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [currency, setCurrency] = useState('USD');
