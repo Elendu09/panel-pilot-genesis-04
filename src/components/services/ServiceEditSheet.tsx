@@ -60,6 +60,8 @@ interface ServiceEditSheetProps {
     category: string;
     provider?: string;
     provider_id?: string;
+    provider_service_id?: string;
+    provider_service_ref?: string;
     price: number;
     originalPrice?: number;
     minQty?: number;
@@ -177,19 +179,24 @@ export const ServiceEditSheet = ({
     if (!service?.id || !panel?.id) return;
     setSaving(true);
     try {
+      // Preserve provider_id for imported services (never change it)
+      const isImported = !!(service?.provider_service_id || service?.provider_service_ref);
+      const updatePayload: Record<string, any> = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category as any,
+        min_quantity: formData.min_quantity,
+        max_quantity: formData.max_quantity,
+        price: calculatedPrice,
+        image_url: formData.image_url || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (!isImported) {
+        updatePayload.provider_id = formData.provider_id || null;
+      }
       const { error } = await supabase
         .from("services")
-        .update({
-          name: formData.name,
-          description: formData.description,
-          category: formData.category as any,
-          provider_id: formData.provider_id || null,
-          min_quantity: formData.min_quantity,
-          max_quantity: formData.max_quantity,
-          price: calculatedPrice,
-          image_url: formData.image_url || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", service.id);
 
       if (error) throw error;
@@ -279,10 +286,10 @@ export const ServiceEditSheet = ({
                   <SheetTitle className="text-xl truncate">
                     {formData.name || "Edit Service"}
                   </SheetTitle>
-                  <SheetDescription className="flex flex-wrap items-center gap-2 mt-2">
+                <SheetDescription className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge variant="outline" className="text-xs font-mono">
                       <Hash className="w-3 h-3 mr-0.5" />
-                      {service.id.slice(0, 8)}
+                      {service.provider_service_id || service.id.slice(0, 8)}
                     </Badge>
                     {providerName && (
                       <Badge variant="secondary" className="text-xs">
@@ -352,22 +359,32 @@ export const ServiceEditSheet = ({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
-                        <Select
-                          value={formData.provider_id || "__none__"}
-                          onValueChange={(v) => handleChange("provider_id", v === "__none__" ? "" : v)}
-                        >
-                          <SelectTrigger className="bg-background/50">
-                            <SelectValue placeholder="Select provider" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">No Provider</SelectItem>
-                            {providers.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {/* Lock provider for imported services */}
+                        {service?.provider_service_id || service?.provider_service_ref ? (
+                          <div className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 border border-border/50">
+                            <Badge variant="secondary" className="text-xs">
+                              {providerName || providers.find(p => p.id === formData.provider_id)?.name || 'Linked Provider'}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground ml-auto">Imported — locked</span>
+                          </div>
+                        ) : (
+                          <Select
+                            value={formData.provider_id || "__none__"}
+                            onValueChange={(v) => handleChange("provider_id", v === "__none__" ? "" : v)}
+                          >
+                            <SelectTrigger className="bg-background/50">
+                              <SelectValue placeholder="Select provider" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">No Provider</SelectItem>
+                              {providers.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </CardContent>
                     </Card>
                     

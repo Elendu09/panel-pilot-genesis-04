@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock, Timer } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Loader2, CreditCard, ExternalLink, CheckCircle2, Shield, Clock, Sparkles, Lock, Timer, AlertTriangle } from "lucide-react";
 import { SlideToUnlock } from './SlideToUnlock';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +31,10 @@ interface OnboardingPaymentStepProps {
   slideUnlocked?: boolean;
   verifying?: boolean;
   verificationSecondsLeft?: number;
+  verificationTimedOut?: boolean;
   onCancelVerification?: () => void;
+  onKeepWaiting?: () => void;
+  onContinueFreePlan?: () => void;
 }
 
 const planPrices = { basic: 5, pro: 15 };
@@ -46,7 +50,7 @@ const planGradient = {
 export const OnboardingPaymentStep = ({ 
   selectedPlan, panelId, onPaymentSuccess, onSkip, paymentCompleted = false, trialStarted = false,
   onSlideUnlocked, slideUnlocked = false, verifying = false, verificationSecondsLeft = 0,
-  onCancelVerification
+  verificationTimedOut = false, onCancelVerification, onKeepWaiting, onContinueFreePlan
 }: OnboardingPaymentStepProps) => {
   const { toast } = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -224,7 +228,36 @@ export const OnboardingPaymentStep = ({
     );
   }
 
+  // Timeout dialog — shown when verification polling exhausted without confirmation
+  const timeoutDialog = (
+    <Dialog open={verificationTimedOut} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Payment Still Processing
+          </DialogTitle>
+          <DialogDescription>
+            We haven't received confirmation yet. Your payment may still be processing. You can keep waiting or continue with a free 3-day trial while we finalize.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button onClick={onKeepWaiting} variant="outline" className="w-full gap-2">
+            <Timer className="w-4 h-4" />
+            Keep Waiting (retry verification)
+          </Button>
+          <Button onClick={onContinueFreePlan} className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white">
+            <Clock className="w-4 h-4" />
+            Continue with Free Plan (3-day trial)
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
+    <>
+    {timeoutDialog}
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-2">
@@ -417,5 +450,6 @@ export const OnboardingPaymentStep = ({
         )}
       </div>
     </div>
+    </>
   );
 };

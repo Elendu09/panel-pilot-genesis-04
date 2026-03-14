@@ -77,6 +77,7 @@ const PanelOnboardingV2 = () => {
   const [trialPlan, setTrialPlan] = useState<'basic' | 'pro' | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [verificationSecondsLeft, setVerificationSecondsLeft] = useState(0);
+  const [verificationTimedOut, setVerificationTimedOut] = useState(false);
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const verificationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [currency, setCurrency] = useState('USD');
@@ -325,10 +326,7 @@ const PanelOnboardingV2 = () => {
         verificationTimerRef.current = null;
         setIsVerifyingPayment(false);
         setVerificationSecondsLeft(0);
-        toast({
-          title: 'Payment Processing',
-          description: 'Your payment is being processed. It may take a moment to confirm. You can proceed or wait.',
-        });
+        setVerificationTimedOut(true);
       }
     }, 5000);
   };
@@ -933,7 +931,37 @@ const PanelOnboardingV2 = () => {
               trialStarted={trialStarted}
               verifying={isVerifyingPayment}
               verificationSecondsLeft={verificationSecondsLeft}
+              verificationTimedOut={verificationTimedOut}
               onCancelVerification={cancelPaymentVerification}
+              onKeepWaiting={() => {
+                setVerificationTimedOut(false);
+                startPaymentVerification(null);
+              }}
+              onContinueFreePlan={async () => {
+                setVerificationTimedOut(false);
+                setTrialStarted(true);
+                setPaymentCompleted(false);
+                setTrialPlan(selectedPlan as 'basic' | 'pro');
+                setTrialSlideUnlocked(false);
+                markStepComplete(currentStep);
+                if (createdPanelIdRef.current) {
+                  const trialEndsAt = new Date();
+                  trialEndsAt.setDate(trialEndsAt.getDate() + 3);
+                  await supabase.from('panels').update({
+                    subscription_status: 'trial',
+                    subscription_tier: selectedPlan,
+                  }).eq('id', createdPanelIdRef.current);
+                  await supabase.from('panel_subscriptions').upsert({
+                    panel_id: createdPanelIdRef.current,
+                    plan_type: selectedPlan,
+                    price: selectedPlan === 'pro' ? 15 : 5,
+                    status: 'trial' as any,
+                    started_at: new Date().toISOString(),
+                    expires_at: trialEndsAt.toISOString(),
+                    trial_ends_at: trialEndsAt.toISOString(),
+                  }, { onConflict: 'panel_id' });
+                }
+              }}
               onSlideUnlocked={() => setTrialSlideUnlocked(true)}
               slideUnlocked={trialSlideUnlocked}
               onSkip={async () => {

@@ -658,9 +658,10 @@ const ProviderManagement = () => {
           description: errorMsg
         });
       } else {
+        const skippedMsg = summary.totalSkipped ? ` (${summary.totalSkipped} skipped — plan limit reached)` : '';
         toast({ 
           title: "Services Imported", 
-          description: `${summary.totalNew} new services added, ${summary.totalUpdated} updated${allErrors.length > 0 ? ` (${allErrors.length} warnings)` : ''}` 
+          description: `${summary.totalNew} new services added, ${summary.totalUpdated} updated${skippedMsg}${allErrors.length > 0 ? ` (${allErrors.length} warnings)` : ''}` 
         });
       }
 

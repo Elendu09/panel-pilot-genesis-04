@@ -1642,6 +1642,7 @@ export type Database = {
           quantity: number
           remains: number | null
           service_id: string | null
+          service_name: string | null
           start_count: number | null
           started_at: string | null
           status: Database["public"]["Enums"]["order_status"] | null
@@ -1665,6 +1666,7 @@ export type Database = {
           quantity: number
           remains?: number | null
           service_id?: string | null
+          service_name?: string | null
           start_count?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
@@ -1688,6 +1690,7 @@ export type Database = {
           quantity?: number
           remains?: number | null
           service_id?: string | null
+          service_name?: string | null
           start_count?: number | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null

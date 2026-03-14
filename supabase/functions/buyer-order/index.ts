@@ -230,27 +230,37 @@ serve(async (req) => {
 
     const orderStatus = paymentType === 'direct' ? 'awaiting_payment' : 'pending';
     const providerCostAtOrder = service.provider_cost || service.cost_usd || 0;
+    
+    const orderPayload: Record<string, any> = {
+      order_number: orderNumber,
+      panel_id: panelId,
+      buyer_id: buyerId,
+      service_id: serviceId,
+      target_url: targetUrl,
+      quantity,
+      price,
+      status: orderStatus,
+      progress: 0,
+      notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
+      provider_cost: providerCostAtOrder,
+      provider_id: service.provider_id || null,
+    };
+
+    // Only include service_name if the column exists (safe for schema drift)
+    if (service.name) {
+      orderPayload.service_name = service.name;
+    }
+
+    console.log(`[buyer-order] Inserting order payload:`, JSON.stringify(orderPayload));
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert({
-        order_number: orderNumber,
-        panel_id: panelId,
-        buyer_id: buyerId,
-        service_id: serviceId,
-        service_name: service.name || null,
-        target_url: targetUrl,
-        quantity,
-        price,
-        status: orderStatus,
-        progress: 0,
-        notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
-        provider_cost: providerCostAtOrder,
-        provider_id: service.provider_id || null,
-      })
+      .insert(orderPayload)
       .select()
       .single();
 
     if (orderError) {
+      console.error(`[buyer-order] Order insert failed:`, orderError.message, orderError.details, orderError.hint);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to create order', details: orderError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

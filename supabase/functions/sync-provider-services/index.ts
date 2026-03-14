@@ -12,6 +12,7 @@ interface SyncResult {
   servicesUpdated: number;
   pricesChanged: number;
   newServices: number;
+  skippedLimit: number;
   errors: string[];
 }
 
@@ -337,6 +338,7 @@ serve(async (req) => {
         servicesUpdated: 0,
         pricesChanged: 0,
         newServices: 0,
+        skippedLimit: 0,
         errors: [],
       };
 
@@ -450,10 +452,10 @@ serve(async (req) => {
 
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
-        // Get existing services for this panel
+        // Get existing services for this panel + THIS SPECIFIC PROVIDER (composite key)
         const providerServiceIds = providerServices.map(s => String(s.service));
         
-        // Fetch in batches
+        // Fetch in batches - use composite key (panel_id, provider_id, provider_service_id)
         const batchSize = 500;
         const allExistingServices: any[] = [];
         
@@ -463,6 +465,7 @@ serve(async (req) => {
             .from('services')
             .select('*')
             .eq('panel_id', panelId)
+            .eq('provider_id', provider.id)
             .in('provider_service_id', batch);
           
           if (!batchError && batchServices) {
@@ -473,6 +476,24 @@ serve(async (req) => {
         const existingByProviderServiceId = new Map(
           allExistingServices.map(s => [s.provider_service_id, s])
         );
+
+        // Plan service cap enforcement
+        const SERVICE_LIMITS: Record<string, number> = { free: 100, basic: 5000, pro: 10000 };
+        const { data: panelInfo } = await supabase
+          .from('panels')
+          .select('subscription_tier')
+          .eq('id', panelId)
+          .single();
+        const tier = (panelInfo?.subscription_tier || 'free') as string;
+        const maxServices = SERVICE_LIMITS[tier] || 100;
+        
+        // Count existing total services for this panel
+        const { count: existingTotalCount } = await supabase
+          .from('services')
+          .select('id', { count: 'exact', head: true })
+          .eq('panel_id', panelId);
+        const currentTotal = existingTotalCount || 0;
+        let remainingSlots = Math.max(0, maxServices - currentTotal);
 
         console.log(`Found ${allExistingServices.length} existing services to update`);
 
@@ -542,11 +563,17 @@ serve(async (req) => {
               toUpdate.push({ ...serviceData, id: existing.id });
               result.servicesUpdated++;
             } else if (importNew) {
-              toInsert.push({
-                ...serviceData,
-                created_at: new Date().toISOString(),
-              });
-              result.newServices++;
+              // Enforce plan service cap
+              if (remainingSlots <= 0) {
+                result.skippedLimit++;
+              } else {
+                toInsert.push({
+                  ...serviceData,
+                  created_at: new Date().toISOString(),
+                });
+                result.newServices++;
+                remainingSlots--;
+              }
             }
           } catch (serviceError: any) {
             console.error(`Error processing service ${providerService.service}:`, serviceError);
@@ -625,8 +652,9 @@ serve(async (req) => {
     const totalNew = results.reduce((sum, r) => sum + r.newServices, 0);
     const totalUpdated = results.reduce((sum, r) => sum + r.servicesUpdated, 0);
     const totalPriceChanges = results.reduce((sum, r) => sum + r.pricesChanged, 0);
+    const totalSkipped = results.reduce((sum, r) => sum + r.skippedLimit, 0);
 
-    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated, ${totalPriceChanges} price changes`);
+    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated, ${totalPriceChanges} price changes, ${totalSkipped} skipped (limit)`);
 
     return new Response(
       JSON.stringify({ 
@@ -636,6 +664,7 @@ serve(async (req) => {
           totalNew,
           totalUpdated,
           totalPriceChanges,
+          totalSkipped,
           totalProviders: results.length,
         },
         syncedAt: new Date().toISOString(),

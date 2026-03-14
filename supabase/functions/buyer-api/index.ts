@@ -379,20 +379,27 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   const orderNumber = 'ORD' + Date.now().toString().slice(-10) + Math.random().toString(36).slice(-4).toUpperCase();
 
   // Create order
+  const orderPayload: Record<string, any> = {
+    panel_id: panelId,
+    service_id: serviceData.id,
+    order_number: orderNumber,
+    target_url: link,
+    quantity: orderQuantity,
+    price: price,
+    status: 'pending',
+    buyer_id: buyerId || null,
+    notes: comments || null
+  };
+  // Include service_name if available (column may or may not exist)
+  if (serviceData.name) {
+    orderPayload.service_name = serviceData.name;
+  }
+
+  console.log(`[buyer-api] Creating order payload:`, JSON.stringify(orderPayload));
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .insert({
-      panel_id: panelId,
-      service_id: serviceData.id,
-      service_name: serviceData.name || null,
-      order_number: orderNumber,
-      target_url: link,
-      quantity: orderQuantity,
-      price: price,
-      status: 'pending',
-      buyer_id: buyerId || null,
-      notes: comments || null
-    })
+    .insert(orderPayload)
     .select('id, order_number')
     .single();
 

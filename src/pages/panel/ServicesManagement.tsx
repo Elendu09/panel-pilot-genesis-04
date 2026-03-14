@@ -452,6 +452,7 @@ const ServicesManagement = () => {
               category: serviceItem.category,
               provider: serviceItem.provider,
               provider_id: serviceItem.providerId,
+              provider_service_id: serviceItem.providerServiceId || undefined,
               price: serviceItem.price,
               originalPrice: serviceItem.originalPrice,
               minQty: serviceItem.minQty,
@@ -1430,6 +1431,7 @@ const ServicesManagement = () => {
       category: service.category,
       provider: service.provider,
       provider_id: service.providerId,
+      provider_service_id: service.providerServiceId || undefined,
       price: service.price,
       originalPrice: service.originalPrice,
       minQty: service.minQty,
@@ -2965,6 +2967,7 @@ const ServicesManagement = () => {
             if (!open) setEditingService(null);
           }}
           service={editingService}
+          providerName={editingService.provider || undefined}
           onSave={handleSaveEdit}
         />
       )}
