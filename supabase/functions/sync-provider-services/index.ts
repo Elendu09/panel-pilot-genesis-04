@@ -338,6 +338,7 @@ serve(async (req) => {
         servicesUpdated: 0,
         pricesChanged: 0,
         newServices: 0,
+        skippedLimit: 0,
         errors: [],
       };
 
