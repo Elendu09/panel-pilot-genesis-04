@@ -281,10 +281,10 @@ export const ServiceEditSheet = ({
                   <SheetTitle className="text-xl truncate">
                     {formData.name || "Edit Service"}
                   </SheetTitle>
-                  <SheetDescription className="flex flex-wrap items-center gap-2 mt-2">
+                <SheetDescription className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge variant="outline" className="text-xs font-mono">
                       <Hash className="w-3 h-3 mr-0.5" />
-                      {service.id.slice(0, 8)}
+                      {service.provider_service_id || service.id.slice(0, 8)}
                     </Badge>
                     {providerName && (
                       <Badge variant="secondary" className="text-xs">
