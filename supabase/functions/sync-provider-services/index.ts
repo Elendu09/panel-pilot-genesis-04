@@ -12,6 +12,7 @@ interface SyncResult {
   servicesUpdated: number;
   pricesChanged: number;
   newServices: number;
+  skippedLimit: number;
   errors: string[];
 }
 
