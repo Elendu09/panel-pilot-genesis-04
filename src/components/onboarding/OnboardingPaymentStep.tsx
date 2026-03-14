@@ -450,5 +450,6 @@ export const OnboardingPaymentStep = ({
         )}
       </div>
     </div>
+    </>
   );
 };
