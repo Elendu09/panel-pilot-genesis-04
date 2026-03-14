@@ -652,8 +652,9 @@ serve(async (req) => {
     const totalNew = results.reduce((sum, r) => sum + r.newServices, 0);
     const totalUpdated = results.reduce((sum, r) => sum + r.servicesUpdated, 0);
     const totalPriceChanges = results.reduce((sum, r) => sum + r.pricesChanged, 0);
+    const totalSkipped = results.reduce((sum, r) => sum + r.skippedLimit, 0);
 
-    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated, ${totalPriceChanges} price changes`);
+    console.log(`Sync completed: ${totalNew} new, ${totalUpdated} updated, ${totalPriceChanges} price changes, ${totalSkipped} skipped (limit)`);
 
     return new Response(
       JSON.stringify({ 
