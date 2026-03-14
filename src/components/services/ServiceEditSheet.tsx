@@ -60,6 +60,8 @@ interface ServiceEditSheetProps {
     category: string;
     provider?: string;
     provider_id?: string;
+    provider_service_id?: string;
+    provider_service_ref?: string;
     price: number;
     originalPrice?: number;
     minQty?: number;
