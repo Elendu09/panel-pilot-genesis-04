@@ -2967,6 +2967,7 @@ const ServicesManagement = () => {
             if (!open) setEditingService(null);
           }}
           service={editingService}
+          providerName={editingService.provider || undefined}
           onSave={handleSaveEdit}
         />
       )}
