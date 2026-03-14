@@ -563,11 +563,17 @@ serve(async (req) => {
               toUpdate.push({ ...serviceData, id: existing.id });
               result.servicesUpdated++;
             } else if (importNew) {
-              toInsert.push({
-                ...serviceData,
-                created_at: new Date().toISOString(),
-              });
-              result.newServices++;
+              // Enforce plan service cap
+              if (remainingSlots <= 0) {
+                result.skippedLimit++;
+              } else {
+                toInsert.push({
+                  ...serviceData,
+                  created_at: new Date().toISOString(),
+                });
+                result.newServices++;
+                remainingSlots--;
+              }
             }
           } catch (serviceError: any) {
             console.error(`Error processing service ${providerService.service}:`, serviceError);
