@@ -325,10 +325,7 @@ const PanelOnboardingV2 = () => {
         verificationTimerRef.current = null;
         setIsVerifyingPayment(false);
         setVerificationSecondsLeft(0);
-        toast({
-          title: 'Payment Processing',
-          description: 'Your payment is being processed. It may take a moment to confirm. You can proceed or wait.',
-        });
+        setVerificationTimedOut(true);
       }
     }, 5000);
   };
