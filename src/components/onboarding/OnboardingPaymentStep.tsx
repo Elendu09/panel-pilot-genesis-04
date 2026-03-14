@@ -31,7 +31,10 @@ interface OnboardingPaymentStepProps {
   slideUnlocked?: boolean;
   verifying?: boolean;
   verificationSecondsLeft?: number;
+  verificationTimedOut?: boolean;
   onCancelVerification?: () => void;
+  onKeepWaiting?: () => void;
+  onContinueFreePlan?: () => void;
 }
 
 const planPrices = { basic: 5, pro: 15 };
