@@ -228,6 +228,33 @@ export const OnboardingPaymentStep = ({
     );
   }
 
+  // Timeout dialog — shown when verification polling exhausted without confirmation
+  const timeoutDialog = (
+    <Dialog open={verificationTimedOut} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Payment Still Processing
+          </DialogTitle>
+          <DialogDescription>
+            We haven't received confirmation yet. Your payment may still be processing. You can keep waiting or continue with a free 3-day trial while we finalize.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button onClick={onKeepWaiting} variant="outline" className="w-full gap-2">
+            <Timer className="w-4 h-4" />
+            Keep Waiting (retry verification)
+          </Button>
+          <Button onClick={onContinueFreePlan} className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white">
+            <Clock className="w-4 h-4" />
+            Continue with Free Plan (3-day trial)
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   return (
     <div className="space-y-6">
       <div className="text-center">
