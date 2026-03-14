@@ -450,10 +450,10 @@ serve(async (req) => {
 
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
-        // Get existing services for this panel
+        // Get existing services for this panel + THIS SPECIFIC PROVIDER (composite key)
         const providerServiceIds = providerServices.map(s => String(s.service));
         
-        // Fetch in batches
+        // Fetch in batches - use composite key (panel_id, provider_id, provider_service_id)
         const batchSize = 500;
         const allExistingServices: any[] = [];
         
@@ -463,6 +463,7 @@ serve(async (req) => {
             .from('services')
             .select('*')
             .eq('panel_id', panelId)
+            .eq('provider_id', provider.id)
             .in('provider_service_id', batch);
           
           if (!batchError && batchServices) {
@@ -473,6 +474,24 @@ serve(async (req) => {
         const existingByProviderServiceId = new Map(
           allExistingServices.map(s => [s.provider_service_id, s])
         );
+
+        // Plan service cap enforcement
+        const SERVICE_LIMITS: Record<string, number> = { free: 100, basic: 5000, pro: 10000 };
+        const { data: panelInfo } = await supabase
+          .from('panels')
+          .select('subscription_tier')
+          .eq('id', panelId)
+          .single();
+        const tier = (panelInfo?.subscription_tier || 'free') as string;
+        const maxServices = SERVICE_LIMITS[tier] || 100;
+        
+        // Count existing total services for this panel
+        const { count: existingTotalCount } = await supabase
+          .from('services')
+          .select('id', { count: 'exact', head: true })
+          .eq('panel_id', panelId);
+        const currentTotal = existingTotalCount || 0;
+        let remainingSlots = Math.max(0, maxServices - currentTotal);
 
         console.log(`Found ${allExistingServices.length} existing services to update`);
 
