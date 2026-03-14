@@ -452,6 +452,7 @@ const ServicesManagement = () => {
               category: serviceItem.category,
               provider: serviceItem.provider,
               provider_id: serviceItem.providerId,
+              provider_service_id: serviceItem.providerServiceId || undefined,
               price: serviceItem.price,
               originalPrice: serviceItem.originalPrice,
               minQty: serviceItem.minQty,
