@@ -664,6 +664,7 @@ serve(async (req) => {
           totalNew,
           totalUpdated,
           totalPriceChanges,
+          totalSkipped,
           totalProviders: results.length,
         },
         syncedAt: new Date().toISOString(),
