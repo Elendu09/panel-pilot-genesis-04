@@ -1,99 +1,96 @@
 
+Goal: resolve tenant fast-order failures, enforce imported-service provider integrity, harden onboarding payment verification UX/finalization, and make provider re-import reliable with plan limits.
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+1) Fast Order “Failed to create order” (critical backend fix)
+- Root cause found: `buyer-order` inserts `orders.service_name`, but the connected DB currently does not have `service_name` on `orders` (confirmed from schema query).
+- Implement:
+  - Add idempotent migration to ensure `public.orders.service_name text` exists and backfill from `services.name`.
+  - Keep `buyer-order`/`buyer-api` writing `service_name` for historical integrity.
+  - Add explicit edge-function error logging around order insert payload + DB error text for faster production debugging.
 
-## Overview
+Files:
+- `supabase/migrations/*_ensure_orders_service_name.sql`
+- `supabase/functions/buyer-order/index.ts`
+- `supabase/functions/buyer-api/index.ts`
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+2) Imported services: lock provider field + show provider service ID
+(Using your chosen behavior: “Lock provider only”)
+- In edit sheet, detect imported service (`provider_service_id` or `provider_service_ref` present).
+- Provider section:
+  - Imported service: show read-only provider name badge/text (no dropdown).
+  - Non-imported/manual service: keep dropdown.
+- Header ID badge:
+  - Show provider service ID first (e.g. `#2c7e48a2`), fallback to internal UUID only if missing.
+- Preserve provider linkage on save for imported services (never change `provider_id` there).
 
----
+Files:
+- `src/pages/panel/ServicesManagement.tsx` (pass provider service metadata to edit sheet)
+- `src/components/services/ServiceEditSheet.tsx` (read-only provider UI for imported services)
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+3) Onboarding payment verification: reliable finalize + timeout decision dialog
+(Using your chosen behavior: “Manual choice dialog”)
+- Replace table-only polling with gateway verification call:
+  - Use `process-payment` with `{ action: 'verify-payment', transactionId }` each poll tick.
+  - Keep fallback checks on `transactions.status` and `panels.subscription_status`.
+- Robust return parsing:
+  - Detect payment return via any of: `payment=success*`, `success=true`, `status=successful`, `transaction_id`, `tx_ref`.
+  - Parse malformed/double-`?` callbacks safely.
+- Timeout behavior:
+  - On 30s timeout, open dialog with:
+    - “Keep waiting” (resume verification)
+    - “Continue with free plan (3-day trial)” (set trial state and unlock Next)
+- UI controls:
+  - During verification: keep Back replaced by red Cancel.
+  - After successful payment: show completed state + enabled Next.
+  - If continued as trial: Next label changes to “Payment still processing, continue with free plan” until payment is confirmed later.
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+Files:
+- `src/pages/panel/PanelOnboardingV2.tsx`
+- `src/components/onboarding/OnboardingPaymentStep.tsx`
+- `supabase/functions/process-payment/index.ts` (safe return URL query appender + verification resiliency)
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+4) Provider re-import reliability (actual persistence + sync-safe mapping)
+- Fix sync key collisions in `sync-provider-services`:
+  - Match existing rows by `(panel_id, provider_id, provider_service_id)` (not only provider_service_id).
+  - Prevent cross-provider overwrite when two providers share numeric IDs.
+- Enforce plan service caps in sync path:
+  - Free 100, Basic 5000, Pro 10000 (respect remaining capacity before inserts).
+- Improve import result contract:
+  - Return `processed`, `inserted`, `updated`, `skipped_limit`, `failed`, and per-batch errors.
+- ProviderManagement import progress:
+  - Replace fake progress with real counters from function response.
+  - Show actionable error summary when imported count is zero.
+- Ensure imported services keep provider external IDs and stay order-forwarding ready.
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+Files:
+- `supabase/functions/sync-provider-services/index.ts`
+- `src/pages/panel/ProviderManagement.tsx`
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+5) Consistency checks for tenant ordering + provider sync
+- Validate that imported services have:
+  - `provider_id` set
+  - `provider_service_id` = upstream provider ID
+  - category normalized to valid enum values
+- Confirm buyer order forwarding still resolves external service ID correctly after re-imports (`buyer-order.resolveExternalServiceId` path).
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+Files:
+- `supabase/functions/buyer-order/index.ts` (verification logs only if needed)
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+Technical details (concise)
+- Main fast-order blocker is schema drift (`orders.service_name` absent), not UI.
+- Main re-import blocker is identity mismatch in sync (`provider_service_id` alone is not unique across providers).
+- Onboarding verification should treat webhook as eventual consistency and actively finalize via `process-payment verify-payment`.
+- Imported-service provider mutability is causing mapping corruption risk; lock provider edit only for imported services (as requested).
 
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
-
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
-
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
-
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
-
----
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
-
+Acceptance checks
+- Fast order: complete all steps and pay via balance/direct without “Failed to create order”.
+- Edit imported service: provider shown read-only, no dropdown; displayed ID equals provider service ID.
+- Onboarding:
+  - verifying state shows timer + cancel replaces back;
+  - timeout opens manual choice dialog;
+  - successful payment shows completed state and Next works;
+  - “continue with free plan” path allows progress while payment can still finalize later.
+- Re-import:
+  - counts reflect actual DB writes;
+  - no silent zero-import success;
+  - imported services appear in Services Management and tenant storefront with correct provider linkage.
