@@ -130,6 +130,12 @@ serve(async (req) => {
       case 'cancel':
         response = await handleCancel(supabase, panelId, params);
         break;
+      case 'get-orders':
+        response = await handleGetOrders(supabase, panelId, buyerId);
+        break;
+      case 'get-order':
+        response = await handleGetOrder(supabase, panelId, buyerId, params);
+        break;
       default:
         response = errorResponse(`Unknown action: ${action}`);
     }
