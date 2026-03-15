@@ -32,6 +32,7 @@ interface LiveOrderTrackerProps {
   orderId: string;
   orderNumber: string;
   themeMode?: string;
+  buyerApiKey?: string;
   onTrackAnother?: () => void;
   onViewAllOrders?: () => void;
 }
