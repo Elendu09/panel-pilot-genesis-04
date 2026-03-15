@@ -150,3 +150,6 @@ verify_jwt = false
 [functions.team-data]
 verify_jwt = false
 
+[functions.sync-orders]
+verify_jwt = false
+

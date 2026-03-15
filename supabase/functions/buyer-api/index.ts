@@ -130,6 +130,12 @@ serve(async (req) => {
       case 'cancel':
         response = await handleCancel(supabase, panelId, params);
         break;
+      case 'get-orders':
+        response = await handleGetOrders(supabase, panelId, buyerId);
+        break;
+      case 'get-order':
+        response = await handleGetOrder(supabase, panelId, buyerId, params);
+        break;
       default:
         response = errorResponse(`Unknown action: ${action}`);
     }
@@ -655,6 +661,61 @@ async function handleCancel(supabase: any, panelId: string, params: BuyerApiRequ
     }
   }
   return jsonResponse(results);
+}
+
+// Get all orders for a buyer
+async function handleGetOrders(supabase: any, panelId: string, buyerId: string | null) {
+  if (!buyerId) return errorResponse("Buyer authentication required");
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, service:services(name, provider_service_id)')
+    .eq('panel_id', panelId)
+    .eq('buyer_id', buyerId)
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    console.error('[buyer-api] get-orders error:', error);
+    return errorResponse("Failed to fetch orders");
+  }
+
+  return jsonResponse(data || []);
+}
+
+// Get single order for a buyer
+async function handleGetOrder(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  const orderId = params.orderId || params.order_id;
+  const orderNumber = params.orderNumber || params.order_number;
+
+  if (!orderId && !orderNumber) return errorResponse("Order ID or order number required");
+
+  let query = supabase
+    .from('orders')
+    .select('*')
+    .eq('panel_id', panelId);
+
+  if (orderId) {
+    query = query.eq('id', orderId);
+  } else {
+    query = query.eq('order_number', orderNumber);
+  }
+
+  // Only enforce buyer ownership if buyerId is present
+  if (buyerId) {
+    query = query.eq('buyer_id', buyerId);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error('[buyer-api] get-order error:', error);
+    return errorResponse("Failed to fetch order");
+  }
+
+  if (!data) return errorResponse("Order not found");
+
+  return jsonResponse(data);
 }
 
 // Helper functions

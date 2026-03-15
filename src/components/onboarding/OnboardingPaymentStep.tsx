@@ -122,6 +122,10 @@ export const OnboardingPaymentStep = ({
       });
       if (fnError) throw fnError;
       if (data?.success && (data?.redirectUrl || data?.url)) {
+        // Store transactionId in localStorage before redirect so we can verify on return
+        if (data.transactionId) {
+          localStorage.setItem('onboarding_payment_tx', data.transactionId);
+        }
         if (panelId) {
           await supabase.from('panels').update({ 
             subscription_tier: selectedPlan, subscription_status: 'pending'

@@ -282,6 +282,19 @@ const PanelOnboardingV2 = () => {
         if (txData?.status === 'completed') confirmed = true;
       }
 
+      // Fallback: find the most recent pending subscription transaction for this panel
+      if (!confirmed && !txId && createdPanelIdRef.current) {
+        const { data: recentTx } = await supabase
+          .from('transactions')
+          .select('id, status')
+          .eq('panel_id', createdPanelIdRef.current)
+          .eq('type', 'subscription')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (recentTx?.status === 'completed') confirmed = true;
+      }
+
       // Also check panel subscription status
       if (!confirmed && createdPanelIdRef.current) {
         const { data: panelData } = await supabase
@@ -343,14 +356,19 @@ const PanelOnboardingV2 = () => {
     if (!isPaymentReturn) return;
     paymentDetectedRef.current = true;
 
-    // Extract transaction_id robustly
+    // Extract transaction_id robustly from URL params
     let txId = params.get('transaction_id') || params.get('tx_ref');
     if (!txId && paymentParam?.includes('transaction_id=')) {
       const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
       txId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
     }
+    
+    // Fallback: read from localStorage (stored before redirect)
+    if (!txId) {
+      txId = localStorage.getItem('onboarding_payment_tx');
+    }
 
-    // Clean URL
+    // Clean URL and stored tx
     window.history.replaceState({}, '', '/panel/onboarding');
 
     // Start verification
