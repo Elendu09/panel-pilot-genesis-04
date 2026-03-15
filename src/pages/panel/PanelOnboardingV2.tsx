@@ -343,14 +343,19 @@ const PanelOnboardingV2 = () => {
     if (!isPaymentReturn) return;
     paymentDetectedRef.current = true;
 
-    // Extract transaction_id robustly
+    // Extract transaction_id robustly from URL params
     let txId = params.get('transaction_id') || params.get('tx_ref');
     if (!txId && paymentParam?.includes('transaction_id=')) {
       const innerParams = new URLSearchParams(paymentParam.replace(/^success\??/, ''));
       txId = innerParams.get('transaction_id') || innerParams.get('tx_ref');
     }
+    
+    // Fallback: read from localStorage (stored before redirect)
+    if (!txId) {
+      txId = localStorage.getItem('onboarding_payment_tx');
+    }
 
-    // Clean URL
+    // Clean URL and stored tx
     window.history.replaceState({}, '', '/panel/onboarding');
 
     // Start verification

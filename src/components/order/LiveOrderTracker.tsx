@@ -106,23 +106,40 @@ export const LiveOrderTracker = ({
   const [copied, setCopied] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  // Fetch initial order data
+  // Fetch initial order data via edge function (bypasses RLS)
   useEffect(() => {
     const fetchOrder = async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching order:', error);
+      try {
+        // Get buyer API key from localStorage (set during buyer auth)
+        const buyerApiKey = localStorage.getItem('buyer_api_key') || '';
+        const panelApiKey = localStorage.getItem('panel_api_key') || '';
+        const apiKey = buyerApiKey || panelApiKey;
+        
+        if (apiKey) {
+          // Use buyer-api edge function to bypass RLS
+          const { data, error } = await supabase.functions.invoke('buyer-api', {
+            body: { key: apiKey, action: 'get-order', orderId }
+          });
+          
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          setOrder(data);
+        } else {
+          // Fallback: direct query (may fail due to RLS, but try)
+          const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .single();
+          if (error) throw error;
+          setOrder(data);
+        }
+      } catch (err: any) {
+        console.error('Error fetching order:', err);
         toast({ title: 'Failed to load order', variant: 'destructive' });
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      setOrder(data);
-      setLoading(false);
     };
 
     fetchOrder();
