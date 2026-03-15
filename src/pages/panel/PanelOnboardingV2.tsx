@@ -282,6 +282,19 @@ const PanelOnboardingV2 = () => {
         if (txData?.status === 'completed') confirmed = true;
       }
 
+      // Fallback: find the most recent pending subscription transaction for this panel
+      if (!confirmed && !txId && createdPanelIdRef.current) {
+        const { data: recentTx } = await supabase
+          .from('transactions')
+          .select('id, status')
+          .eq('panel_id', createdPanelIdRef.current)
+          .eq('type', 'subscription')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (recentTx?.status === 'completed') confirmed = true;
+      }
+
       // Also check panel subscription status
       if (!confirmed && createdPanelIdRef.current) {
         const { data: panelData } = await supabase
