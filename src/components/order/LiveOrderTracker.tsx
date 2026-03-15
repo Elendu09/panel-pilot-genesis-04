@@ -99,6 +99,7 @@ export const LiveOrderTracker = ({
   orderId, 
   orderNumber, 
   themeMode = 'dark',
+  buyerApiKey,
   onTrackAnother,
   onViewAllOrders
 }: LiveOrderTrackerProps) => {
