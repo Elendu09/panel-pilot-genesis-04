@@ -1625,6 +1625,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       orderId={placedOrderId}
                       orderNumber={placedOrderNumber}
                       themeMode={themeMode}
+                      buyerApiKey={buyer?.api_key || undefined}
                       onTrackAnother={() => {
                         // Reset all state for new order
                         setCurrentStep(1);
