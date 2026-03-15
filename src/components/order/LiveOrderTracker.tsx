@@ -112,10 +112,7 @@ export const LiveOrderTracker = ({
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        // Get buyer API key from localStorage (set during buyer auth)
-        const buyerApiKey = localStorage.getItem('buyer_api_key') || '';
-        const panelApiKey = localStorage.getItem('panel_api_key') || '';
-        const apiKey = buyerApiKey || panelApiKey;
+        const apiKey = buyerApiKey || localStorage.getItem('buyer_api_key') || localStorage.getItem('panel_api_key') || '';
         
         if (apiKey) {
           // Use buyer-api edge function to bypass RLS
