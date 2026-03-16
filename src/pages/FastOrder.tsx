@@ -431,7 +431,7 @@ const FastOrderContent = () => {
     fetchPanelData();
   }, [resolvedPanelId]);
 
-  if (loading) {
+  if (loading || servicesLoading) {
     return (
       <div className="h-screen h-[100dvh] bg-background flex overflow-hidden">
         <div className="hidden lg:block w-72 border-r border-border p-6 flex-shrink-0">
