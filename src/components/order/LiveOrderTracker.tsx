@@ -102,6 +102,8 @@ export const LiveOrderTracker = ({
   orderNumber, 
   themeMode = 'dark',
   buyerApiKey,
+  buyerId,
+  panelId,
   onTrackAnother,
   onViewAllOrders
 }: LiveOrderTrackerProps) => {
@@ -117,7 +119,7 @@ export const LiveOrderTracker = ({
         const apiKey = buyerApiKey || localStorage.getItem('buyer_api_key') || localStorage.getItem('panel_api_key') || '';
         
         if (apiKey) {
-          // Use buyer-api edge function to bypass RLS
+          // Use buyer-api edge function with API key
           const { data, error } = await supabase.functions.invoke('buyer-api', {
             body: { key: apiKey, action: 'get-order', orderId }
           });
@@ -125,8 +127,23 @@ export const LiveOrderTracker = ({
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
           setOrder(data);
+        } else if (buyerId && panelId) {
+          // Fallback: use buyer-api with buyerId+panelId auth (no API key needed)
+          const { data, error } = await supabase.functions.invoke('buyer-api', {
+            body: { 
+              key: '__buyer_id_auth__', 
+              action: 'get-order', 
+              orderId,
+              buyerId,
+              panelId,
+            }
+          });
+          
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          setOrder(data);
         } else {
-          // Fallback: direct query (may fail due to RLS, but try)
+          // Last resort: direct query (may fail due to RLS)
           const { data, error } = await supabase
             .from('orders')
             .select('*')
@@ -144,7 +161,7 @@ export const LiveOrderTracker = ({
     };
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, buyerId, panelId]);
 
   // Subscribe to real-time updates
   useEffect(() => {
