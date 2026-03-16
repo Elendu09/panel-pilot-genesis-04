@@ -792,6 +792,7 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
       referral_count: 0,
       custom_discount: 0,
       referred_by: referrerId,
+      api_key: crypto.randomUUID(),
     })
     .select()
     .single();
@@ -902,6 +903,7 @@ async function handleGuestOrder(supabaseAdmin: any, body: any) {
       total_spent: 0,
       referral_count: 0,
       custom_discount: 0,
+      api_key: crypto.randomUUID(),
     })
     .select()
     .single();

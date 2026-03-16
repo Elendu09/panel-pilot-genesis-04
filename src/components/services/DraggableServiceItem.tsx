@@ -159,8 +159,13 @@ export const DraggableServiceItem = ({
             className="h-4 w-4"
           />
           <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 font-mono">
-            ID: {service.providerServiceId || service.displayId}
+            #{service.displayOrder || service.displayId}
           </Badge>
+          {service.providerServiceId && (
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 font-mono opacity-60">
+              P:{service.providerServiceId}
+            </Badge>
+          )}
           <div className="flex-1" />
           <Switch
             checked={service.status}
@@ -248,11 +253,18 @@ export const DraggableServiceItem = ({
         </div>
       </td>
 
-      {/* ID - Shows provider service ID for easy reference */}
+      {/* ID - Shows panel service ID and provider ID */}
       <td className="py-3 px-2">
-        <Badge variant="outline" className="text-xs font-mono bg-primary/5">
-          ID: {service.providerServiceId || service.displayId}
-        </Badge>
+        <div className="flex flex-col gap-0.5">
+          <Badge variant="outline" className="text-xs font-mono bg-primary/5 w-fit">
+            #{service.displayOrder || service.displayId}
+          </Badge>
+          {service.providerServiceId && (
+            <span className="text-[10px] text-muted-foreground font-mono">
+              Provider: {service.providerServiceId}
+            </span>
+          )}
+        </div>
       </td>
 
       {/* Service */}

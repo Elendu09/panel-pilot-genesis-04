@@ -79,29 +79,51 @@ serve(async (req) => {
 
     console.log(`[buyer-api] action=${action}`);
 
-    // Validate API key
+    // Validate API key — or use buyerId+panelId direct auth for order tracking
     let panelId: string | null = null;
     let buyerId: string | null = null;
     
-    const { data: panelKeyData } = await supabase
-      .from('panel_api_keys')
-      .select('panel_id, is_active')
-      .eq('api_key', key)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (panelKeyData) {
-      panelId = panelKeyData.panel_id;
-    } else {
-      const { data: buyerKeyData } = await supabase
+    // Special auth path: buyerId+panelId direct auth (for LiveOrderTracker without API key)
+    if (key === '__buyer_id_auth__' && (params as any).buyerId && (params as any).panelId) {
+      const directBuyerId = (params as any).buyerId;
+      const directPanelId = (params as any).panelId;
+      
+      // Validate buyer exists on this panel
+      const { data: buyerCheck } = await supabase
         .from('client_users')
-        .select('id, panel_id, api_key')
+        .select('id')
+        .eq('id', directBuyerId)
+        .eq('panel_id', directPanelId)
+        .maybeSingle();
+      
+      if (buyerCheck) {
+        panelId = directPanelId;
+        buyerId = directBuyerId;
+      }
+    }
+    
+    // Standard API key auth
+    if (!panelId) {
+      const { data: panelKeyData } = await supabase
+        .from('panel_api_keys')
+        .select('panel_id, is_active')
         .eq('api_key', key)
+        .eq('is_active', true)
         .maybeSingle();
 
-      if (buyerKeyData) {
-        panelId = buyerKeyData.panel_id;
-        buyerId = buyerKeyData.id;
+      if (panelKeyData) {
+        panelId = panelKeyData.panel_id;
+      } else {
+        const { data: buyerKeyData } = await supabase
+          .from('client_users')
+          .select('id, panel_id, api_key')
+          .eq('api_key', key)
+          .maybeSingle();
+
+        if (buyerKeyData) {
+          panelId = buyerKeyData.panel_id;
+          buyerId = buyerKeyData.id;
+        }
       }
     }
 
