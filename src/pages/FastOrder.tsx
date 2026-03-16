@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/use-theme';
 import { BuyerThemeWrapper } from '@/components/buyer-themes';
 import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
+import { useUnifiedServices } from '@/hooks/useUnifiedServices';
 
 interface Panel {
   id: string;
