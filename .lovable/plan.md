@@ -1,99 +1,51 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Fix Order Tracking, Service Count Mismatch, and Provider Service ID Mapping
 
-## Overview
+## Root Causes Found
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+### 1. "Failed to load order status" in Fast Order
+`LiveOrderTracker` relies on `buyer.api_key` to call `buyer-api` edge function. Only 4 of 11 buyers have API keys generated. Buyers created via guest signup or without explicit key generation have `api_key = null`, causing the edge function to return "Invalid API key" and the tracker to fail.
 
----
+**Fix**: Modify `LiveOrderTracker` to accept `buyerId` + `panelId` as props and add a new lightweight action `get-order-by-id` to `buyer-api` that authenticates via buyerId+panelId (already validated during order creation) instead of requiring an API key. Also ensure all new buyer accounts get an API key generated on creation.
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+### 2. Network/category count mismatch between Fast Order and New Order
+`FastOrder.tsx` fetches services with a direct Supabase query (line 408) which is limited to default 1000 rows. `BuyerNewOrder.tsx` uses `useUnifiedServices` hook which paginates up to 10,000 rows.
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+**Fix**: Replace the direct query in `FastOrder.tsx` with `useUnifiedServices` hook, consistent with all other buyer pages. Pass the unified services to `FastOrderSection` instead of the direct query results.
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+### 3. Provider service ID mapping — "Incorrect service ID" errors
+The current system stores `provider_service_id` correctly (e.g., "111" from upstream provider). The `resolveExternalServiceId` function correctly uses this for API requests. However, the user wants a clear **panel service ID** (sequential, human-readable number like "25", "26") shown to tenants — separate from the **provider service ID** used internally for API forwarding.
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+Currently, `display_order` exists but is only used for sorting, not as a tenant-facing ID. The user's reference screenshots show socpanel using sequential IDs.
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+**Fix**: Use `display_order` as the tenant-facing "Service ID" (rename/alias as `panel_service_id` in the UI). In Services Management, show both the panel service ID and the provider service ID. In tenant-facing pages (Fast Order, New Order, Services), show only the panel service ID. In order forwarding, continue using `provider_service_id` for API requests (no change needed).
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+Also: ensure `buyer-auth` guest-order flow generates an `api_key` for every new buyer.
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
-
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
-
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
-
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
-
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
-
----
-
-## Files to Change
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| `src/components/order/LiveOrderTracker.tsx` | Accept `buyerId`+`panelId` props; fetch order by passing these to edge function instead of requiring API key |
+| `supabase/functions/buyer-api/index.ts` | Add alternative auth path for `get-order` that accepts `buyerId`+`panelId` directly (validated pair) |
+| `src/pages/FastOrder.tsx` | Replace direct service query with `useUnifiedServices` hook for consistent counts |
+| `src/components/storefront/FastOrderSection.tsx` | Pass `buyerId`+`panelId` to `LiveOrderTracker` |
+| `supabase/functions/buyer-auth/index.ts` | Ensure guest-order creates `api_key` for new buyers |
+| `src/pages/panel/ServicesManagement.tsx` | Show `display_order` as "Panel Service ID" and `provider_service_id` as "Provider ID" in the table |
+
+## Technical Details
+
+**Order tracking auth bypass**: Instead of requiring API key, `LiveOrderTracker` passes `{ action: 'get-order', orderId, buyerId, panelId }`. The edge function validates that the order belongs to `buyerId` on `panelId` using service role. This is secure because the buyerId is from the authenticated buyer context, not user input.
+
+**Service count fix**: Simply swap:
+```typescript
+// Before (FastOrder.tsx line 408-414)
+const { data: servicesData } = await supabase.from('services').select(...)
+
+// After
+const { services } = useUnifiedServices({ panelId: resolvedPanelId });
+```
+
+**Panel service ID**: The `display_order` field (0-indexed integer assigned during import) serves as the tenant-facing service ID. No new columns needed. Just display it as "ID" in tenant pages and "Panel ID" in admin pages.
 
