@@ -351,7 +351,6 @@ const FastOrderContent = () => {
   }
   
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -362,6 +361,23 @@ const FastOrderContent = () => {
     searchParams.get('panel') || 
     buyerContext?.panelId || 
     localStorage.getItem('current_panel_id');
+
+  // Use unified services hook for consistent counts across all pages
+  const { services: unifiedServices, loading: servicesLoading } = useUnifiedServices({ 
+    panelId: resolvedPanelId, 
+    enabled: !!resolvedPanelId 
+  });
+
+  // Map unified services to the Service interface expected by FastOrderSection
+  const services: Service[] = unifiedServices.map(s => ({
+    id: s.id,
+    name: s.name,
+    price: s.price,
+    category: s.category,
+    min_quantity: s.minQuantity,
+    max_quantity: s.maxQuantity,
+    provider_service_id: s.providerServiceId,
+  }));
 
   // Analytics tracking for Fast Order funnel
   const { trackPageVisit, trackFastOrderStep } = useAnalyticsTracking(resolvedPanelId || undefined);
@@ -387,7 +403,7 @@ const FastOrderContent = () => {
       localStorage.setItem('current_panel_id', resolvedPanelId);
     }
 
-    const fetchData = async () => {
+    const fetchPanelData = async () => {
       if (!resolvedPanelId) {
         setError('No panel specified');
         setLoading(false);
@@ -395,7 +411,7 @@ const FastOrderContent = () => {
       }
 
       try {
-        // Fetch panel data
+        // Fetch panel data only - services come from useUnifiedServices
         const { data: panelData, error: panelError } = await supabase
           .from('panels_public')
           .select('id, name, logo_url, primary_color, custom_branding')
@@ -404,18 +420,6 @@ const FastOrderContent = () => {
 
         if (panelError) throw panelError;
         setPanel(panelData);
-
-        // Fetch services - include is_hidden filter and provider_service_id for debugging
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('id, name, price, category, min_quantity, max_quantity, provider_service_id')
-          .eq('panel_id', resolvedPanelId)
-          .eq('is_active', true)
-          .eq('is_hidden', false)
-          .order('display_order', { ascending: true });
-
-        if (servicesError) throw servicesError;
-        setServices(servicesData || []);
       } catch (err: any) {
         console.error('Error fetching data:', err);
         setError(err.message || 'Failed to load data');
@@ -424,7 +428,7 @@ const FastOrderContent = () => {
       }
     };
 
-    fetchData();
+    fetchPanelData();
   }, [resolvedPanelId]);
 
   if (loading) {
