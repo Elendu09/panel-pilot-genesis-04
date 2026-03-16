@@ -159,8 +159,13 @@ export const DraggableServiceItem = ({
             className="h-4 w-4"
           />
           <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 font-mono">
-            ID: {service.providerServiceId || service.displayId}
+            #{service.displayOrder || service.displayId}
           </Badge>
+          {service.providerServiceId && (
+            <Badge variant="secondary" className="text-[10px] sm:text-xs px-1.5 font-mono opacity-60">
+              P:{service.providerServiceId}
+            </Badge>
+          )}
           <div className="flex-1" />
           <Switch
             checked={service.status}
