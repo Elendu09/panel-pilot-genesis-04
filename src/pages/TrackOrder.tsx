@@ -89,6 +89,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any; bg
 
 const TrackOrder = () => {
   const navigate = useNavigate();
+  const { panel } = useTenant();
   const [orderNumber, setOrderNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<OrderData | null>(null);
