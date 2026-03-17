@@ -110,7 +110,7 @@ const TrackOrder = () => {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('track-order', {
-        body: { orderNumber: validation.data }
+        body: { orderNumber: validation.data, panelId: panel?.id }
       });
 
       if (fnError) throw fnError;

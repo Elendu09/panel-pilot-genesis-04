@@ -65,6 +65,7 @@ serve(async (req) => {
         provider_id
       `)
       .eq("order_number", sanitizedOrderNumber)
+      .eq("panel_id", panelId)
       .maybeSingle();
 
     if (orderError) {
