@@ -1,77 +1,99 @@
 
 
-# Plan: Fix Order Visibility, Service ID Mapping, Subscription Detection, and Plan Locking
+# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
 
-## Issues Found
+## Overview
 
-### 1. Orders missing from "My Orders" after Fast Order payment
-- Orders created with `paymentType === 'direct'` get status `awaiting_payment`
-- When the payment completes (via manual payment flow), nothing transitions the order from `awaiting_payment` to `pending`/`processing`
-- The `BuyerOrders` kanban only shows `pending`, `in_progress`, `completed` columns — `awaiting_payment` orders are in "other" but may be overlooked
-- **Root fix**: After direct payment completes, transition order status to `pending` and trigger provider forwarding. Also add `awaiting_payment` as a visible kanban column.
+This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
 
-### 2. Provider Service ID mismatch in Services Management
-- During import, `display_order` is set to `originalIndex` (0-indexed position in the provider's response array), NOT the provider's actual service ID
-- The provider returns `service: 12`, but if it's the 3rd item in the array, `display_order` = 2
-- The UI shows `display_order` as "Panel ID" which confuses panel owners
-- **Root fix**: Set `display_order` to the provider's actual service ID number during import. Show `provider_service_id` prominently in the services table as the provider-side identifier.
+---
 
-### 3. Subscription transactions stored as `type: 'deposit'`
-- `process-payment` line 391: `const txType = orderId ? 'order_payment' : 'deposit'` — ignores metadata.type
-- All subscription payments get `type: 'deposit'` in the database
-- Transaction history shows subscriptions as "deposit"
-- Onboarding verification fallback queries `type = 'subscription'` which never matches
-- **Root fix**: Set `txType = metadata?.type === 'subscription' ? 'subscription' : (orderId ? 'order_payment' : 'deposit')`
+## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
 
-### 4. Onboarding payment verification fails
-- The polling fallback at line 291 searches for `type = 'subscription'` but transactions are stored as `type = 'deposit'`
-- Even with localStorage txId, the `process-payment` verify-payment action should work — but the gateway may not be verifying correctly if the return URL doesn't include the transaction_id
-- **Root fix**: Fix the transaction type (issue 3) AND also add the verify-payment call to the polling loop (currently it only queries the DB directly, doesn't call the edge function to trigger gateway verification)
+| File | Error | Fix |
+|------|-------|-----|
+| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
+| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
+| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
+| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
+| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
+| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
 
-### 5. Billing page doesn't lock plans after upgrade
-- All plans remain clickable after a paid upgrade
-- Users can accidentally initiate another upgrade, leaving the previous subscription as pending
-- **Root fix**: Disable plans that are lower than or equal to the current plan. Show "Current Plan" for the active tier. Show expiry date and disable downgrades during active billing period.
+## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
 
-## Files to Modify
+Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+
+- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
+- Create a simple context or use localStorage directly; the header component reads this value
+- The switch is only rendered in mobile mode (use `useIsMobile()`)
+- When enabled → show the hamburger menu icon in the dashboard header
+- When disabled → hide it (current default behavior for clean mobile UI)
+
+## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+
+Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+
+**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
+
+Affected pages and their replacement queries:
+- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
+- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
+- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
+- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
+- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
+- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
+
+Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
+
+## 4. Restore Subdomain Suffix to `smmpilot.online`
+
+Update references in:
+- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
+- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
+- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
+- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
+- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
+
+## 5. Fix Payment Verification & Subscription Upgrade Flow
+
+### Deposit status not updating in transaction history
+The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
+
+**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
+
+### Subscription upgrade from balance
+Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
+- Before calling `process-payment`, check if `panelBalance >= plan.price`
+- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
+- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
+
+---
+
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/process-payment/index.ts` | Fix transaction type: use `metadata.type` for subscription transactions |
-| `supabase/functions/buyer-order/index.ts` | Add order status transition after direct payment completion |
-| `supabase/functions/sync-provider-services/index.ts` | Set `display_order` to provider's service ID number, not array index |
-| `src/pages/buyer/BuyerOrders.tsx` | Add `awaiting_payment` and `processing` to kanban columns |
-| `src/pages/panel/PanelOnboardingV2.tsx` | Fix verification polling: call verify-payment edge function + search for `type = 'deposit'` as fallback |
-| `src/pages/panel/Billing.tsx` | Lock plans: disable plans ≤ current tier during active subscription period |
-| `src/components/services/DraggableServiceItem.tsx` | Show `provider_service_id` as primary ID badge for imported services |
-| `src/components/storefront/FastOrderSection.tsx` | After direct payment completes, call an endpoint to transition order from `awaiting_payment` to `pending` |
-
-## Implementation Details
-
-**Transaction type fix** (process-payment):
-```typescript
-// Line 391: Replace
-const txType = orderId ? 'order_payment' : 'deposit';
-// With
-const txType = metadata?.type === 'subscription' ? 'subscription' 
-  : (orderId ? 'order_payment' : 'deposit');
-```
-
-**Onboarding verification fix** (PanelOnboardingV2):
-- In polling loop, call `process-payment` verify-payment with txId (triggers gateway API check)
-- Change fallback query from `.eq('type', 'subscription')` to `.in('type', ['subscription', 'deposit']).eq('metadata->>type', 'subscription')`
-
-**Plan locking** (Billing.tsx):
-- Compare plan tiers numerically: free=0, basic=1, pro=2
-- Disable button for all plans ≤ current tier
-- Show "Downgrade" label (disabled) for lower plans
-- Show expiry countdown for active paid plans
-
-**Service display_order fix** (sync-provider-services):
-- Change `display_order: originalIndex` to `display_order: parseInt(serviceId) || originalIndex`
-- This makes the panel ID match the provider's service number
-
-**Order lifecycle for direct payments**:
-- Add a `complete-order-payment` action to `buyer-order` or `buyer-api` that: transitions status from `awaiting_payment` to `pending`, deducts balance, and triggers provider forwarding
-- FastOrderSection: after manual payment proof is submitted and approved, call this action
+| `supabase/functions/dns-lookup/index.ts` | Cast error types |
+| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
+| `supabase/functions/import-provider-services/index.ts` | Cast error type |
+| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
+| `supabase/functions/security-audit/index.ts` | Cast error type |
+| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
+| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
+| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
+| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
+| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
+| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
+| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
+| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
+| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
+| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
+| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
 

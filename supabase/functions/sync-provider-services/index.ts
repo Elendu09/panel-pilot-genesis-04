@@ -548,7 +548,7 @@ serve(async (req) => {
               min_quantity: parseInt(String(providerService.min).replace(/[^0-9]/g, '')) || 1,
               max_quantity: parseInt(String(providerService.max).replace(/[^0-9]/g, '')) || 10000,
               is_active: true,
-              display_order: originalIndex,
+              display_order: parseInt(serviceId) || originalIndex,
               service_type: parseServiceType(providerService.type),
               refill_available: parseBooleanField(providerService.refill),
               cancel_available: parseBooleanField(providerService.cancel),

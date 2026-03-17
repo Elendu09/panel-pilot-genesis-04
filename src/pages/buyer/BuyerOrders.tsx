@@ -184,7 +184,9 @@ const BuyerOrders = () => {
   });
 
   const kanbanColumns = [
+    { title: 'Awaiting Payment', status: 'awaiting_payment', icon: Clock, gradient: 'from-yellow-500 to-yellow-600', bg: 'bg-yellow-500/10', textColor: 'text-yellow-500', borderColor: 'border-yellow-500/30' },
     { title: t('orders.pending'), status: 'pending', icon: Clock, gradient: 'from-amber-500 to-amber-600', bg: 'bg-amber-500/10', textColor: 'text-amber-500', borderColor: 'border-amber-500/30' },
+    { title: 'Processing', status: 'processing', icon: Loader2, gradient: 'from-blue-500 to-blue-600', bg: 'bg-blue-500/10', textColor: 'text-blue-500', borderColor: 'border-blue-500/30' },
     { title: t('orders.in_progress'), status: 'in_progress', icon: Loader2, gradient: 'from-primary to-primary/80', bg: 'bg-primary/10', textColor: 'text-primary', borderColor: 'border-primary/30' },
     { title: t('orders.completed'), status: 'completed', icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bg: 'bg-emerald-500/10', textColor: 'text-emerald-500', borderColor: 'border-emerald-500/30' },
   ];
@@ -420,12 +422,12 @@ const BuyerOrders = () => {
         </motion.div>
 
         {/* Other status orders (cancelled, partial, refunded) */}
-        {filteredOrders.filter(o => !['pending', 'in_progress', 'completed'].includes(o.status)).length > 0 && (
+        {filteredOrders.filter(o => !['awaiting_payment', 'pending', 'processing', 'in_progress', 'completed'].includes(o.status)).length > 0 && (
           <motion.div variants={itemVariants}>
             <h3 className="text-lg font-semibold mb-3">{t('orders.other_orders')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredOrders
-                .filter(o => !['pending', 'in_progress', 'completed'].includes(o.status))
+                .filter(o => !['awaiting_payment', 'pending', 'processing', 'in_progress', 'completed'].includes(o.status))
                 .map((order) => (
                   <OrderCard 
                     key={order.id} 

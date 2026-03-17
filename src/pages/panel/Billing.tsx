@@ -644,10 +644,14 @@ const Billing = () => {
       <motion.div variants={itemVariants}>
         <h2 className="text-xl font-bold mb-4">Choose Your Plan</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => {
+          {plans.map((plan, planIndex) => {
             const Icon = plan.icon;
             const isCurrent = currentPlan === plan.name.toLowerCase();
             const isLoading = upgradeLoading === plan.name;
+            const currentPlanIndex = plans.findIndex(p => p.name.toLowerCase() === currentPlan);
+            const isLowerTier = planIndex < currentPlanIndex;
+            const isActivePaid = subscription?.status === 'active' && currentPlan !== 'free';
+            const isDisabled = isCurrent || isLoading || (isLowerTier && isActivePaid);
             
             return (
               <motion.div
@@ -688,6 +692,13 @@ const Billing = () => {
                       <span className="text-4xl font-bold">${plan.price}</span>
                       <span className="text-muted-foreground">/{plan.period}</span>
                     </div>
+
+                    {isCurrent && subscription?.expires_at && (
+                      <div className="text-center text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                        <Calendar className="w-3 h-3 inline mr-1" />
+                        Renews {new Date(subscription.expires_at).toLocaleDateString()}
+                      </div>
+                    )}
                     
                     <ul className="space-y-3">
                       {plan.features.map((feature, i) => (
@@ -701,11 +712,11 @@ const Billing = () => {
                     <Button
                       className={cn(
                         "w-full gap-2",
-                        isCurrent && "bg-muted text-muted-foreground hover:bg-muted"
+                        (isCurrent || isDisabled) && "bg-muted text-muted-foreground hover:bg-muted"
                       )}
-                      variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => !isCurrent && handleUpgrade(plan.name)}
-                      disabled={isCurrent || isLoading}
+                      variant={plan.popular && !isDisabled ? 'default' : 'outline'}
+                      onClick={() => !isDisabled && handleUpgrade(plan.name)}
+                      disabled={isDisabled}
                     >
                       {isLoading ? (
                         <>
@@ -714,6 +725,8 @@ const Billing = () => {
                         </>
                       ) : isCurrent ? (
                         'Current Plan'
+                      ) : isLowerTier && isActivePaid ? (
+                        'Downgrade N/A'
                       ) : (
                         <>
                           Upgrade <ArrowUpRight className="w-4 h-4" />
