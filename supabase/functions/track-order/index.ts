@@ -13,12 +13,19 @@ serve(async (req) => {
   }
 
   try {
-    const { orderNumber } = await req.json();
+    const { orderNumber, panelId } = await req.json();
 
     // Input validation
     if (!orderNumber || typeof orderNumber !== 'string') {
       return new Response(
         JSON.stringify({ error: "Order number is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!panelId || typeof panelId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Panel context is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
