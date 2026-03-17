@@ -388,7 +388,7 @@ serve(async (req) => {
     // Now create transaction AFTER validating gateway (server-side creation bypasses RLS)
     let txId = transactionId;
     if (!txId) {
-      const txType = orderId ? 'order_payment' : 'deposit';
+      const txType = metadata?.type === 'subscription' ? 'subscription' : (orderId ? 'order_payment' : 'deposit');
       const txDescription = orderId ? `Order payment via ${gateway}` : `Deposit via ${gateway}`;
       
       const { data: newTx, error: txError } = await supabase

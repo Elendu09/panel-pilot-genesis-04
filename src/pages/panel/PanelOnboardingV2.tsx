@@ -272,8 +272,20 @@ const PanelOnboardingV2 = () => {
       attempts++;
       let confirmed = false;
 
-      // Check transaction status if we have the ID
+      // Try verify-payment edge function first (triggers gateway API check)
       if (txId) {
+        try {
+          const { data: verifyData } = await supabase.functions.invoke('process-payment', {
+            body: { action: 'verify-payment', transactionId: txId }
+          });
+          if (verifyData?.status === 'completed') confirmed = true;
+        } catch (e) {
+          console.log('[onboarding] verify-payment call failed, checking DB directly');
+        }
+      }
+
+      // Check transaction status directly if verify didn't confirm
+      if (!confirmed && txId) {
         const { data: txData } = await supabase
           .from('transactions')
           .select('status')
@@ -282,17 +294,21 @@ const PanelOnboardingV2 = () => {
         if (txData?.status === 'completed') confirmed = true;
       }
 
-      // Fallback: find the most recent pending subscription transaction for this panel
+      // Fallback: find the most recent subscription transaction for this panel (check both types since older ones may be 'deposit')
       if (!confirmed && !txId && createdPanelIdRef.current) {
         const { data: recentTx } = await supabase
           .from('transactions')
-          .select('id, status')
+          .select('id, status, metadata')
           .eq('panel_id', createdPanelIdRef.current)
-          .eq('type', 'subscription')
+          .in('type', ['subscription', 'deposit'])
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (recentTx?.status === 'completed') confirmed = true;
+          .limit(3);
+        
+        const subTx = recentTx?.find(tx => 
+          tx.status === 'completed' && 
+          ((tx.metadata as any)?.type === 'subscription')
+        );
+        if (subTx) confirmed = true;
       }
 
       // Also check panel subscription status

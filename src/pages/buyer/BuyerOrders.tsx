@@ -427,7 +427,7 @@ const BuyerOrders = () => {
             <h3 className="text-lg font-semibold mb-3">{t('orders.other_orders')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredOrders
-                .filter(o => !['pending', 'in_progress', 'completed'].includes(o.status))
+                .filter(o => !['awaiting_payment', 'pending', 'processing', 'in_progress', 'completed'].includes(o.status))
                 .map((order) => (
                   <OrderCard 
                     key={order.id} 
