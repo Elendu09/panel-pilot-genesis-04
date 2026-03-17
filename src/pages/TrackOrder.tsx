@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useTenant } from '@/hooks/useTenant';
 import { z } from 'zod';
 
 // Order number validation schema
@@ -88,6 +89,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any; bg
 
 const TrackOrder = () => {
   const navigate = useNavigate();
+  const { panel } = useTenant();
   const [orderNumber, setOrderNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [order, setOrder] = useState<OrderData | null>(null);
@@ -108,7 +110,7 @@ const TrackOrder = () => {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('track-order', {
-        body: { orderNumber: validation.data }
+        body: { orderNumber: validation.data, panelId: panel?.id }
       });
 
       if (fnError) throw fnError;
