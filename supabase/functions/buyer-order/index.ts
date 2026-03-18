@@ -221,7 +221,7 @@ serve(async (req) => {
       service_id: serviceId,
       target_url: targetUrl,
       quantity,
-      price,
+      price: verifiedPrice,
       status: orderStatus,
       progress: 0,
       notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
