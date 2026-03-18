@@ -278,6 +278,28 @@ function parseBooleanField(value: any): boolean {
   return false;
 }
 
+function extractProviderServiceId(service: Record<string, unknown>): string | null {
+  const candidates = [
+    service.service,
+    service.id,
+    service.service_id,
+    service.serviceId,
+    service.external_service_id,
+    service.externalServiceId,
+    service.sid,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === null || candidate === undefined) continue;
+    const normalized = String(candidate).trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
