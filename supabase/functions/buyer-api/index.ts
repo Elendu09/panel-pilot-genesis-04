@@ -212,39 +212,13 @@ async function handleServices(supabase: any, panelId: string) {
 }
 
 // Resolve the external service ID that the provider API expects
-async function resolveExternalServiceId(
-  supabase: any,
-  service: { provider_service_id?: string; provider_service_ref?: string }
-): Promise<string | null> {
-  if (service.provider_service_ref) {
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_ref)
-      .single();
-
-    if (providerService?.external_service_id) {
-      return providerService.external_service_id;
-    }
-  }
-
+function resolveExternalServiceId(
+  service: { provider_service_id?: string }
+): string | null {
   if (service.provider_service_id) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
-    if (!isUUID) {
-      return service.provider_service_id;
-    }
-
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_id)
-      .single();
-
-    if (providerService?.external_service_id) {
-      return providerService.external_service_id;
-    }
+    console.log(`[buyer-api] Using provider_service_id directly: ${service.provider_service_id}`);
+    return service.provider_service_id;
   }
-
   return null;
 }
 
@@ -267,7 +241,7 @@ async function forwardOrderToProvider(
       return { success: false, error: 'No provider linked' };
     }
 
-    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    const externalServiceId = resolveExternalServiceId(service);
     if (!externalServiceId) {
       return { success: false, error: 'No external service ID found' };
     }

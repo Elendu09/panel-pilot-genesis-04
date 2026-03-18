@@ -19,42 +19,13 @@ interface OrderRequest {
 }
 
 // Resolve the external service ID that the provider API expects
-async function resolveExternalServiceId(
-  supabase: any,
-  service: { provider_service_id?: string; provider_service_ref?: string }
-): Promise<string | null> {
-  if (service.provider_service_ref) {
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_ref)
-      .single();
-
-    if (providerService?.external_service_id) {
-      console.log(`[buyer-order] Resolved external_service_id via provider_service_ref: ${providerService.external_service_id}`);
-      return providerService.external_service_id;
-    }
-  }
-
+function resolveExternalServiceId(
+  service: { provider_service_id?: string }
+): string | null {
   if (service.provider_service_id) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
-    if (!isUUID) {
-      console.log(`[buyer-order] Using provider_service_id directly: ${service.provider_service_id}`);
-      return service.provider_service_id;
-    }
-
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_id)
-      .single();
-
-    if (providerService?.external_service_id) {
-      console.log(`[buyer-order] Resolved external_service_id from UUID provider_service_id: ${providerService.external_service_id}`);
-      return providerService.external_service_id;
-    }
+    console.log(`[buyer-order] Using provider_service_id directly: ${service.provider_service_id}`);
+    return service.provider_service_id;
   }
-
   return null;
 }
 
@@ -78,7 +49,7 @@ async function forwardToProvider(
       return { success: false, error: 'No provider linked' };
     }
 
-    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    const externalServiceId = resolveExternalServiceId(service);
     if (!externalServiceId) {
       console.log('[buyer-order] Could not resolve external service ID');
       return { success: false, error: 'No external service ID found' };
@@ -188,9 +159,9 @@ serve(async (req) => {
     }
 
     const currentBalance = buyer.balance || 0;
-    if (paymentType === 'balance' && currentBalance < price) {
+    if (paymentType === 'balance' && currentBalance < verifiedPrice) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: price, needsPayment: true }),
+        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: verifiedPrice, needsPayment: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -217,6 +188,18 @@ serve(async (req) => {
       );
     }
 
+    // Server-side price verification — prevent client price manipulation
+    const serverPrice = (service.price * quantity) / 1000;
+    if (price < serverPrice * 0.99 && Math.abs(serverPrice - price) > 0.01) {
+      console.log(`[buyer-order] Price mismatch: client=${price}, server=${serverPrice}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Price mismatch: service price has changed. Please refresh and try again.', expectedPrice: serverPrice }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // Use server-calculated price to ensure panel owner profit margin
+    const verifiedPrice = Math.max(price, serverPrice);
+
     const minQty = service.min_quantity || 1;
     const maxQty = service.max_quantity || 1000000;
     if (quantity < minQty || quantity > maxQty) {
@@ -238,7 +221,7 @@ serve(async (req) => {
       service_id: serviceId,
       target_url: targetUrl,
       quantity,
-      price,
+      price: verifiedPrice,
       status: orderStatus,
       progress: 0,
       notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
@@ -270,8 +253,8 @@ serve(async (req) => {
     // Only deduct balance for balance payment type
     let newBalance = currentBalance;
     if (paymentType === 'balance') {
-      newBalance = currentBalance - price;
-      const newTotalSpent = (buyer.total_spent || 0) + price;
+      newBalance = currentBalance - verifiedPrice;
+      const newTotalSpent = (buyer.total_spent || 0) + verifiedPrice;
 
       const { error: balanceError } = await supabase
         .from('client_users')
