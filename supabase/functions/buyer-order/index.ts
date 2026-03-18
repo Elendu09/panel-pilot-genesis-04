@@ -159,9 +159,9 @@ serve(async (req) => {
     }
 
     const currentBalance = buyer.balance || 0;
-    if (paymentType === 'balance' && currentBalance < price) {
+    if (paymentType === 'balance' && currentBalance < verifiedPrice) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: price, needsPayment: true }),
+        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: verifiedPrice, needsPayment: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
