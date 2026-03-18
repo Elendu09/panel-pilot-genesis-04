@@ -194,7 +194,7 @@ const Analytics = () => {
       // Fetch orders with service names
       const { data: orders } = await supabase
         .from('orders')
-        .select('*, services(name, category)')
+        .select('*, service_name, services(name, category)')
         .eq('panel_id', panel.id)
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());

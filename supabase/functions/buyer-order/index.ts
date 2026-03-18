@@ -188,6 +188,18 @@ serve(async (req) => {
       );
     }
 
+    // Server-side price verification — prevent client price manipulation
+    const serverPrice = (service.price * quantity) / 1000;
+    if (price < serverPrice * 0.99 && Math.abs(serverPrice - price) > 0.01) {
+      console.log(`[buyer-order] Price mismatch: client=${price}, server=${serverPrice}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Price mismatch: service price has changed. Please refresh and try again.', expectedPrice: serverPrice }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    // Use server-calculated price to ensure panel owner profit margin
+    const verifiedPrice = Math.max(price, serverPrice);
+
     const minQty = service.min_quantity || 1;
     const maxQty = service.max_quantity || 1000000;
     if (quantity < minQty || quantity > maxQty) {

@@ -241,7 +241,7 @@ async function forwardOrderToProvider(
       return { success: false, error: 'No provider linked' };
     }
 
-    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    const externalServiceId = resolveExternalServiceId(service);
     if (!externalServiceId) {
       return { success: false, error: 'No external service ID found' };
     }

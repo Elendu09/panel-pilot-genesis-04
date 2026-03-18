@@ -187,30 +187,36 @@ const PanelOverview = () => {
           today.setHours(0, 0, 0, 0);
           const { data: todayOrders } = await supabase
             .from('orders')
-            .select('price, service_id')
+            .select('price, service_id, service_name')
             .eq('panel_id', panel.id)
             .gte('created_at', today.toISOString());
           
           const todayOrderCount = todayOrders?.length || 0;
           const todayRevenueTotal = todayOrders?.reduce((sum, o) => sum + Number(o.price), 0) || 0;
           
-          // Find top service today
+          // Find top service today — use service_name as fallback when service deleted
           let topService = '';
           if (todayOrders && todayOrders.length > 0) {
             const serviceCounts: Record<string, number> = {};
+            const serviceNames: Record<string, string> = {};
             todayOrders.forEach(o => {
-              if (o.service_id) {
-                serviceCounts[o.service_id] = (serviceCounts[o.service_id] || 0) + 1;
-              }
+              const key = o.service_id || o.service_name || 'unknown';
+              serviceCounts[key] = (serviceCounts[key] || 0) + 1;
+              if (o.service_name) serviceNames[key] = o.service_name;
             });
-            const topServiceId = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-            if (topServiceId) {
-              const { data: serviceData } = await supabase
-                .from('services')
-                .select('name')
-                .eq('id', topServiceId)
-                .single();
-              topService = serviceData?.name || '';
+            const topKey = Object.entries(serviceCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+            if (topKey) {
+              // If we have a cached name, use it; otherwise try to look up
+              if (serviceNames[topKey]) {
+                topService = serviceNames[topKey];
+              } else if (topKey !== 'unknown') {
+                const { data: serviceData } = await supabase
+                  .from('services')
+                  .select('name')
+                  .eq('id', topKey)
+                  .maybeSingle();
+                topService = serviceData?.name || 'Deleted Service';
+              }
             }
           }
 
