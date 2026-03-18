@@ -475,7 +475,9 @@ serve(async (req) => {
         console.log(`Found ${providerServices.length} services from ${provider.name}`);
 
         // Get existing services for this panel + THIS SPECIFIC PROVIDER (composite key)
-        const providerServiceIds = providerServices.map(s => String(s.service));
+        const providerServiceIds = providerServices
+          .map(service => extractProviderServiceId(service as unknown as Record<string, unknown>))
+          .filter((serviceId): serviceId is string => Boolean(serviceId));
         
         // Fetch in batches - use composite key (panel_id, provider_id, provider_service_id)
         const batchSize = 500;
@@ -526,7 +528,13 @@ serve(async (req) => {
         // Process each service - MAINTAIN ORIGINAL ORDER
         providerServices.forEach((providerService, originalIndex) => {
           try {
-            const serviceId = String(providerService.service);
+            const serviceId = extractProviderServiceId(providerService as unknown as Record<string, unknown>);
+            if (!serviceId) {
+              console.warn('[sync-provider-services] Skipping service without detectable provider ID:', JSON.stringify(providerService).slice(0, 300));
+              result.errors.push(`Skipped service without detectable provider ID: ${providerService.name || 'Unnamed service'}`);
+              return;
+            }
+
             const existing = existingByProviderServiceId.get(serviceId);
             
             // Clean and validate rate - this is in PROVIDER CURRENCY
@@ -570,7 +578,7 @@ serve(async (req) => {
               min_quantity: parseInt(String(providerService.min).replace(/[^0-9]/g, '')) || 1,
               max_quantity: parseInt(String(providerService.max).replace(/[^0-9]/g, '')) || 10000,
               is_active: true,
-              display_order: parseInt(serviceId) || originalIndex,
+              display_order: /^\d+$/.test(serviceId) ? parseInt(serviceId, 10) : originalIndex,
               service_type: parseServiceType(providerService.type),
               refill_available: parseBooleanField(providerService.refill),
               cancel_available: parseBooleanField(providerService.cancel),
@@ -598,8 +606,9 @@ serve(async (req) => {
               }
             }
           } catch (serviceError: any) {
-            console.error(`Error processing service ${providerService.service}:`, serviceError);
-            result.errors.push(`Service ${providerService.service}: ${serviceError.message}`);
+            const fallbackServiceId = extractProviderServiceId(providerService as unknown as Record<string, unknown>) || 'unknown';
+            console.error(`Error processing service ${fallbackServiceId}:`, serviceError);
+            result.errors.push(`Service ${fallbackServiceId}: ${serviceError.message}`);
           }
         });
 

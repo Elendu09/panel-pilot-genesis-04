@@ -452,7 +452,13 @@ serve(async (req) => {
     console.log(`Raw services received: ${services.length}`);
 
     // Standardize service format with enhanced detection
-    const standardizedServices: StandardizedService[] = services.map((service) => {
+    const standardizedServices: StandardizedService[] = services.flatMap((service) => {
+      const providerServiceId = extractProviderServiceId(service as unknown as Record<string, unknown>);
+      if (!providerServiceId) {
+        console.warn('[provider-services] Skipping service without detectable provider ID:', JSON.stringify(service).slice(0, 300));
+        return [];
+      }
+
       const detectedPlatform = detectPlatform(service.category || '', service.name || '');
       const serviceType = parseServiceType(service.type);
       const refill = parseBoolean(service.refill);
@@ -461,14 +467,15 @@ serve(async (req) => {
       // Clean and validate rate
       const rawRate = String(service.rate).replace(/[^0-9.]/g, '');
       const rate = parseFloat(rawRate) || 0;
+      const compatibilityId = /^\d+$/.test(providerServiceId) ? Number(providerServiceId) : providerServiceId;
       
-      return {
+      return [{
         providerId: 'external',
-        providerServiceId: String(service.service),
-        name: service.name || 'Unknown Service',
+        providerServiceId,
+        name: service.name || `Service ${providerServiceId}`,
         category: detectedPlatform,
         type: service.type || 'default',
-        rate: rate,
+        rate,
         min: parseInt(String(service.min).replace(/[^0-9]/g, '')) || 1,
         max: parseInt(String(service.max).replace(/[^0-9]/g, '')) || 10000,
         description: service.description || generateDescription(service, refill, cancel),
@@ -476,7 +483,9 @@ serve(async (req) => {
         cancel,
         serviceType,
         averageTime: service.average_time || '',
-      };
+        id: compatibilityId,
+        service: compatibilityId,
+      } as StandardizedService];
     });
 
     // Log category detection stats
