@@ -49,7 +49,7 @@ async function forwardToProvider(
       return { success: false, error: 'No provider linked' };
     }
 
-    const externalServiceId = await resolveExternalServiceId(supabase, service);
+    const externalServiceId = resolveExternalServiceId(service);
     if (!externalServiceId) {
       console.log('[buyer-order] Could not resolve external service ID');
       return { success: false, error: 'No external service ID found' };
