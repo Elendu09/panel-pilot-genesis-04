@@ -19,42 +19,13 @@ interface OrderRequest {
 }
 
 // Resolve the external service ID that the provider API expects
-async function resolveExternalServiceId(
-  supabase: any,
-  service: { provider_service_id?: string; provider_service_ref?: string }
-): Promise<string | null> {
-  if (service.provider_service_ref) {
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_ref)
-      .single();
-
-    if (providerService?.external_service_id) {
-      console.log(`[buyer-order] Resolved external_service_id via provider_service_ref: ${providerService.external_service_id}`);
-      return providerService.external_service_id;
-    }
-  }
-
+function resolveExternalServiceId(
+  service: { provider_service_id?: string }
+): string | null {
   if (service.provider_service_id) {
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.provider_service_id);
-    if (!isUUID) {
-      console.log(`[buyer-order] Using provider_service_id directly: ${service.provider_service_id}`);
-      return service.provider_service_id;
-    }
-
-    const { data: providerService } = await supabase
-      .from('provider_services')
-      .select('external_service_id')
-      .eq('id', service.provider_service_id)
-      .single();
-
-    if (providerService?.external_service_id) {
-      console.log(`[buyer-order] Resolved external_service_id from UUID provider_service_id: ${providerService.external_service_id}`);
-      return providerService.external_service_id;
-    }
+    console.log(`[buyer-order] Using provider_service_id directly: ${service.provider_service_id}`);
+    return service.provider_service_id;
   }
-
   return null;
 }
 
