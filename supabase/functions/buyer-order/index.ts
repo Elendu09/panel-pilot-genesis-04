@@ -253,8 +253,8 @@ serve(async (req) => {
     // Only deduct balance for balance payment type
     let newBalance = currentBalance;
     if (paymentType === 'balance') {
-      newBalance = currentBalance - price;
-      const newTotalSpent = (buyer.total_spent || 0) + price;
+      newBalance = currentBalance - verifiedPrice;
+      const newTotalSpent = (buyer.total_spent || 0) + verifiedPrice;
 
       const { error: balanceError } = await supabase
         .from('client_users')
