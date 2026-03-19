@@ -1424,9 +1424,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         </div>
                         <div className="flex justify-between">
                           <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Link</span>
-                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-teal-400' : 'text-blue-500')}>
+                          <a
+                            href={targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px] underline", themeMode === 'dark' ? 'text-teal-400' : 'text-blue-500')}
+                          >
                             {targetUrl}
-                          </span>
+                          </a>
                         </div>
                       </div>
                     </div>

@@ -158,15 +158,7 @@ serve(async (req) => {
       );
     }
 
-    const currentBalance = buyer.balance || 0;
-    if (paymentType === 'balance' && currentBalance < verifiedPrice) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: verifiedPrice, needsPayment: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify service exists and is active
+    // Verify service exists and is active — MUST come before balance check
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('id, name, price, min_quantity, max_quantity, is_active, panel_id, provider_id, provider_cost, cost_usd')
@@ -188,6 +180,16 @@ serve(async (req) => {
       );
     }
 
+    // Quantity validation
+    const minQty = service.min_quantity || 1;
+    const maxQty = service.max_quantity || 1000000;
+    if (quantity < minQty || quantity > maxQty) {
+      return new Response(
+        JSON.stringify({ success: false, error: `Quantity must be between ${minQty} and ${maxQty}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Server-side price verification — prevent client price manipulation
     const serverPrice = (service.price * quantity) / 1000;
     if (price < serverPrice * 0.99 && Math.abs(serverPrice - price) > 0.01) {
@@ -200,11 +202,11 @@ serve(async (req) => {
     // Use server-calculated price to ensure panel owner profit margin
     const verifiedPrice = Math.max(price, serverPrice);
 
-    const minQty = service.min_quantity || 1;
-    const maxQty = service.max_quantity || 1000000;
-    if (quantity < minQty || quantity > maxQty) {
+    // NOW check balance — verifiedPrice is safely declared
+    const currentBalance = buyer.balance || 0;
+    if (paymentType === 'balance' && currentBalance < verifiedPrice) {
       return new Response(
-        JSON.stringify({ success: false, error: `Quantity must be between ${minQty} and ${maxQty}` }),
+        JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance, required: verifiedPrice, needsPayment: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
