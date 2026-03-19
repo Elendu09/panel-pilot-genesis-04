@@ -666,6 +666,7 @@ const PaymentMethods = () => {
                         subtitle={method.processingTime}
                         enabled={method.enabled}
                         onClick={() => openManualDialog(method)}
+                        onToggle={() => toggleManualPayment(method.id)}
                       />
                     ))
                 )}
