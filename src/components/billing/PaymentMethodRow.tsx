@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 
 interface PaymentMethodRowProps {
   icon: React.ReactNode;
@@ -7,9 +8,10 @@ interface PaymentMethodRowProps {
   subtitle?: string;
   enabled?: boolean;
   onClick: () => void;
+  onToggle?: (enabled: boolean) => void;
 }
 
-export function PaymentMethodRow({ icon, name, subtitle, enabled, onClick }: PaymentMethodRowProps) {
+export function PaymentMethodRow({ icon, name, subtitle, enabled, onClick, onToggle }: PaymentMethodRowProps) {
   return (
     <button
       onClick={onClick}
@@ -35,7 +37,18 @@ export function PaymentMethodRow({ icon, name, subtitle, enabled, onClick }: Pay
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        {enabled !== undefined && (
+        {enabled !== undefined && onToggle && (
+          <Switch
+            checked={enabled}
+            onCheckedChange={(checked) => {
+              // Prevent the row click from firing
+              onToggle(checked);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="data-[state=checked]:bg-emerald-500"
+          />
+        )}
+        {enabled !== undefined && !onToggle && (
           <div 
             className={cn(
               "w-3 h-3 rounded-full transition-all shadow-sm",

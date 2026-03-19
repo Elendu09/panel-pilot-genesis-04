@@ -24,12 +24,13 @@ serve(async (req) => {
     }
 
     // Fetch active orders that have a provider_order_id
+    // Include 'completed' so we can detect refunds from providers
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, provider_order_id, provider_id, service_id, status, quantity')
+      .select('id, provider_order_id, provider_id, service_id, status, quantity, buyer_id, price')
       .eq('panel_id', panelId)
       .not('provider_order_id', 'is', null)
-      .in('status', ['pending', 'processing', 'in_progress'])
+      .in('status', ['pending', 'processing', 'in_progress', 'completed', 'partial'])
       .limit(500);
 
     if (ordersError) {
@@ -45,21 +46,29 @@ serve(async (req) => {
       });
     }
 
-    // Get unique service IDs to resolve providers
-    const serviceIds = [...new Set(orders.map(o => o.service_id).filter(Boolean))];
-    const { data: services } = await supabase
-      .from('services')
-      .select('id, provider_id')
-      .in('id', serviceIds);
+    // Build provider map — use provider_id from orders table first (survives service deletion)
+    const providerIdsFromOrders = orders.map(o => o.provider_id).filter(Boolean);
+    const serviceIds = orders.filter(o => !o.provider_id && o.service_id).map(o => o.service_id);
 
     const serviceProviderMap: Record<string, string> = {};
-    (services || []).forEach((s: any) => {
-      if (s.provider_id) serviceProviderMap[s.id] = s.provider_id;
-    });
 
-    // Get unique provider IDs
-    const providerIds = [...new Set(Object.values(serviceProviderMap))];
-    if (providerIds.length === 0) {
+    if (serviceIds.length > 0) {
+      const { data: services } = await supabase
+        .from('services')
+        .select('id, provider_id')
+        .in('id', serviceIds);
+      (services || []).forEach((s: any) => {
+        if (s.provider_id) serviceProviderMap[s.id] = s.provider_id;
+      });
+    }
+
+    // Collect all unique provider IDs
+    const allProviderIds = [...new Set([
+      ...providerIdsFromOrders,
+      ...Object.values(serviceProviderMap),
+    ])];
+
+    if (allProviderIds.length === 0) {
       return new Response(JSON.stringify({ success: true, total: orders.length, updated: 0, message: 'No providers linked' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -68,7 +77,7 @@ serve(async (req) => {
     const { data: providers } = await supabase
       .from('providers')
       .select('id, api_endpoint, api_key, is_active')
-      .in('id', providerIds)
+      .in('id', allProviderIds)
       .eq('is_active', true);
 
     if (!providers || providers.length === 0) {
@@ -83,7 +92,7 @@ serve(async (req) => {
     // Group orders by provider
     const ordersByProvider: Record<string, any[]> = {};
     for (const order of orders) {
-      const providerId = serviceProviderMap[order.service_id];
+      const providerId = order.provider_id || serviceProviderMap[order.service_id];
       if (providerId && providerMap[providerId]) {
         if (!ordersByProvider[providerId]) ordersByProvider[providerId] = [];
         ordersByProvider[providerId].push(order);
@@ -96,8 +105,6 @@ serve(async (req) => {
     // Query each provider for order statuses
     for (const [providerId, providerOrders] of Object.entries(ordersByProvider)) {
       const provider = providerMap[providerId];
-
-      // SMM API supports multi-order status check
       const providerOrderIds = providerOrders.map(o => o.provider_order_id);
 
       try {
@@ -125,6 +132,12 @@ serve(async (req) => {
           const remains = parseInt(statusData.remains) || 0;
           const delivered = order.quantity - remains;
           const progress = order.quantity > 0 ? Math.min(100, Math.round((delivered / order.quantity) * 100)) : 0;
+          const charge = parseFloat(statusData.charge) || null;
+
+          // Skip if status hasn't changed and it's already a terminal state
+          if (newStatus === order.status && (newStatus === 'completed' || newStatus === 'cancelled' || newStatus === 'refunded')) {
+            continue;
+          }
 
           const updateData: Record<string, any> = {
             status: newStatus,
@@ -133,8 +146,50 @@ serve(async (req) => {
             progress: progress,
           };
 
-          if (newStatus === 'completed' && !order.completed_at) {
+          if (newStatus === 'completed' && order.status !== 'completed') {
             updateData.completed_at = new Date().toISOString();
+            updateData.progress = 100;
+          }
+
+          // Handle refund from provider — credit buyer balance back
+          if (newStatus === 'refunded' && order.status !== 'refunded' && order.buyer_id) {
+            const refundAmount = charge !== null ? charge : order.price;
+            try {
+              const { data: buyer } = await supabase
+                .from('client_users')
+                .select('balance, total_spent')
+                .eq('id', order.buyer_id)
+                .single();
+              if (buyer) {
+                await supabase
+                  .from('client_users')
+                  .update({
+                    balance: (buyer.balance || 0) + refundAmount,
+                    total_spent: Math.max(0, (buyer.total_spent || 0) - refundAmount),
+                  })
+                  .eq('id', order.buyer_id);
+                console.log(`[sync-orders] Refunded $${refundAmount} to buyer ${order.buyer_id} for order ${order.id}`);
+              }
+            } catch (refundErr) {
+              console.error(`[sync-orders] Refund balance error for order ${order.id}:`, refundErr);
+            }
+
+            // Create notification for buyer
+            try {
+              await supabase.from('buyer_notifications').insert({
+                buyer_id: order.buyer_id,
+                panel_id: panelId,
+                order_id: order.id,
+                type: 'order_update',
+                title: 'Order Refunded',
+                message: `Order has been refunded. $${refundAmount.toFixed(2)} has been credited to your balance.`,
+              });
+            } catch (_) { /* non-fatal */ }
+          }
+
+          // Handle partial — update charge if provider reports different cost
+          if (newStatus === 'partial' && charge !== null) {
+            updateData.provider_cost = charge;
           }
 
           const { error: updateError } = await supabase
@@ -178,6 +233,18 @@ function mapProviderStatus(providerStatus: string): string {
     'Canceled': 'cancelled',
     'Cancelled': 'cancelled',
     'Refunded': 'refunded',
+    'Failed': 'cancelled',
+    'Error': 'cancelled',
+    // Lowercase variants common in some provider APIs
+    'pending': 'pending',
+    'in_progress': 'in_progress',
+    'processing': 'processing',
+    'completed': 'completed',
+    'partial': 'partial',
+    'canceled': 'cancelled',
+    'cancelled': 'cancelled',
+    'refunded': 'refunded',
+    'failed': 'cancelled',
   };
   return statusMap[providerStatus] || providerStatus?.toLowerCase() || 'pending';
 }

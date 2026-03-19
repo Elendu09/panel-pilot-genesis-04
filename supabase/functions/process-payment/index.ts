@@ -322,15 +322,18 @@ serve(async (req) => {
       }
 
       const config = adminProvider.config as Record<string, any> || {};
+      const resolvedPublicKey = config.public_key || config.publicKey;
       gatewayConfig = {
         id: adminProvider.provider_name,
         enabled: true,
         secretKey: config.secret_key || config.secretKey,
-        apiKey: config.api_key || config.apiKey,
-        publicKey: config.public_key || config.publicKey,
+        // Many providers store the primary API key under publicKey (e.g. Coinbase, NOWPayments)
+        apiKey: config.api_key || config.apiKey || resolvedPublicKey,
+        publicKey: resolvedPublicKey,
         contractCode: config.contract_code || config.contractCode,
         payeeName: config.payee_name || config.payeeName,
         storeId: config.store_id || config.storeId,
+        merchantId: config.merchant_id || config.merchantId,
       };
       
       console.log('[process-payment] Using admin gateway config for:', gateway);
