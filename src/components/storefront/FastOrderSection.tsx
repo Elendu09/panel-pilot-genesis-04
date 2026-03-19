@@ -50,6 +50,8 @@ interface Service {
   min_quantity?: number;
   max_quantity?: number;
   provider_service_id?: string;
+  display_order?: number;
+  displayOrder?: number;
 }
 
 // Smart price formatting: 4 decimals for < $1, 2 decimals for >= $1
