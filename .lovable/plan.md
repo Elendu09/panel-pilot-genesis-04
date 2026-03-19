@@ -1,89 +1,99 @@
 
 
-# Plan: Fix Order Creation Error, Service IDs, Validation, Links, and Crypto Payments
+# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
 
-## Issue 1: "Cannot access 'verifiedPrice' before initialization" (CRITICAL)
+## Overview
 
-**Root cause**: In `buyer-order/index.ts`, `verifiedPrice` is used on line 162 (balance check) but declared on line 201 (after service fetch and price calculation). JavaScript `const` has a temporal dead zone — using it before declaration throws this exact error.
+This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
 
-**Fix**: Reorder the logic in the edge function so that:
-1. Fetch buyer
-2. Fetch service
-3. Calculate `verifiedPrice`
-4. THEN check balance against `verifiedPrice`
+---
 
-This single fix resolves the "Order Failed" error on both Fast Order and New Order pages.
+## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
 
-## Issue 2: Service IDs for Tenant Users
+| File | Error | Fix |
+|------|-------|-----|
+| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
+| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
+| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
+| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
+| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
+| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
+| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
 
-**Current state**: Tenant users see `provider_service_id` (the external provider ID) or a truncated UUID. They should see a simple sequential panel-local ID (like #1, #2, #3) based on `display_order`.
+## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
 
-**Fix**: In `FastOrderSection.tsx` line 1163-1165 and `BuyerNewOrder.tsx`, show `display_order` as the tenant-facing service ID (e.g., "ID: 1") instead of `provider_service_id`. The `provider_service_id` remains visible only to panel owners in ServicesManagement.
+Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
 
-## Issue 3: Fast Order Missing Validations
+- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
+- Create a simple context or use localStorage directly; the header component reads this value
+- The switch is only rendered in mobile mode (use `useIsMobile()`)
+- When enabled → show the hamburger menu icon in the dashboard header
+- When disabled → hide it (current default behavior for clean mobile UI)
 
-**Current state**: Step 4 (Order Details) does not validate:
-- Empty or invalid URL/username
-- Quantity below `min_quantity` or above `max_quantity`
+## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
 
-**Fix**: In `handleDetailsConfirmed()` (line 387), add:
-- URL/username presence check (already exists but no format validation)
-- Quantity range validation against `selectedService.min_quantity` and `max_quantity`
-- Show clear error toasts with the allowed range
+Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
 
-Also clamp quantity when it's out of range in the quantity input `onChange`.
+**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
 
-## Issue 4: Order Links Opening Incorrectly
+Affected pages and their replacement queries:
+- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
+- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
+- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
+- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
+- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
+- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
 
-**Current state**: The screenshot shows "Homeofsmm.com" as the link text in the order summary. This is the `targetUrl` the buyer entered — the system displays it correctly. The issue is that when clicking the link in Order Management or order details, it should open in a new tab with the correct URL.
+Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
 
-**Fix**: In `OrdersManagement.tsx`, the link on line 1058 already uses `target="_blank"`. The "homeofsmm" text is the actual `target_url` the buyer typed. This is working correctly — the buyer entered that URL. No code change needed here.
+## 4. Restore Subdomain Suffix to `smmpilot.online`
 
-However, in `FastOrderSection.tsx` Step 5 (line 1407-1410), the `targetUrl` is displayed as plain text, not as a clickable link. Make it clickable with `target="_blank"`.
+Update references in:
+- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
+- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
+- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
+- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
+- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
 
-## Issue 5: Crypto Payment "Not Configured" Error
+## 5. Fix Payment Verification & Subscription Upgrade Flow
 
-**Root cause**: When a panel owner tries to pay for billing/subscription via crypto (Coinbase Commerce), the system looks up `platform_payment_providers` for the gateway name `crypto` or `coinbase`. The admin may have configured it under a different name, or the `config` object may not have `apiKey` set.
+### Deposit status not updating in transaction history
+The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
 
-The error "Crypto payment not configured" comes from line 553-557 when `gatewayConfig.apiKey` is null. For owner payments, the config is built from `platform_payment_providers.config` which maps `api_key` to `apiKey` (line 329). If the admin stored the key under a different field name (like `commerce_api_key`), it won't be found.
+**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
 
-**Fix**: In `process-payment/index.ts`, for the `crypto`/`coinbase` case, also check `gatewayConfig.commerceApiKey` and the env fallback `COINBASE_COMMERCE_API_KEY`. Also improve the error message to say which config field is missing so the admin knows what to set.
+### Subscription upgrade from balance
+Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
+- Before calling `process-payment`, check if `panelBalance >= plan.price`
+- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
+- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
 
-For the `cryptomus` case, same pattern — check more field name variants.
+---
 
-## Files to Modify
+## Files to Change
 
 | File | Change |
 |------|--------|
-| `supabase/functions/buyer-order/index.ts` | Reorder balance check AFTER `verifiedPrice` declaration |
-| `src/components/storefront/FastOrderSection.tsx` | Show `display_order` as tenant ID; add quantity validation; make target URL clickable |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Show `display_order` as tenant service ID |
-| `supabase/functions/process-payment/index.ts` | Improve crypto config key resolution with more field name fallbacks |
-
-## Key Code Changes
-
-**buyer-order/index.ts** — Move balance check after service fetch:
-```
-// Current broken order:
-// 1. Fetch buyer → 2. Check balance vs verifiedPrice (ERROR!) → 3. Fetch service → 4. Declare verifiedPrice
-
-// Fixed order:
-// 1. Fetch buyer → 2. Fetch service → 3. Declare verifiedPrice → 4. Check balance vs verifiedPrice
-```
-
-**FastOrderSection.tsx** — Quantity validation in `handleDetailsConfirmed`:
-```typescript
-const minQty = selectedService?.min_quantity || 1;
-const maxQty = selectedService?.max_quantity || 1000000;
-if (quantity < minQty || quantity > maxQty) {
-  toast({ title: `Quantity must be between ${minQty} and ${maxQty.toLocaleString()}`, variant: "destructive" });
-  return;
-}
-```
-
-**Service ID display** — Show sequential panel ID:
-```typescript
-// Instead of provider_service_id
-<Badge>ID: {service.display_order || index + 1}</Badge>
-```
+| `supabase/functions/dns-lookup/index.ts` | Cast error types |
+| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
+| `supabase/functions/import-provider-services/index.ts` | Cast error type |
+| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
+| `supabase/functions/security-audit/index.ts` | Cast error type |
+| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
+| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
+| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
+| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
+| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
+| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
+| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
+| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
+| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
+| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
+| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
+| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
 

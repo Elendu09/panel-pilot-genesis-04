@@ -547,12 +547,17 @@ serve(async (req) => {
 
       case 'crypto':
       case 'coinbase': {
-        // Coinbase Commerce integration
-        const coinbaseApiKey = gatewayConfig.apiKey || Deno.env.get('COINBASE_COMMERCE_API_KEY');
+        // Coinbase Commerce integration — check multiple config key field names
+        const coinbaseApiKey = gatewayConfig.apiKey 
+          || gatewayConfig.commerceApiKey 
+          || gatewayConfig.commerce_api_key
+          || gatewayConfig.api_key
+          || Deno.env.get('COINBASE_COMMERCE_API_KEY');
         
         if (!coinbaseApiKey) {
+          console.error('[process-payment] Coinbase API key not found in config fields: apiKey, commerceApiKey, commerce_api_key, api_key');
           return new Response(
-            JSON.stringify({ success: false, error: 'Crypto payment not configured' }),
+            JSON.stringify({ success: false, error: 'Crypto payment not configured. Admin needs to set the API key in platform payment providers settings.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }

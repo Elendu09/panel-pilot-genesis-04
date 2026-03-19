@@ -603,7 +603,7 @@ const BuyerNewOrder = () => {
                               </div>
                               <div className="flex items-center gap-2 flex-wrap ml-7">
                                 <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0.5 h-5 shrink-0">
-                                  ID: {service.provider_service_id || service.id?.slice(0, 6)}
+                                  ID: {(service as any).display_order || (service as any).displayOrder || service.id?.slice(0, 6)}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
                                   {(service.min_quantity || 100).toLocaleString()}-{(service.max_quantity || 10000).toLocaleString()}

@@ -50,6 +50,8 @@ interface Service {
   min_quantity?: number;
   max_quantity?: number;
   provider_service_id?: string;
+  display_order?: number;
+  displayOrder?: number;
 }
 
 // Smart price formatting: 4 decimals for < $1, 2 decimals for >= $1
@@ -386,7 +388,24 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Handle details confirmed
   const handleDetailsConfirmed = () => {
     if (!targetUrl.trim()) {
-      toast({ title: "Please enter a link", variant: "destructive" });
+      toast({ title: "Please enter a link or username", variant: "destructive" });
+      return;
+    }
+    // Validate quantity against service limits
+    if (selectedService) {
+      const minQty = selectedService.min_quantity || 100;
+      const maxQty = selectedService.max_quantity || 100000;
+      if (quantity < minQty) {
+        toast({ title: `Minimum quantity is ${minQty.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+      if (quantity > maxQty) {
+        toast({ title: `Maximum quantity is ${maxQty.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+    }
+    if (quantity <= 0) {
+      toast({ title: "Please enter a valid quantity", variant: "destructive" });
       return;
     }
     // Track checkout start for analytics
@@ -1161,7 +1180,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               )}
                             </div>
                             <Badge variant="secondary" className="text-[7px] font-mono px-0.5 py-0 h-3 mb-0.5">
-                              {service.provider_service_id || service.id?.slice(0, 6)}
+                              ID: {service.display_order || service.displayOrder || (index + 1)}
                             </Badge>
                             <p className={cn(
                               "text-[10px] sm:text-xs line-clamp-1",
@@ -1405,9 +1424,14 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         </div>
                         <div className="flex justify-between">
                           <span className={themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Link</span>
-                          <span className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px]", themeMode === 'dark' ? 'text-teal-400' : 'text-blue-500')}>
+                          <a
+                            href={targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn("font-medium truncate max-w-[180px] sm:max-w-[220px] underline", themeMode === 'dark' ? 'text-teal-400' : 'text-blue-500')}
+                          >
                             {targetUrl}
-                          </span>
+                          </a>
                         </div>
                       </div>
                     </div>
