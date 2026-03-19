@@ -388,7 +388,24 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   // Handle details confirmed
   const handleDetailsConfirmed = () => {
     if (!targetUrl.trim()) {
-      toast({ title: "Please enter a link", variant: "destructive" });
+      toast({ title: "Please enter a link or username", variant: "destructive" });
+      return;
+    }
+    // Validate quantity against service limits
+    if (selectedService) {
+      const minQty = selectedService.min_quantity || 100;
+      const maxQty = selectedService.max_quantity || 100000;
+      if (quantity < minQty) {
+        toast({ title: `Minimum quantity is ${minQty.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+      if (quantity > maxQty) {
+        toast({ title: `Maximum quantity is ${maxQty.toLocaleString()}`, variant: "destructive" });
+        return;
+      }
+    }
+    if (quantity <= 0) {
+      toast({ title: "Please enter a valid quantity", variant: "destructive" });
       return;
     }
     // Track checkout start for analytics
