@@ -706,6 +706,7 @@ const PaymentMethods = () => {
                         subtitle={`Fee: ${gateway.fee}`}
                         enabled={isConfigured ? isEnabled : undefined}
                         onClick={() => openConfigDialog(gateway)}
+                        onToggle={isConfigured ? () => toggleGateway(gateway.id) : undefined}
                       />
                     );
                   })}
