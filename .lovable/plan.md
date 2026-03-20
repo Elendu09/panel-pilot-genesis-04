@@ -1,99 +1,100 @@
 
 
-# Plan: Fix Build Errors, Header Toggle, Admin Functions, Subdomain, Payment & Import
+# Plan: Fix Missing Order History, Deposit History, Coinbase Deprecation, and Payment Config
 
-## Overview
+## Issue 1: Orders from Fast Order not showing in "My Orders"
 
-This plan addresses 5 areas: (1) fix all 12 build errors in edge functions, (2) replace ThemeToggle with a header visibility switch in MoreMenu, (3) fix admin pages that call non-existent `admin-data` function, (4) restore `smmpilot.online` as the subdomain suffix, and (5) fix payment verification status updates.
+**Root cause**: `BuyerOrders.tsx` fetches via `buyer-api` with `buyer.api_key`. Many buyers (especially guest-created) have no `api_key`. The fallback direct query hits RLS and returns nothing.
 
----
+The `handleGetOrders` function in `buyer-api` works correctly — the problem is authentication. When `api_key` is null, the code falls through to a direct Supabase query which fails due to RLS.
 
-## 1. Fix Build Errors (12 TypeScript errors across 6 edge functions)
+**Fix**: In `BuyerOrders.tsx`, use the `__buyer_id_auth__` path (already supported by buyer-api) as fallback when `api_key` is missing. This mirrors what `LiveOrderTracker` does.
 
-| File | Error | Fix |
-|------|-------|-----|
-| `dns-lookup/index.ts` L210, L295 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `domain-health-check/index.ts` L167 | TXT returns `string[][]` not `string[]` | Cast: `as unknown as string[]` or flatten |
-| `import-provider-services/index.ts` L612 | `'error' is of type 'unknown'` | Cast to `(error as Error).message` |
-| `mfa-setup/index.ts` L59, L85 | `Uint8Array` not assignable to `BufferSource` | Cast: `key as unknown as ArrayBuffer` or use `.buffer` |
-| `security-audit/index.ts` L89 | `'err' is of type 'unknown'` | Cast to `(err as Error).message` |
-| `serve-favicon/index.ts` L100-101 | `custom_branding` not on array type | Add `.single()` type assertion or check `Array.isArray` |
-| `webhook-notify/index.ts` L191 | `string | null` not assignable to fetch | Add null guard before fetch |
-| `webhook-notify/index.ts` L232-233 | `supabaseAdmin.rpc` always truthy, `.raw` doesn't exist | Replace with simple `failure_count: 1` (increment via SQL or just set 1) |
+## Issue 2: Deposit history empty in tenant "Add Funds" page
 
-## 2. MoreMenu: Replace ThemeToggle with Header Menu Icon Toggle
+**Root cause**: `BuyerDeposit.tsx` calls `buyer-auth` with `action: 'transactions'`, but `buyer-auth` has NO `transactions` case — it falls to `default: return { error: 'Invalid action' }`. The function silently returns an error which is caught but not shown.
 
-Replace `<ThemeToggle />` in the user profile card with a `<Switch>` component labeled "Show Menu Icon" that controls whether the hamburger/menu icon appears in the mobile header.
+**Fix**: Add a `transactions` case to `buyer-auth/index.ts` that queries the `transactions` table for the buyer's records (all types: deposits, order payments, etc., as user selected "All payments").
 
-- Store setting in `localStorage` key `header-menu-visible` (default: `false` = disabled = hidden)
-- Create a simple context or use localStorage directly; the header component reads this value
-- The switch is only rendered in mobile mode (use `useIsMobile()`)
-- When enabled → show the hamburger menu icon in the dashboard header
-- When disabled → hide it (current default behavior for clean mobile UI)
+## Issue 3: Coinbase Commerce "charge creation has been deprecated"
 
-## 3. Fix Admin Pages — Replace `admin-data` with Direct Supabase Calls
+**Root cause**: The `process-payment` edge function uses `POST https://api.commerce.coinbase.com/charges` which Coinbase has deprecated. The replacement is `POST https://api.commerce.coinbase.com/checkouts`.
 
-Six admin pages call `/functions/v1/admin-data` which **does not exist** as an edge function. The existing function is `admin-panel-ops` (handles add_funds, update_subscription, bulk_update only — not data fetching).
+**Fix**: Replace the `/charges` endpoint with `/checkouts` in `process-payment/index.ts`. The checkout API uses the same `X-CC-Api-Key` header but has slightly different request/response structure:
+- Request: same fields but uses `requested_info` instead of some charge-specific fields
+- Response: checkout URL is at `data.hosted_url` (same as charges)
 
-**Fix**: Replace `fetch('/functions/v1/admin-data', ...)` calls with direct `supabase.from(...)` queries using the service role via RLS policies (admin already has `is_any_admin` policies on panels).
+## Issue 4: Payment method config flexibility
 
-Affected pages and their replacement queries:
-- **`PanelManagement.tsx`**: `get_panels` → `supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name), subscription:panel_subscriptions(plan_type, status)')` 
-- **`AdminOverview.tsx`**: `get_dashboard_stats` → aggregate from panels, orders, transactions, client_users tables
-- **`UserManagement.tsx`**: `get_users` → `supabase.from('profiles').select('*')`
-- **`PaymentManagement.tsx`**: `get_transactions` → `supabase.from('transactions').select('*')`
-- **`SystemHealth.tsx`**: `get_system_health` → compute from table counts
-- **`SupportTickets.tsx`**: `get_tickets` / `update_ticket` → `supabase.from('support_tickets').select/update`
+Already addressed in previous iterations — multiple field name fallbacks exist. No additional changes needed.
 
-Also fix CORS on `admin-panel-ops/index.ts` (line 5 missing platform headers).
-
-## 4. Restore Subdomain Suffix to `smmpilot.online`
-
-Update references in:
-- `tenant-domain-config.ts`: Change default fallback from `homeofsmm.com` to `smmpilot.online` (line 39)
-- `generate-sitemap/index.ts`: Change `homeofsmm.com` URLs to `smmpilot.online`
-- `docs/DocsHub.tsx`: Change example URLs from `homeofsmm.com` to `smmpilot.online`
-- Remove Replit patterns from `DEV_PATTERNS` in `tenant-domain-config.ts` (lines 80-83) and `TenantRouter.tsx` (lines 39-42)
-- Keep `homeofsmm.com` in `PLATFORM_DOMAINS` array (it's the brand) but ensure `smmpilot.online` is primary for subdomains
-
-## 5. Fix Payment Verification & Subscription Upgrade Flow
-
-### Deposit status not updating in transaction history
-The verification flow in `Billing.tsx` (lines 183-226) already calls `verify-payment` on return. The issue is timing — if the gateway hasn't confirmed yet, verification returns `pending`. 
-
-**Fix**: Add a retry loop (poll 3 times with 5s intervals) when status comes back as `pending` after returning from payment.
-
-### Subscription upgrade from balance
-Currently `handleUpgrade` always goes through the payment gateway. Add an option to pay from panel balance:
-- Before calling `process-payment`, check if `panelBalance >= plan.price`
-- Show a dialog asking: "Pay from balance ($X available) or use payment gateway?"
-- If balance: directly deduct from `panels.balance`, create completed transaction, update subscription — all via a new `balance-payment` action in `process-payment`
-
----
-
-## Files to Change
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/dns-lookup/index.ts` | Cast error types |
-| `supabase/functions/domain-health-check/index.ts` | Fix TXT record type |
-| `supabase/functions/import-provider-services/index.ts` | Cast error type |
-| `supabase/functions/mfa-setup/index.ts` | Fix crypto key type |
-| `supabase/functions/security-audit/index.ts` | Cast error type |
-| `supabase/functions/serve-favicon/index.ts` | Fix panel type check |
-| `supabase/functions/webhook-notify/index.ts` | Fix null check + remove `.rpc`/`.raw` |
-| `supabase/functions/admin-panel-ops/index.ts` | Fix CORS headers |
-| `src/pages/panel/MoreMenu.tsx` | Replace ThemeToggle with header menu switch |
-| `src/pages/admin/PanelManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/AdminOverview.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/UserManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/PaymentManagement.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SystemHealth.tsx` | Replace admin-data with direct Supabase |
-| `src/pages/admin/SupportTickets.tsx` | Replace admin-data with direct Supabase |
-| `src/lib/tenant-domain-config.ts` | Fix default domain, remove Replit |
-| `src/pages/TenantRouter.tsx` | Remove Replit patterns |
-| `supabase/functions/generate-sitemap/index.ts` | Fix URLs |
-| `src/pages/docs/DocsHub.tsx` | Fix example URLs |
-| `src/pages/panel/Billing.tsx` | Add retry polling, balance payment option |
-| `supabase/functions/process-payment/index.ts` | Add balance-payment action |
+| `supabase/functions/buyer-auth/index.ts` | Add `transactions` case to fetch all buyer transactions |
+| `supabase/functions/process-payment/index.ts` | Replace deprecated Coinbase `/charges` with `/checkouts` |
+| `src/pages/buyer/BuyerOrders.tsx` | Use `__buyer_id_auth__` fallback when no API key |
+
+## Implementation Details
+
+### buyer-auth: Add transactions handler
+
+```typescript
+case 'transactions':
+  return await handleTransactions(supabaseAdmin, body);
+
+async function handleTransactions(supabase, body) {
+  const { buyerId, panelId } = body;
+  if (!buyerId || !panelId) return jsonResponse({ error: 'Missing buyerId or panelId' });
+  
+  // Verify buyer belongs to panel
+  const { data: buyer } = await supabase.from('client_users')
+    .select('id').eq('id', buyerId).eq('panel_id', panelId).single();
+  if (!buyer) return jsonResponse({ error: 'Invalid buyer' });
+  
+  // Fetch ALL transaction types for this buyer
+  const { data: transactions } = await supabase.from('transactions')
+    .select('*')
+    .or(`buyer_id.eq.${buyerId},user_id.eq.${buyerId}`)
+    .eq('panel_id', panelId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  
+  return jsonResponse({ transactions: transactions || [] });
+}
+```
+
+### Coinbase: Switch to Checkouts API
+
+```typescript
+// Replace /charges with /checkouts
+const checkoutResponse = await fetch('https://api.commerce.coinbase.com/checkouts', {
+  method: 'POST',
+  headers: {
+    'X-CC-Api-Key': coinbaseApiKey,
+    'X-CC-Version': '2018-03-22',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: `Deposit - ${panelName}`,
+    description: `Account deposit of $${amount}`,
+    pricing_type: 'fixed_price',
+    local_price: { amount: amount.toString(), currency: currency.toUpperCase() },
+    requested_info: [],
+    metadata: { panelId, buyerId, transactionId },
+  }),
+});
+// Response structure same: data.hosted_url for redirect
+```
+
+### BuyerOrders: Fallback auth
+
+```typescript
+// If no API key, use buyerId+panelId direct auth
+const buyerApiKey = buyer.api_key || localStorage.getItem('buyer_api_key');
+const authBody = buyerApiKey 
+  ? { key: buyerApiKey, action: 'get-orders' }
+  : { key: '__buyer_id_auth__', action: 'get-orders', buyerId: buyer.id, panelId: panel?.id };
+```
 
