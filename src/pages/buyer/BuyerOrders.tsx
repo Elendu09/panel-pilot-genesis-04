@@ -114,50 +114,32 @@ const BuyerOrders = () => {
       // Use buyer-api edge function to bypass RLS
       const buyerApiKey = buyer.api_key || localStorage.getItem('buyer_api_key') || '';
       
-      if (buyerApiKey) {
-        const { data, error } = await supabase.functions.invoke('buyer-api', {
-          body: { key: buyerApiKey, action: 'get-orders' }
-        });
-        
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+      // Build request body — use __buyer_id_auth__ fallback when no API key
+      const requestBody = buyerApiKey
+        ? { key: buyerApiKey, action: 'get-orders' }
+        : { key: '__buyer_id_auth__', action: 'get-orders', buyerId: buyer.id, panelId: panel?.id };
+      
+      const { data, error } = await supabase.functions.invoke('buyer-api', {
+        body: requestBody
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-        const ordersData = Array.isArray(data) ? data : [];
-        const formattedOrders: Order[] = ordersData.map((o: any) => ({
-          id: o.id,
-          order_number: o.order_number,
-          target_url: o.target_url,
-          quantity: o.quantity,
-          price: o.price,
-          status: o.status || 'pending',
-          progress: o.progress || 0,
-          created_at: o.created_at,
-          service_name: o.service_name,
-          service: o.service,
-        }));
-        setOrders(formattedOrders);
-      } else {
-        // Fallback to direct query
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*, service:services(name, provider_service_id)')
-          .eq('buyer_id', buyer.id)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        const formattedOrders: Order[] = (data || []).map((o: any) => ({
-          id: o.id,
-          order_number: o.order_number,
-          target_url: o.target_url,
-          quantity: o.quantity,
-          price: o.price,
-          status: o.status || 'pending',
-          progress: o.progress || 0,
-          created_at: o.created_at,
-          service_name: o.service_name,
-          service: o.service,
-        }));
-        setOrders(formattedOrders);
-      }
+      const ordersData = Array.isArray(data) ? data : [];
+      const formattedOrders: Order[] = ordersData.map((o: any) => ({
+        id: o.id,
+        order_number: o.order_number,
+        target_url: o.target_url,
+        quantity: o.quantity,
+        price: o.price,
+        status: o.status || 'pending',
+        progress: o.progress || 0,
+        created_at: o.created_at,
+        service_name: o.service_name,
+        service: o.service,
+      }));
+      setOrders(formattedOrders);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       setError('Failed to load your orders. Please try again.');

@@ -420,6 +420,8 @@ serve(async (req) => {
         return await handleGenerateApiKey(supabaseAdmin, body);
       case 'resend-verification':
         return await handleResendVerification(supabaseAdmin, body);
+      case 'transactions':
+        return await handleTransactions(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }

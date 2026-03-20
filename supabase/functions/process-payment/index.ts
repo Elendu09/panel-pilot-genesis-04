@@ -565,7 +565,8 @@ serve(async (req) => {
           );
         }
 
-        const chargeResponse = await fetch('https://api.commerce.coinbase.com/charges', {
+        // Use Coinbase Commerce Checkouts API (charges API is deprecated)
+        const checkoutResponse = await fetch('https://api.commerce.coinbase.com/checkouts', {
           method: 'POST',
           headers: {
             'X-CC-Api-Key': coinbaseApiKey,
@@ -580,27 +581,28 @@ serve(async (req) => {
               amount: amount.toString(),
               currency: currency.toUpperCase(),
             },
+            requested_info: [],
             metadata: {
               panelId,
               buyerId,
               transactionId: transactionIdToUse,
             },
-            redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
-            cancel_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
           }),
         });
 
-        const charge = await chargeResponse.json();
+        const checkout = await checkoutResponse.json();
         
-        if (charge.error) {
+        if (checkout.error || !checkoutResponse.ok) {
+          const errMsg = checkout.error?.message || checkout.message || 'Coinbase checkout creation failed';
+          console.error('[process-payment] Coinbase checkout error:', JSON.stringify(checkout));
           return new Response(
-            JSON.stringify({ success: false, error: charge.error.message }),
+            JSON.stringify({ success: false, error: errMsg }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        redirectUrl = charge.data?.hosted_url;
-        paymentId = charge.data?.id;
+        redirectUrl = checkout.data?.hosted_url;
+        paymentId = checkout.data?.id;
         break;
       }
 
