@@ -1293,3 +1293,40 @@ async function handleResendVerification(supabaseAdmin: any, body: any) {
     message: 'Verification email sent successfully'
   });
 }
+
+// Handle transactions history for buyer
+async function handleTransactions(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId } = body;
+
+  if (!buyerId || !panelId) {
+    return jsonResponse({ error: 'Missing buyerId or panelId' });
+  }
+
+  // Verify buyer belongs to panel
+  const { data: buyer } = await supabaseAdmin
+    .from('client_users')
+    .select('id')
+    .eq('id', buyerId)
+    .eq('panel_id', panelId)
+    .single();
+
+  if (!buyer) {
+    return jsonResponse({ error: 'Invalid buyer' });
+  }
+
+  // Fetch ALL transaction types for this buyer
+  const { data: transactions, error } = await supabaseAdmin
+    .from('transactions')
+    .select('*')
+    .or(`buyer_id.eq.${buyerId},user_id.eq.${buyerId}`)
+    .eq('panel_id', panelId)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error('Error fetching transactions:', error);
+    return jsonResponse({ error: 'Failed to fetch transactions' });
+  }
+
+  return jsonResponse({ transactions: transactions || [] });
+}
