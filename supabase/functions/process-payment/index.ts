@@ -565,15 +565,49 @@ serve(async (req) => {
           );
         }
 
-        // Use Coinbase Commerce Checkouts API (charges API is deprecated)
-        const checkoutResponse = await fetch('https://api.commerce.coinbase.com/checkouts', {
-          method: 'POST',
-          headers: {
-            'X-CC-Api-Key': coinbaseApiKey,
-            'X-CC-Version': '2018-03-22',
-            'Content-Type': 'application/json',
+        // Coinbase Commerce — try /charges first (primary endpoint), fallback to /checkouts
+        const coinbaseHeaders = {
+          'X-CC-Api-Key': coinbaseApiKey,
+          'X-CC-Version': '2018-03-22',
+          'Content-Type': 'application/json',
+        };
+
+        const chargePayload = JSON.stringify({
+          name: `Deposit - ${panelName}`,
+          description: `Account deposit of $${amount}`,
+          pricing_type: 'fixed_price',
+          local_price: {
+            amount: amount.toString(),
+            currency: currency.toUpperCase(),
           },
-          body: JSON.stringify({
+          metadata: {
+            panelId,
+            buyerId,
+            transactionId: transactionIdToUse,
+          },
+          redirect_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}`,
+          cancel_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
+        });
+
+        // Try /charges endpoint first
+        let coinbaseResult: any = null;
+        let coinbaseOk = false;
+
+        const chargeResponse = await fetch('https://api.commerce.coinbase.com/charges', {
+          method: 'POST',
+          headers: coinbaseHeaders,
+          body: chargePayload,
+        });
+        const chargeData = await chargeResponse.json();
+
+        if (chargeResponse.ok && chargeData.data?.hosted_url) {
+          coinbaseResult = chargeData;
+          coinbaseOk = true;
+        } else {
+          console.warn('[process-payment] Coinbase /charges failed, trying /checkouts:', JSON.stringify(chargeData));
+          
+          // Fallback to /checkouts
+          const checkoutPayload = JSON.stringify({
             name: `Deposit - ${panelName}`,
             description: `Account deposit of $${amount}`,
             pricing_type: 'fixed_price',
@@ -587,22 +621,30 @@ serve(async (req) => {
               buyerId,
               transactionId: transactionIdToUse,
             },
-          }),
-        });
+          });
 
-        const checkout = await checkoutResponse.json();
-        
-        if (checkout.error || !checkoutResponse.ok) {
-          const errMsg = checkout.error?.message || checkout.message || 'Coinbase checkout creation failed';
-          console.error('[process-payment] Coinbase checkout error:', JSON.stringify(checkout));
-          return new Response(
-            JSON.stringify({ success: false, error: errMsg }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          const checkoutResponse = await fetch('https://api.commerce.coinbase.com/checkouts', {
+            method: 'POST',
+            headers: coinbaseHeaders,
+            body: checkoutPayload,
+          });
+          const checkoutData = await checkoutResponse.json();
+
+          if (checkoutResponse.ok && checkoutData.data?.hosted_url) {
+            coinbaseResult = checkoutData;
+            coinbaseOk = true;
+          } else {
+            const errMsg = checkoutData.error?.message || chargeData.error?.message || 'Coinbase payment creation failed';
+            console.error('[process-payment] Both Coinbase endpoints failed. Charges:', JSON.stringify(chargeData), 'Checkouts:', JSON.stringify(checkoutData));
+            return new Response(
+              JSON.stringify({ success: false, error: errMsg }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
 
-        redirectUrl = checkout.data?.hosted_url;
-        paymentId = checkout.data?.id;
+        redirectUrl = coinbaseResult.data?.hosted_url;
+        paymentId = coinbaseResult.data?.id;
         break;
       }
 
