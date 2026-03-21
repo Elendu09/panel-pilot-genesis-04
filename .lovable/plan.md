@@ -1,100 +1,105 @@
 
 
-# Plan: Fix Missing Order History, Deposit History, Coinbase Deprecation, and Payment Config
+# Plan: Fix "origin is not defined" Error, Balance-Based Upgrades, Trial Expiry Locking, and Payment Separation
 
-## Issue 1: Orders from Fast Order not showing in "My Orders"
+## Issue 1: "Deposit Failed: origin is not defined" (CRITICAL)
 
-**Root cause**: `BuyerOrders.tsx` fetches via `buyer-api` with `buyer.api_key`. Many buyers (especially guest-created) have no `api_key`. The fallback direct query hits RLS and returns nothing.
+**Root cause**: In `process-payment/index.ts` line 588-589, the Coinbase Commerce charge payload uses `${origin}` for `redirect_url` and `cancel_url`, but `origin` is never declared in the edge function. In Deno edge functions, there is no `window.location.origin`. The `returnUrl` parameter IS passed in the request body (line 249) but is not used for the Coinbase case.
 
-The `handleGetOrders` function in `buyer-api` works correctly — the problem is authentication. When `api_key` is null, the code falls through to a direct Supabase query which fails due to RLS.
+**Fix**: Replace `${origin}` with `${returnUrl}` on lines 588-589, consistent with how Stripe, Flutterwave, Paystack, and all other gateways use `returnUrl`.
 
-**Fix**: In `BuyerOrders.tsx`, use the `__buyer_id_auth__` path (already supported by buyer-api) as fallback when `api_key` is missing. This mirrors what `LiveOrderTracker` does.
+## Issue 2: Balance-Based Plan Upgrade in Billing Page
 
-## Issue 2: Deposit history empty in tenant "Add Funds" page
+**Current state**: `handleUpgrade()` always redirects to a payment gateway. No option to use panel balance.
 
-**Root cause**: `BuyerDeposit.tsx` calls `buyer-auth` with `action: 'transactions'`, but `buyer-auth` has NO `transactions` case — it falls to `default: return { error: 'Invalid action' }`. The function silently returns an error which is caught but not shown.
+**Fix**: Before calling `process-payment`, check if `panelBalance >= plan.price`. If yes, show a dialog asking:
+- "Use Balance ($X.XX)" — deducts from panel balance directly via a new `balance-payment` action in `process-payment`
+- "Pay via Gateway" — proceeds to external payment as current flow
 
-**Fix**: Add a `transactions` case to `buyer-auth/index.ts` that queries the `transactions` table for the buyer's records (all types: deposits, order payments, etc., as user selected "All payments").
+Also: when subscription `expires_at` is reached and `panelBalance >= plan.price`, auto-renew by calling the balance-payment path automatically. This check runs in `usePanel.tsx` during the existing expiry check loop.
 
-## Issue 3: Coinbase Commerce "charge creation has been deprecated"
+## Issue 3: Trial Expiry Locking
 
-**Root cause**: The `process-payment` edge function uses `POST https://api.commerce.coinbase.com/charges` which Coinbase has deprecated. The replacement is `POST https://api.commerce.coinbase.com/checkouts`.
+**Current state**: `usePanel.tsx` already auto-downgrades expired trials to `free` tier. `TrialExpiryBanner` shows a warning banner. But there is NO lock that redirects panel owners to billing when their trial/subscription expires.
 
-**Fix**: Replace the `/charges` endpoint with `/checkouts` in `process-payment/index.ts`. The checkout API uses the same `X-CC-Api-Key` header but has slightly different request/response structure:
-- Request: same fields but uses `requested_info` instead of some charge-specific fields
-- Response: checkout URL is at `data.hosted_url` (same as charges)
+**Fix**:
+- In the panel layout/guard component, when `subscription_status === 'expired'`, show a full-screen lock overlay (not just a banner) that only allows navigation to `/panel/billing`
+- Add countdown warning at 3 days, 1 day, and final hours before expiry
+- The `TrialExpiryBanner` already handles active trial warnings — enhance it to also cover paid subscription expiry (not just trials)
 
-## Issue 4: Payment method config flexibility
+## Issue 4: Admin vs Panel Owner Payment Method Separation
 
-Already addressed in previous iterations — multiple field name fallbacks exist. No additional changes needed.
+**Current state**: Both admin and panel owner payments go through the SAME `process-payment` edge function, which is correct — they just use different config sources (admin: `platform_payment_providers` table; panel owner: `panels.settings.payments`). The separation already exists at lines 298-388.
+
+**No new edge function needed.** The current architecture correctly separates:
+- Admin gateways (from `platform_payment_providers`) → used when `isOwnerDeposit=true` or `metadata.type='subscription'`
+- Panel owner gateways (from `panel.settings.payments`) → used for tenant/buyer payments
+
+The database already stores admin keys in `platform_payment_providers.config` and panel keys in `panels.settings.payments.enabledMethods`. These are already separate. Creating duplicate edge functions would introduce maintenance burden with no security benefit.
+
+**Clarification for user**: Admin payment methods = `platform_payment_providers` table (for panel owner billing). Panel payment methods = `panels.settings.payments` JSON (for tenant deposits/orders). Already separate databases/storage.
+
+## Issue 5: Coinbase Commerce API Error
+
+The `/charges` endpoint returning `ForbiddenError` or deprecation — this is because:
+1. `origin` is undefined (Issue 1) causing the entire request to fail before reaching Coinbase
+2. Some Coinbase Commerce API keys only support `/charges` (older) or only `/checkouts` (newer)
+
+The dual-endpoint fallback is already implemented. Fixing `origin` → `returnUrl` will resolve this.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/buyer-auth/index.ts` | Add `transactions` case to fetch all buyer transactions |
-| `supabase/functions/process-payment/index.ts` | Replace deprecated Coinbase `/charges` with `/checkouts` |
-| `src/pages/buyer/BuyerOrders.tsx` | Use `__buyer_id_auth__` fallback when no API key |
+| `supabase/functions/process-payment/index.ts` | Fix `${origin}` → `${returnUrl}` on lines 588-589; add `balance-payment` action for direct balance deduction |
+| `src/pages/panel/Billing.tsx` | Add balance-upgrade dialog; add subscription expiry lock overlay |
+| `src/components/billing/TrialExpiryBanner.tsx` | Enhance to cover paid subscription expiry countdown |
+| `src/hooks/usePanel.tsx` | Add auto-renewal check when subscription expires and balance is sufficient |
 
-## Implementation Details
+## Key Implementation Details
 
-### buyer-auth: Add transactions handler
-
+### process-payment fix (lines 588-589):
 ```typescript
-case 'transactions':
-  return await handleTransactions(supabaseAdmin, body);
+redirect_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}`,
+cancel_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
+```
 
-async function handleTransactions(supabase, body) {
-  const { buyerId, panelId } = body;
-  if (!buyerId || !panelId) return jsonResponse({ error: 'Missing buyerId or panelId' });
-  
-  // Verify buyer belongs to panel
-  const { data: buyer } = await supabase.from('client_users')
-    .select('id').eq('id', buyerId).eq('panel_id', panelId).single();
-  if (!buyer) return jsonResponse({ error: 'Invalid buyer' });
-  
-  // Fetch ALL transaction types for this buyer
-  const { data: transactions } = await supabase.from('transactions')
-    .select('*')
-    .or(`buyer_id.eq.${buyerId},user_id.eq.${buyerId}`)
-    .eq('panel_id', panelId)
-    .order('created_at', { ascending: false })
-    .limit(100);
-  
-  return jsonResponse({ transactions: transactions || [] });
+### Balance-payment action in process-payment:
+```typescript
+if (body.action === 'balance-payment') {
+  // Deduct from panel balance, create completed transaction, update subscription
+  // Used when panel owner chooses to pay from their panel balance
 }
 ```
 
-### Coinbase: Switch to Checkouts API
-
+### Billing page upgrade dialog:
 ```typescript
-// Replace /charges with /checkouts
-const checkoutResponse = await fetch('https://api.commerce.coinbase.com/checkouts', {
-  method: 'POST',
-  headers: {
-    'X-CC-Api-Key': coinbaseApiKey,
-    'X-CC-Version': '2018-03-22',
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    name: `Deposit - ${panelName}`,
-    description: `Account deposit of $${amount}`,
-    pricing_type: 'fixed_price',
-    local_price: { amount: amount.toString(), currency: currency.toUpperCase() },
-    requested_info: [],
-    metadata: { panelId, buyerId, transactionId },
-  }),
-});
-// Response structure same: data.hosted_url for redirect
+// Before handleUpgrade redirects to gateway:
+if (panelBalance >= plan.price) {
+  // Show AlertDialog: "You have $X.XX. Pay from balance or use gateway?"
+  // Option 1: Call balance-payment action → instant upgrade
+  // Option 2: Proceed to gateway as before
+}
 ```
 
-### BuyerOrders: Fallback auth
-
+### Subscription expiry lock in Billing.tsx:
 ```typescript
-// If no API key, use buyerId+panelId direct auth
-const buyerApiKey = buyer.api_key || localStorage.getItem('buyer_api_key');
-const authBody = buyerApiKey 
-  ? { key: buyerApiKey, action: 'get-orders' }
-  : { key: '__buyer_id_auth__', action: 'get-orders', buyerId: buyer.id, panelId: panel?.id };
+// Full-page overlay when subscription_status === 'expired'
+if (subscription?.status === 'expired' && currentPlan !== 'free') {
+  // Lock all panel pages except /panel/billing
+  // Show "Your subscription has expired. Please renew to continue."
+}
+```
+
+### Auto-renewal in usePanel.tsx:
+```typescript
+// During expiry check, if balance >= plan price:
+if (sub?.expires_at && new Date(sub.expires_at) < new Date()) {
+  if (panel.balance >= planPrice) {
+    // Auto-renew via balance-payment
+  } else {
+    // Mark as expired (existing logic)
+  }
+}
 ```
 
