@@ -670,8 +670,8 @@ serve(async (req) => {
             buyerId,
             transactionId: transactionIdToUse,
           },
-          redirect_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}`,
-          cancel_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
+          redirect_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&success=true&transaction_id=${transactionIdToUse}`,
+          cancel_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
         });
 
         // Try /charges endpoint first
