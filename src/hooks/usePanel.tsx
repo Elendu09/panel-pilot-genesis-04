@@ -63,17 +63,48 @@ export function usePanel() {
         return;
       }
 
-      // Check for expired trials and auto-downgrade
+      // Check for expired trials/subscriptions, auto-renew or auto-downgrade
+      const PLAN_PRICES: Record<string, number> = { basic: 5, pro: 15 };
+
       for (const p of panelList) {
-        if ((p as any).subscription_status === 'trial') {
+        const subStatus = (p as any).subscription_status;
+        if (subStatus === 'trial' || subStatus === 'active') {
           const { data: sub } = await supabase
             .from('panel_subscriptions')
-            .select('trial_ends_at')
+            .select('trial_ends_at, expires_at, plan_type')
             .eq('panel_id', p.id)
             .maybeSingle();
+
+          const expiryDate = subStatus === 'trial' ? sub?.trial_ends_at : sub?.expires_at;
           
-          if (sub?.trial_ends_at && new Date(sub.trial_ends_at) < new Date()) {
-            // Trial expired — auto-downgrade
+          if (expiryDate && new Date(expiryDate) < new Date()) {
+            const planType = sub?.plan_type || 'free';
+            const planPrice = PLAN_PRICES[planType] || 0;
+
+            // Auto-renew if panel has enough balance
+            if (planPrice > 0 && (p.balance || 0) >= planPrice) {
+              try {
+                const { data: renewResult } = await supabase.functions.invoke('process-payment', {
+                  body: {
+                    action: 'balance-payment',
+                    panelId: p.id,
+                    userId: profile.id,
+                    amount: planPrice,
+                    plan: planType,
+                  }
+                });
+                if (renewResult?.success) {
+                  (p as any).subscription_status = 'active';
+                  (p as any).subscription_tier = planType;
+                  console.log(`[usePanel] Auto-renewed ${planType} for panel ${p.id}`);
+                  continue;
+                }
+              } catch (e) {
+                console.warn('[usePanel] Auto-renewal failed:', e);
+              }
+            }
+
+            // Not enough balance or renewal failed — expire
             await supabase.from('panels').update({
               subscription_status: 'expired',
               subscription_tier: 'free',

@@ -34,6 +34,91 @@ serve(async (req) => {
     const body = await req.json();
 
     // === VERIFY-PAYMENT ACTION: allows client to verify & finalize a payment on return ===
+    // === BALANCE-PAYMENT ACTION: deduct from panel balance for plan upgrades ===
+    if (body.action === 'balance-payment') {
+      const { panelId: bpPanelId, amount: bpAmount, plan: bpPlan, userId: bpUserId } = body;
+      if (!bpPanelId || !bpAmount || !bpPlan || !bpUserId) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing required fields for balance payment' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Fetch current panel balance
+      const { data: bpPanel, error: bpPanelErr } = await supabase
+        .from('panels')
+        .select('balance, name')
+        .eq('id', bpPanelId)
+        .single();
+
+      if (bpPanelErr || !bpPanel) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Panel not found' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if ((bpPanel.balance || 0) < bpAmount) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Insufficient balance', currentBalance: bpPanel.balance }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Deduct balance
+      const newBalance = (bpPanel.balance || 0) - bpAmount;
+      const { error: balErr } = await supabase
+        .from('panels')
+        .update({ balance: newBalance })
+        .eq('id', bpPanelId);
+
+      if (balErr) {
+        console.error('[process-payment] Balance deduction error:', balErr);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Failed to deduct balance' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Create completed transaction record
+      await supabase.from('transactions').insert({
+        user_id: bpUserId,
+        panel_id: bpPanelId,
+        amount: bpAmount,
+        type: 'subscription',
+        payment_method: 'balance',
+        status: 'completed',
+        description: `Plan upgrade to ${bpPlan} (paid from balance)`,
+        metadata: { type: 'subscription', plan: bpPlan, paidFromBalance: true },
+      });
+
+      // Update/upsert subscription
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+      await supabase.from('panel_subscriptions').upsert({
+        panel_id: bpPanelId,
+        plan_type: bpPlan,
+        price: bpAmount,
+        status: 'active',
+        started_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+      }, { onConflict: 'panel_id' });
+
+      // Update panel tier
+      await supabase.from('panels').update({
+        subscription_tier: bpPlan,
+        subscription_status: 'active',
+      }).eq('id', bpPanelId);
+
+      console.log(`[process-payment] Balance payment: ${bpPlan} upgrade for panel ${bpPanelId}, deducted $${bpAmount}`);
+
+      return new Response(
+        JSON.stringify({ success: true, status: 'completed', newBalance }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (body.action === 'verify-payment') {
       const { transactionId, gateway: verifyGateway } = body;
       if (!transactionId) {
@@ -585,8 +670,8 @@ serve(async (req) => {
             buyerId,
             transactionId: transactionIdToUse,
           },
-          redirect_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}`,
-          cancel_url: `${origin}/payment/callback?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
+          redirect_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&success=true&transaction_id=${transactionIdToUse}`,
+          cancel_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
         });
 
         // Try /charges endpoint first

@@ -13,14 +13,15 @@ interface TrialExpiryBannerProps {
 
 export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
   const navigate = useNavigate();
-  const [trialEndsAt, setTrialEndsAt] = useState<Date | null>(null);
+  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [planType, setPlanType] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (!panelId) return;
 
-    const fetchTrialStatus = async () => {
+    const fetchStatus = async () => {
       const { data: panel } = await supabase
         .from('panels')
         .select('subscription_status')
@@ -30,38 +31,49 @@ export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
       if (!panel) return;
       setSubscriptionStatus(panel.subscription_status);
 
-      if (panel.subscription_status === 'trial' || panel.subscription_status === 'expired') {
-        const { data: sub } = await supabase
-          .from('panel_subscriptions')
-          .select('trial_ends_at, status')
-          .eq('panel_id', panelId)
-          .maybeSingle();
+      // Fetch subscription details for both trial and paid plans
+      const { data: sub } = await supabase
+        .from('panel_subscriptions')
+        .select('trial_ends_at, expires_at, status, plan_type')
+        .eq('panel_id', panelId)
+        .maybeSingle();
 
-        if (sub?.trial_ends_at) {
-          setTrialEndsAt(new Date(sub.trial_ends_at));
+      if (sub) {
+        setPlanType(sub.plan_type);
+        // Use trial_ends_at for trials, expires_at for paid subscriptions
+        if (panel.subscription_status === 'trial' && sub.trial_ends_at) {
+          setExpiresAt(new Date(sub.trial_ends_at));
+        } else if (sub.expires_at) {
+          setExpiresAt(new Date(sub.expires_at));
         }
       }
     };
 
-    fetchTrialStatus();
+    fetchStatus();
   }, [panelId]);
 
   if (dismissed || !subscriptionStatus) return null;
-  if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'expired') return null;
 
+  // Show for trial, expired, or active paid plans nearing expiry
+  const isTrialOrExpired = subscriptionStatus === 'trial' || subscriptionStatus === 'expired';
   const now = new Date();
-  const isExpired = trialEndsAt ? now > trialEndsAt : subscriptionStatus === 'expired';
+  const isExpired = expiresAt ? now > expiresAt : subscriptionStatus === 'expired';
+
+  // For active paid plans, show warning when <= 7 days remain
+  const isActivePaid = subscriptionStatus === 'active' && planType && planType !== 'free' && expiresAt;
+  const daysUntilExpiry = expiresAt ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+  const showPaidWarning = isActivePaid && daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+
+  if (!isTrialOrExpired && !showPaidWarning) return null;
 
   const getDaysRemaining = () => {
-    if (!trialEndsAt) return 0;
-    const diff = trialEndsAt.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    if (!expiresAt) return 0;
+    return Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   };
 
   const getHoursRemaining = () => {
-    if (!trialEndsAt) return 0;
-    const diff = trialEndsAt.getTime() - now.getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60)));
+    if (!expiresAt) return 0;
+    return Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)));
   };
 
   const daysLeft = getDaysRemaining();
@@ -73,9 +85,14 @@ export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
         <AlertTriangle className="h-4 w-4 text-destructive" />
         <AlertDescription className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex-1">
-            <span className="font-semibold text-destructive">Trial Expired</span>
+            <span className="font-semibold text-destructive">
+              {subscriptionStatus === 'trial' ? 'Trial Expired' : 'Subscription Expired'}
+            </span>
             <span className="text-muted-foreground ml-2">
-              Your free trial has ended. Subscribe now to keep your panel active.
+              {subscriptionStatus === 'trial' 
+                ? 'Your free trial has ended. Subscribe now to keep your panel active.'
+                : `Your ${planType || ''} plan has expired. Renew to maintain access.`
+              }
             </span>
           </div>
           <Button 
@@ -84,15 +101,16 @@ export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
             className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 gap-1.5"
           >
             <Crown className="w-3.5 h-3.5" />
-            Subscribe Now
+            {subscriptionStatus === 'trial' ? 'Subscribe Now' : 'Renew Now'}
           </Button>
         </AlertDescription>
       </Alert>
     );
   }
 
-  // Trial is active
+  // Active trial or paid plan nearing expiry
   const isUrgent = daysLeft <= 1;
+  const label = subscriptionStatus === 'trial' ? 'Trial Active' : `${(planType || '').charAt(0).toUpperCase() + (planType || '').slice(1)} Plan`;
 
   return (
     <Alert className={cn(
@@ -108,14 +126,14 @@ export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
             "text-xs",
             isUrgent ? "border-orange-500/50 text-orange-500" : "border-amber-500/50 text-amber-500"
           )}>
-            Trial Active
+            {label}
           </Badge>
           <span className="text-sm text-muted-foreground">
             {daysLeft > 0 
               ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
               : `${hoursLeft} hour${hoursLeft !== 1 ? 's' : ''} remaining`
             }
-            {isUrgent && ' — Subscribe to avoid interruption'}
+            {isUrgent && (subscriptionStatus === 'trial' ? ' — Subscribe to avoid interruption' : ' — Renew to avoid interruption')}
           </span>
         </div>
         <div className="flex gap-2">
@@ -133,7 +151,7 @@ export const TrialExpiryBanner = ({ panelId }: TrialExpiryBannerProps) => {
             className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 gap-1.5"
           >
             <Crown className="w-3.5 h-3.5" />
-            Subscribe
+            {subscriptionStatus === 'trial' ? 'Subscribe' : 'Renew'}
           </Button>
         </div>
       </AlertDescription>

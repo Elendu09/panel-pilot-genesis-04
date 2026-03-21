@@ -13,7 +13,8 @@ import {
   DollarSign,
   Sparkles,
   Percent,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +22,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
@@ -114,6 +125,11 @@ const Billing = () => {
     pendingCommission: 0,
     paidCommission: 0,
   });
+
+  // Balance upgrade dialog state
+  const [balanceDialogOpen, setBalanceDialogOpen] = useState(false);
+  const [pendingUpgradePlan, setPendingUpgradePlan] = useState<typeof plans[0] | null>(null);
+  const [balancePaymentLoading, setBalancePaymentLoading] = useState(false);
 
   // Use admin-controlled payment gateways for panel owner billing (not panel-configured buyer gateways)
   const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
@@ -350,7 +366,50 @@ const Billing = () => {
       return;
     }
 
-    // Paid plan - go through payment flow
+    // Check if panel balance covers the plan price — show choice dialog
+    if (panelBalance >= plan.price) {
+      setPendingUpgradePlan(plan);
+      setBalanceDialogOpen(true);
+      return;
+    }
+
+    // Not enough balance — go directly to payment gateway
+    await proceedWithGatewayPayment(plan);
+  };
+
+  const handleBalanceUpgrade = async () => {
+    if (!pendingUpgradePlan || !panel?.id || !profile?.id) return;
+
+    setBalancePaymentLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-payment', {
+        body: {
+          action: 'balance-payment',
+          panelId: panel.id,
+          userId: profile.id,
+          amount: pendingUpgradePlan.price,
+          plan: pendingUpgradePlan.name.toLowerCase(),
+        }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Balance payment failed');
+
+      toast({ title: 'Plan Upgraded!', description: `Successfully upgraded to ${pendingUpgradePlan.name} using your balance.` });
+      setBalanceDialogOpen(false);
+      setPendingUpgradePlan(null);
+      fetchBillingData();
+    } catch (err: any) {
+      console.error('Balance upgrade error:', err);
+      toast({ variant: 'destructive', title: 'Upgrade Failed', description: err.message || 'Failed to upgrade using balance.' });
+    } finally {
+      setBalancePaymentLoading(false);
+    }
+  };
+
+  const proceedWithGatewayPayment = async (plan: typeof plans[0]) => {
+    if (!panel?.id || !profile?.id) return;
+
     if (!defaultGateway) {
       toast({
         variant: 'destructive',
@@ -359,7 +418,7 @@ const Billing = () => {
       });
       return;
     }
-    setUpgradeLoading(planName);
+    setUpgradeLoading(plan.name);
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
@@ -372,7 +431,7 @@ const Billing = () => {
           cancelUrl: `${window.location.origin}/panel/billing?cancelled=true`,
           metadata: {
             type: 'subscription',
-            plan: planName.toLowerCase(),
+            plan: plan.name.toLowerCase(),
             panelId: panel.id
           }
         }
@@ -421,14 +480,13 @@ const Billing = () => {
 
     setDepositLoading(true);
     try {
-      // Create transaction and initiate payment for panel owner deposit
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: method,
           amount,
           panelId: panel.id,
-          buyerId: profile.id, // Edge function expects 'buyerId'
-          isOwnerDeposit: true, // Flag for panel owner deposit
+          buyerId: profile.id,
+          isOwnerDeposit: true,
           returnUrl: `${window.location.origin}/panel/billing`,
           cancelUrl: `${window.location.origin}/panel/billing?cancelled=true`,
           metadata: {
@@ -506,6 +564,7 @@ const Billing = () => {
   };
 
   const currentPlan = subscription?.plan_type || 'free';
+  const isExpired = subscription?.status === 'expired' && currentPlan !== 'free';
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -539,6 +598,27 @@ const Billing = () => {
         <title>Billing & Subscription - Home of SMM</title>
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
+
+      {/* Subscription Expiry Lock Banner */}
+      {isExpired && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border-2 border-destructive/50 bg-destructive/10 p-6 text-center space-y-3"
+        >
+          <AlertTriangle className="w-10 h-10 text-destructive mx-auto" />
+          <h2 className="text-xl font-bold text-destructive">Subscription Expired</h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Your <span className="font-semibold capitalize">{currentPlan}</span> plan has expired. 
+            Please renew your subscription to regain full access to your panel features.
+          </p>
+          {panelBalance >= (plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 999) && (
+            <Badge className="bg-emerald-500/20 text-emerald-500 text-sm">
+              You have ${panelBalance.toFixed(2)} — enough to renew!
+            </Badge>
+          )}
+        </motion.div>
+      )}
 
       {/* Header */}
       <motion.div variants={itemVariants}>
@@ -652,6 +732,8 @@ const Billing = () => {
             const isLowerTier = planIndex < currentPlanIndex;
             const isActivePaid = subscription?.status === 'active' && currentPlan !== 'free';
             const isDisabled = isCurrent || isLoading || (isLowerTier && isActivePaid);
+            // Show "Renew" for expired plans matching current tier
+            const isRenewable = isExpired && isCurrent;
             
             return (
               <motion.div
@@ -669,7 +751,8 @@ const Billing = () => {
                 <Card className={cn(
                   "bg-card/60 backdrop-blur-xl border-border/50 h-full relative overflow-hidden transition-all duration-300 hover:border-primary/30",
                   plan.popular && "border-primary/50 shadow-lg shadow-primary/10",
-                  isCurrent && "ring-2 ring-primary"
+                  isCurrent && !isExpired && "ring-2 ring-primary",
+                  isRenewable && "ring-2 ring-destructive"
                 )}>
                   <div className={cn(
                     "absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-30",
@@ -693,7 +776,7 @@ const Billing = () => {
                       <span className="text-muted-foreground">/{plan.period}</span>
                     </div>
 
-                    {isCurrent && subscription?.expires_at && (
+                    {isCurrent && !isExpired && subscription?.expires_at && (
                       <div className="text-center text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
                         <Calendar className="w-3 h-3 inline mr-1" />
                         Renews {new Date(subscription.expires_at).toLocaleDateString()}
@@ -712,16 +795,22 @@ const Billing = () => {
                     <Button
                       className={cn(
                         "w-full gap-2",
-                        (isCurrent || isDisabled) && "bg-muted text-muted-foreground hover:bg-muted"
+                        isRenewable && "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
+                        (isCurrent && !isRenewable || (isDisabled && !isRenewable)) && "bg-muted text-muted-foreground hover:bg-muted"
                       )}
-                      variant={plan.popular && !isDisabled ? 'default' : 'outline'}
-                      onClick={() => !isDisabled && handleUpgrade(plan.name)}
-                      disabled={isDisabled}
+                      variant={isRenewable ? 'default' : plan.popular && !isDisabled ? 'default' : 'outline'}
+                      onClick={() => (isRenewable || !isDisabled) && handleUpgrade(plan.name)}
+                      disabled={isDisabled && !isRenewable}
                     >
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Processing...
+                        </>
+                      ) : isRenewable ? (
+                        <>
+                          <Crown className="w-4 h-4" />
+                          Renew Plan
                         </>
                       ) : isCurrent ? (
                         'Current Plan'
@@ -740,6 +829,51 @@ const Billing = () => {
           })}
         </div>
       </motion.div>
+
+      {/* Balance Upgrade Dialog */}
+      <AlertDialog open={balanceDialogOpen} onOpenChange={setBalanceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-emerald-500" />
+              Pay from Balance?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                You have <span className="font-semibold text-emerald-500">${panelBalance.toFixed(2)}</span> in your panel balance. 
+                The <span className="font-semibold capitalize">{pendingUpgradePlan?.name}</span> plan costs <span className="font-semibold">${pendingUpgradePlan?.price}/month</span>.
+              </p>
+              <p>Would you like to pay from your balance or use an external payment gateway?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={balancePaymentLoading}>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setBalanceDialogOpen(false);
+                if (pendingUpgradePlan) proceedWithGatewayPayment(pendingUpgradePlan);
+              }}
+              disabled={balancePaymentLoading}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Pay via Gateway
+            </Button>
+            <Button
+              onClick={handleBalanceUpgrade}
+              disabled={balancePaymentLoading}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+            >
+              {balancePaymentLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Wallet className="w-4 h-4 mr-2" />
+              )}
+              Use Balance (${pendingUpgradePlan?.price})
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 };
