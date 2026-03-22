@@ -360,6 +360,15 @@ serve(async (req) => {
       case 'korapay':
         result = await validateKoraPay(secretKey || apiKey);
         break;
+      case 'heleket':
+        if (!secretKey) {
+          return new Response(
+            JSON.stringify({ success: false, message: 'Heleket requires both Merchant ID and API Key' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+        result = await validateHeleket(apiKey, secretKey);
+        break;
       default:
         // For unknown gateways, return a generic success if keys are provided
         result = {
