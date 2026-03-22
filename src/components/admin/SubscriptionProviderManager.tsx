@@ -593,12 +593,24 @@ export const SubscriptionProviderManager = () => {
                           <div className={cn("grid gap-3", fieldConfig.hasField2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">{fieldConfig.field1Label}</Label>
-                              <Input
-                                placeholder={fieldConfig.field1Placeholder}
-                                value={(config as any)[fieldConfig.field1Key] || ''}
-                                onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field1Key, e.target.value)}
-                                className="h-9 text-sm font-mono bg-background/50"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={visibleFields[`${provider.provider_name}_field1`] ? 'text' : 'password'}
+                                  placeholder={fieldConfig.field1Placeholder}
+                                  value={(config as any)[fieldConfig.field1Key] || ''}
+                                  onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field1Key, e.target.value)}
+                                  className="h-9 text-sm font-mono bg-background/50 pr-9"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-9 w-9"
+                                  onClick={() => toggleFieldVisibility(`${provider.provider_name}_field1`)}
+                                >
+                                  {visibleFields[`${provider.provider_name}_field1`] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </Button>
+                              </div>
                               <p className="text-[10px] text-muted-foreground">{fieldConfig.field1Description}</p>
                             </div>
                             {fieldConfig.hasField2 && (
