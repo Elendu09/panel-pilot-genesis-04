@@ -251,6 +251,69 @@ async function validateKoraPay(secretKey: string): Promise<ValidationResponse> {
   }
 }
 
+// Validate Heleket API credentials
+async function validateHeleket(merchantId: string, apiKey: string): Promise<ValidationResponse> {
+  try {
+    // Heleket uses MD5(base64(body) + apiKey) for signing
+    // Test with a simple test endpoint or validate credentials format
+    if (!merchantId || merchantId.length < 5) {
+      return {
+        success: false,
+        message: 'Invalid Heleket Merchant ID',
+        error: 'Merchant ID appears too short',
+      };
+    }
+    if (!apiKey || apiKey.length < 10) {
+      return {
+        success: false,
+        message: 'Invalid Heleket API Key',
+        error: 'API Key appears too short',
+      };
+    }
+
+    // Try to call the balance endpoint to verify credentials
+    const payload = JSON.stringify({ currency: 'USD' });
+    const encoder = new TextEncoder();
+    const payloadBase64 = btoa(payload);
+    const signData = encoder.encode(payloadBase64 + apiKey);
+    const hashBuffer = await crypto.subtle.digest('MD5', signData);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const response = await fetch('https://api.heleket.com/v1/balance', {
+      method: 'POST',
+      headers: {
+        'merchant': merchantId,
+        'sign': sign,
+        'Content-Type': 'application/json',
+      },
+      body: payload,
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Heleket credentials are valid',
+        accountName: 'Heleket',
+        mode: 'live',
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Invalid Heleket credentials',
+        error: 'Authentication failed - check Merchant ID and API Key',
+      };
+    }
+  } catch (error: unknown) {
+    console.error('Heleket validation error:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Heleket',
+      error: (error as Error).message,
+    };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
