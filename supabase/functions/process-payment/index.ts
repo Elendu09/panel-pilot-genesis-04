@@ -636,14 +636,17 @@ serve(async (req) => {
       case 'crypto':
       case 'coinbase': {
         // Coinbase Commerce integration — check multiple config key field names
-        const coinbaseApiKey = gatewayConfig.apiKey 
+        // For admin payments, the key is stored under publicKey in the config
+        const coinbaseApiKey = gatewayConfig.publicKey
+          || gatewayConfig.apiKey 
           || gatewayConfig.commerceApiKey 
           || gatewayConfig.commerce_api_key
           || gatewayConfig.api_key
+          || gatewayConfig.secretKey
           || Deno.env.get('COINBASE_COMMERCE_API_KEY');
         
         if (!coinbaseApiKey) {
-          console.error('[process-payment] Coinbase API key not found in config fields: apiKey, commerceApiKey, commerce_api_key, api_key');
+          console.error('[process-payment] Coinbase API key not found. Config keys available:', Object.keys(gatewayConfig));
           return new Response(
             JSON.stringify({ success: false, error: 'Crypto payment not configured. Admin needs to set the API key in platform payment providers settings.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -882,6 +885,63 @@ serve(async (req) => {
 
         redirectUrl = koraData.data?.checkout_url;
         paymentId = koraData.data?.reference;
+        break;
+      }
+
+      case 'heleket': {
+        // Heleket crypto payment integration
+        const heleketMerchantId = gatewayConfig.merchantId || gatewayConfig.apiKey;
+        const heleketApiKey = gatewayConfig.secretKey;
+        
+        if (!heleketMerchantId || !heleketApiKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Heleket not configured. Please add Merchant ID and API Key.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Heleket uses MD5 signature: MD5(base64(body_json) + api_key)
+        const heleketPayload = {
+          amount: amount.toString(),
+          currency: currency.toUpperCase() === 'USD' ? 'USD' : currency.toUpperCase(),
+          order_id: transactionIdToUse,
+          url_return: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          url_callback: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=heleket`,
+          is_payment_multiple: false,
+          lifetime: 3600,
+          additional_data: JSON.stringify({ panelId, buyerId }),
+        };
+
+        const heleketBodyJson = JSON.stringify(heleketPayload);
+        const heleketEncoder = new TextEncoder();
+        const heleketPayloadBase64 = btoa(heleketBodyJson);
+        const heleketSignData = heleketEncoder.encode(heleketPayloadBase64 + heleketApiKey);
+        const heleketHashBuffer = await crypto.subtle.digest('MD5', heleketSignData);
+        const heleketHashArray = Array.from(new Uint8Array(heleketHashBuffer));
+        const heleketSign = heleketHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const heleketResponse = await fetch('https://api.heleket.com/v1/payment', {
+          method: 'POST',
+          headers: {
+            'merchant': heleketMerchantId,
+            'sign': heleketSign,
+            'Content-Type': 'application/json',
+          },
+          body: heleketBodyJson,
+        });
+
+        const heleketData = await heleketResponse.json();
+        
+        if (!heleketData.result?.url) {
+          console.error('[process-payment] Heleket error:', heleketData);
+          return new Response(
+            JSON.stringify({ success: false, error: heleketData.message || 'Heleket payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = heleketData.result.url;
+        paymentId = heleketData.result.uuid;
         break;
       }
 

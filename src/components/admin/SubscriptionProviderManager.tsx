@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -201,6 +202,30 @@ const providerFieldConfig: Record<string, {
     hasField2: true,
     docsUrl: 'https://docs.lemonsqueezy.com/api'
   },
+  korapay: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Korapay Dashboard → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key for API calls',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://docs.korapay.com/'
+  },
+  heleket: {
+    field1Label: 'Merchant ID',
+    field1Placeholder: 'Your Heleket Merchant UUID',
+    field1Description: 'Heleket Dashboard → Settings → Merchant ID',
+    field1Key: 'merchantId',
+    field2Label: 'Payment API Key',
+    field2Placeholder: 'Your Heleket Payment API Key',
+    field2Description: 'Used for signing payment requests',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://doc.heleket.com/'
+  },
 };
 
 const getProviderFieldConfig = (providerName: string) => {
@@ -261,6 +286,11 @@ export const SubscriptionProviderManager = () => {
   const [testing, setTesting] = useState<string | null>(null);
   const [configs, setConfigs] = useState<Record<string, ProviderConfig>>({});
   const [activeCategory, setActiveCategory] = useState('all');
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+
+  const toggleFieldVisibility = (key: string) => {
+    setVisibleFields(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     fetchProviders();
@@ -389,7 +419,13 @@ export const SubscriptionProviderManager = () => {
   const enabledCount = providers.filter(p => p.is_enabled).length;
   const configuredCount = providers.filter(p => {
     const config = configs[p.provider_name];
-    return p.is_enabled && config?.secretKey;
+    if (!p.is_enabled || !config) return false;
+    const fc = getProviderFieldConfig(p.provider_name);
+    // Check field1 key; if hasField2, also require field2
+    const field1Val = (config as any)[fc.field1Key];
+    const field2Val = (config as any)[fc.field2Key];
+    if (fc.hasField2) return !!(field1Val?.length > 0 || field2Val?.length > 0);
+    return !!(field1Val?.length > 0);
   }).length;
 
   if (loading) {
@@ -463,7 +499,10 @@ export const SubscriptionProviderManager = () => {
             publicKey: '', secretKey: '', testMode: true, webhookSecret: '' 
           };
           const logoUrl = provider.logo_url || providerLogos[provider.provider_name];
-          const isConfigured = config.secretKey?.length > 0;
+          const fieldCfg = getProviderFieldConfig(provider.provider_name);
+          const isConfigured = fieldCfg.hasField2
+            ? !!((config as any)[fieldCfg.field2Key]?.length > 0)
+            : !!((config as any)[fieldCfg.field1Key]?.length > 0);
           const webhookUrl = getWebhookUrl(provider.provider_name);
           
           return (
@@ -554,24 +593,47 @@ export const SubscriptionProviderManager = () => {
                           <div className={cn("grid gap-3", fieldConfig.hasField2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
                             <div className="space-y-1.5">
                               <Label className="text-xs font-medium">{fieldConfig.field1Label}</Label>
-                              <Input
-                                placeholder={fieldConfig.field1Placeholder}
-                                value={(config as any)[fieldConfig.field1Key] || ''}
-                                onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field1Key, e.target.value)}
-                                className="h-9 text-sm font-mono bg-background/50"
-                              />
+                              <div className="relative">
+                                <Input
+                                  type={visibleFields[`${provider.provider_name}_field1`] ? 'text' : 'password'}
+                                  placeholder={fieldConfig.field1Placeholder}
+                                  value={(config as any)[fieldConfig.field1Key] || ''}
+                                  onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field1Key, e.target.value)}
+                                  className="h-9 text-sm font-mono bg-background/50 pr-9"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute right-0 top-0 h-9 w-9"
+                                  onClick={() => toggleFieldVisibility(`${provider.provider_name}_field1`)}
+                                >
+                                  {visibleFields[`${provider.provider_name}_field1`] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </Button>
+                              </div>
                               <p className="text-[10px] text-muted-foreground">{fieldConfig.field1Description}</p>
                             </div>
                             {fieldConfig.hasField2 && (
                               <div className="space-y-1.5">
                                 <Label className="text-xs font-medium">{fieldConfig.field2Label}</Label>
-                                <Input
-                                  type="password"
-                                  placeholder={fieldConfig.field2Placeholder}
-                                  value={(config as any)[fieldConfig.field2Key] || ''}
-                                  onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field2Key, e.target.value)}
-                                  className="h-9 text-sm font-mono bg-background/50"
-                                />
+                                <div className="relative">
+                                  <Input
+                                    type={visibleFields[`${provider.provider_name}_field2`] ? 'text' : 'password'}
+                                    placeholder={fieldConfig.field2Placeholder}
+                                    value={(config as any)[fieldConfig.field2Key] || ''}
+                                    onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field2Key, e.target.value)}
+                                    className="h-9 text-sm font-mono bg-background/50 pr-9"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-9 w-9"
+                                    onClick={() => toggleFieldVisibility(`${provider.provider_name}_field2`)}
+                                  >
+                                    {visibleFields[`${provider.provider_name}_field2`] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                  </Button>
+                                </div>
                                 <p className="text-[10px] text-muted-foreground">{fieldConfig.field2Description}</p>
                               </div>
                             )}

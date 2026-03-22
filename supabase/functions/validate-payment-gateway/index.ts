@@ -105,13 +105,24 @@ async function validatePayPal(clientId: string, clientSecret: string): Promise<V
 // Validate Coinbase Commerce API key
 async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
   try {
-    const response = await fetch('https://api.commerce.coinbase.com/charges', {
+    // Try /checkouts first (newer), then fallback to /charges
+    const headers = {
+      'X-CC-Api-Key': apiKey,
+      'X-CC-Version': '2018-03-22',
+    };
+
+    let response = await fetch('https://api.commerce.coinbase.com/checkouts', {
       method: 'GET',
-      headers: {
-        'X-CC-Api-Key': apiKey,
-        'X-CC-Version': '2018-03-22',
-      },
+      headers,
     });
+
+    if (!response.ok) {
+      // Fallback to /charges
+      response = await fetch('https://api.commerce.coinbase.com/charges', {
+        method: 'GET',
+        headers,
+      });
+    }
 
     if (response.ok) {
       return {
@@ -125,7 +136,7 @@ async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
       return {
         success: false,
         message: 'Invalid Coinbase Commerce API key',
-        error: errorData.error?.message || 'Authentication failed',
+        error: errorData.error?.message || errorData.message || 'Authentication failed',
       };
     }
   } catch (error: unknown) {
@@ -240,6 +251,69 @@ async function validateKoraPay(secretKey: string): Promise<ValidationResponse> {
   }
 }
 
+// Validate Heleket API credentials
+async function validateHeleket(merchantId: string, apiKey: string): Promise<ValidationResponse> {
+  try {
+    // Heleket uses MD5(base64(body) + apiKey) for signing
+    // Test with a simple test endpoint or validate credentials format
+    if (!merchantId || merchantId.length < 5) {
+      return {
+        success: false,
+        message: 'Invalid Heleket Merchant ID',
+        error: 'Merchant ID appears too short',
+      };
+    }
+    if (!apiKey || apiKey.length < 10) {
+      return {
+        success: false,
+        message: 'Invalid Heleket API Key',
+        error: 'API Key appears too short',
+      };
+    }
+
+    // Try to call the balance endpoint to verify credentials
+    const payload = JSON.stringify({ currency: 'USD' });
+    const encoder = new TextEncoder();
+    const payloadBase64 = btoa(payload);
+    const signData = encoder.encode(payloadBase64 + apiKey);
+    const hashBuffer = await crypto.subtle.digest('MD5', signData);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sign = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const response = await fetch('https://api.heleket.com/v1/balance', {
+      method: 'POST',
+      headers: {
+        'merchant': merchantId,
+        'sign': sign,
+        'Content-Type': 'application/json',
+      },
+      body: payload,
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Heleket credentials are valid',
+        accountName: 'Heleket',
+        mode: 'live',
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Invalid Heleket credentials',
+        error: 'Authentication failed - check Merchant ID and API Key',
+      };
+    }
+  } catch (error: unknown) {
+    console.error('Heleket validation error:', error);
+    return {
+      success: false,
+      message: 'Failed to connect to Heleket',
+      error: (error as Error).message,
+    };
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -285,6 +359,15 @@ serve(async (req) => {
         break;
       case 'korapay':
         result = await validateKoraPay(secretKey || apiKey);
+        break;
+      case 'heleket':
+        if (!secretKey) {
+          return new Response(
+            JSON.stringify({ success: false, message: 'Heleket requires both Merchant ID and API Key' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
+        result = await validateHeleket(apiKey, secretKey);
         break;
       default:
         // For unknown gateways, return a generic success if keys are provided

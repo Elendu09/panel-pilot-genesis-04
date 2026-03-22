@@ -44,7 +44,7 @@ interface Order {
   progress: number;
   created_at: string;
   service_name?: string | null;
-  service?: { name: string; provider_service_id?: string } | null;
+  service?: { name: string; display_order?: number; provider_service_id?: string } | null;
 }
 
 const BuyerOrders = () => {
@@ -449,9 +449,9 @@ const BuyerOrders = () => {
                 <span className="text-sm text-muted-foreground">{t('orders.service')}</span>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{selectedOrder.service?.name || selectedOrder.service_name || 'Unknown'}</span>
-                  {selectedOrder.service?.provider_service_id && (
+                  {selectedOrder.service?.display_order && (
                     <Badge variant="secondary" className="text-xs font-mono">
-                      ID: {selectedOrder.service.provider_service_id}
+                      ID: #{selectedOrder.service.display_order}
                     </Badge>
                   )}
                 </div>
@@ -534,9 +534,9 @@ const OrderCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium text-sm truncate">{order.service?.name || order.service_name || 'Unknown'}</p>
-            {order.service?.provider_service_id && (
+            {order.service?.display_order && (
               <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
-                ID: {order.service.provider_service_id}
+                ID: #{order.service.display_order}
               </Badge>
             )}
           </div>
