@@ -105,13 +105,24 @@ async function validatePayPal(clientId: string, clientSecret: string): Promise<V
 // Validate Coinbase Commerce API key
 async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
   try {
-    const response = await fetch('https://api.commerce.coinbase.com/charges', {
+    // Try /checkouts first (newer), then fallback to /charges
+    const headers = {
+      'X-CC-Api-Key': apiKey,
+      'X-CC-Version': '2018-03-22',
+    };
+
+    let response = await fetch('https://api.commerce.coinbase.com/checkouts', {
       method: 'GET',
-      headers: {
-        'X-CC-Api-Key': apiKey,
-        'X-CC-Version': '2018-03-22',
-      },
+      headers,
     });
+
+    if (!response.ok) {
+      // Fallback to /charges
+      response = await fetch('https://api.commerce.coinbase.com/charges', {
+        method: 'GET',
+        headers,
+      });
+    }
 
     if (response.ok) {
       return {
@@ -125,7 +136,7 @@ async function validateCoinbase(apiKey: string): Promise<ValidationResponse> {
       return {
         success: false,
         message: 'Invalid Coinbase Commerce API key',
-        error: errorData.error?.message || 'Authentication failed',
+        error: errorData.error?.message || errorData.message || 'Authentication failed',
       };
     }
   } catch (error: unknown) {
