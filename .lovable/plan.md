@@ -1,105 +1,118 @@
 
 
-# Plan: Fix "origin is not defined" Error, Balance-Based Upgrades, Trial Expiry Locking, and Payment Separation
+# Plan: Fix Admin Payment Config, Add Korapay/Heleket, Fix Tenant Order IDs, Fix Coinbase
 
-## Issue 1: "Deposit Failed: origin is not defined" (CRITICAL)
+## Issue 1: Admin Payment "Configured" Status and Hidden Keys
 
-**Root cause**: In `process-payment/index.ts` line 588-589, the Coinbase Commerce charge payload uses `${origin}` for `redirect_url` and `cancel_url`, but `origin` is never declared in the edge function. In Deno edge functions, there is no `window.location.origin`. The `returnUrl` parameter IS passed in the request body (line 249) but is not used for the Coinbase case.
+**Root cause**: `SubscriptionProviderManager.tsx` line 392/466 checks `config.secretKey` to determine "Configured" status. But Coinbase only uses `publicKey` (field1) — it has no field2/secretKey. So it perpetually shows "Needs Setup".
 
-**Fix**: Replace `${origin}` with `${returnUrl}` on lines 588-589, consistent with how Stripe, Flutterwave, Paystack, and all other gateways use `returnUrl`.
-
-## Issue 2: Balance-Based Plan Upgrade in Billing Page
-
-**Current state**: `handleUpgrade()` always redirects to a payment gateway. No option to use panel balance.
-
-**Fix**: Before calling `process-payment`, check if `panelBalance >= plan.price`. If yes, show a dialog asking:
-- "Use Balance ($X.XX)" — deducts from panel balance directly via a new `balance-payment` action in `process-payment`
-- "Pay via Gateway" — proceeds to external payment as current flow
-
-Also: when subscription `expires_at` is reached and `panelBalance >= plan.price`, auto-renew by calling the balance-payment path automatically. This check runs in `usePanel.tsx` during the existing expiry check loop.
-
-## Issue 3: Trial Expiry Locking
-
-**Current state**: `usePanel.tsx` already auto-downgrades expired trials to `free` tier. `TrialExpiryBanner` shows a warning banner. But there is NO lock that redirects panel owners to billing when their trial/subscription expires.
+Also, the field1 input (line 557-562) uses plain text for ALL providers, exposing API keys. Only field2 uses `type="password"`.
 
 **Fix**:
-- In the panel layout/guard component, when `subscription_status === 'expired'`, show a full-screen lock overlay (not just a banner) that only allows navigation to `/panel/billing`
-- Add countdown warning at 3 days, 1 day, and final hours before expiry
-- The `TrialExpiryBanner` already handles active trial warnings — enhance it to also cover paid subscription expiry (not just trials)
+- Change `isConfigured` to check based on provider's required fields from `providerFieldConfig` — if `hasField2` is false, check field1 only
+- Add `type="password"` to field1 input when the field contains a secret (API keys, access tokens)
+- Add a show/hide toggle for both field1 and field2
 
-## Issue 4: Admin vs Panel Owner Payment Method Separation
+## Issue 2: Add Korapay and Heleket to Admin Payment Providers
 
-**Current state**: Both admin and panel owner payments go through the SAME `process-payment` edge function, which is correct — they just use different config sources (admin: `platform_payment_providers` table; panel owner: `panels.settings.payments`). The separation already exists at lines 298-388.
+**Korapay** (from docs):
+- Uses public key for checkout widget, secret key for server-side API calls
+- Config: `publicKey` + `secretKey`
+- Checkout Standard: `https://korablobstorage.blob.core.windows.net/modal-bucket/korapay-collections.min.js`
+- API: `POST https://api.korapay.com/merchant/api/v1/charges/initialize` with `Authorization: Bearer SECRET_KEY`
 
-**No new edge function needed.** The current architecture correctly separates:
-- Admin gateways (from `platform_payment_providers`) → used when `isOwnerDeposit=true` or `metadata.type='subscription'`
-- Panel owner gateways (from `panel.settings.payments`) → used for tenant/buyer payments
+**Heleket** (from docs):
+- Uses `merchant` ID header + payment API key for signing
+- API: `POST https://api.heleket.com/v1/payment`
+- Headers: `merchant: MERCHANT_ID`, `sign: MD5(body_json + API_KEY)`
+- Response returns `result.url` for payment page redirect
 
-The database already stores admin keys in `platform_payment_providers.config` and panel keys in `panels.settings.payments.enabledMethods`. These are already separate. Creating duplicate edge functions would introduce maintenance burden with no security benefit.
+**Fix**:
+- Add field configs for `korapay` and `heleket` in `SubscriptionProviderManager.tsx`
+- Insert rows into `platform_payment_providers` table via migration
+- Add `korapay` and `heleket` cases to `process-payment/index.ts`
+- Add validation functions to `validate-payment-gateway/index.ts`
 
-**Clarification for user**: Admin payment methods = `platform_payment_providers` table (for panel owner billing). Panel payment methods = `panels.settings.payments` JSON (for tenant deposits/orders). Already separate databases/storage.
+## Issue 3: Tenant Orders Showing Provider Service ID
 
-## Issue 5: Coinbase Commerce API Error
+**Root cause**: `BuyerOrders.tsx` lines 452-456 and 537-541 display `service.provider_service_id` — this is the upstream provider's ID that tenants should never see.
 
-The `/charges` endpoint returning `ForbiddenError` or deprecation — this is because:
-1. `origin` is undefined (Issue 1) causing the entire request to fail before reaching Coinbase
-2. Some Coinbase Commerce API keys only support `/charges` (older) or only `/checkouts` (newer)
+**Fix**: Replace `provider_service_id` with `display_order` in the service join query and display. Show "ID: #X" using the panel-local service ID, or remove the badge entirely since tenants don't need internal IDs.
 
-The dual-endpoint fallback is already implemented. Fixing `origin` → `returnUrl` will resolve this.
+## Issue 4: Coinbase Commerce ForbiddenError
+
+**Root cause**: The Coinbase config stores the API key under `publicKey` (value: `26884c60-...`). In `process-payment`, line 416 resolves it via `resolvedPublicKey`. The key IS being passed to Coinbase, so the `ForbiddenError` is coming from Coinbase's API itself.
+
+Two code improvements:
+1. The `validate-payment-gateway` function uses `GET /charges` to validate — should also try the newer endpoint
+2. Add `publicKey` to the Coinbase key resolution chain explicitly (it's already there via `resolvedPublicKey` on line 416, but adding it directly in the Coinbase case makes it clearer)
+3. Log the exact error response from Coinbase so the admin can see if it's an account-level issue
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `supabase/functions/process-payment/index.ts` | Fix `${origin}` → `${returnUrl}` on lines 588-589; add `balance-payment` action for direct balance deduction |
-| `src/pages/panel/Billing.tsx` | Add balance-upgrade dialog; add subscription expiry lock overlay |
-| `src/components/billing/TrialExpiryBanner.tsx` | Enhance to cover paid subscription expiry countdown |
-| `src/hooks/usePanel.tsx` | Add auto-renewal check when subscription expires and balance is sufficient |
+| `src/components/admin/SubscriptionProviderManager.tsx` | Fix `isConfigured` logic; hide field1 keys; add Korapay/Heleket field configs |
+| `supabase/functions/process-payment/index.ts` | Add `korapay` and `heleket` payment cases; improve Coinbase key resolution |
+| `supabase/functions/validate-payment-gateway/index.ts` | Add Korapay/Heleket validation; fix Coinbase validation endpoint |
+| `src/pages/buyer/BuyerOrders.tsx` | Replace `provider_service_id` with `display_order` in service join and display |
+| New migration | Insert `korapay` and `heleket` rows into `platform_payment_providers` |
 
 ## Key Implementation Details
 
-### process-payment fix (lines 588-589):
+### isConfigured fix:
 ```typescript
-redirect_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}`,
-cancel_url: `${returnUrl}?gateway=coinbase&tx=${transactionIdToUse}&cancelled=true`,
+const fieldConfig = getProviderFieldConfig(provider.provider_name);
+const isConfigured = fieldConfig.hasField2 
+  ? (config as any)[fieldConfig.field2Key]?.length > 0
+  : (config as any)[fieldConfig.field1Key]?.length > 0;
 ```
 
-### Balance-payment action in process-payment:
+### Korapay in process-payment:
 ```typescript
-if (body.action === 'balance-payment') {
-  // Deduct from panel balance, create completed transaction, update subscription
-  // Used when panel owner chooses to pay from their panel balance
+case 'korapay': {
+  const koraSecretKey = gatewayConfig.secretKey;
+  const response = await fetch('https://api.korapay.com/merchant/api/v1/charges/initialize', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${koraSecretKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount, currency: currency.toUpperCase(),
+      reference: transactionIdToUse,
+      redirect_url: returnUrl,
+      customer: { email: buyerEmail || 'customer@panel.com' },
+    }),
+  });
+  // Extract checkout_url from response
 }
 ```
 
-### Billing page upgrade dialog:
+### Heleket in process-payment:
 ```typescript
-// Before handleUpgrade redirects to gateway:
-if (panelBalance >= plan.price) {
-  // Show AlertDialog: "You have $X.XX. Pay from balance or use gateway?"
-  // Option 1: Call balance-payment action → instant upgrade
-  // Option 2: Proceed to gateway as before
+case 'heleket': {
+  const merchantId = gatewayConfig.merchantId;
+  const paymentKey = gatewayConfig.secretKey;
+  const bodyJson = JSON.stringify({ amount: amount.toString(), currency: 'USD', order_id: transactionIdToUse, url_callback: webhookUrl, url_return: returnUrl });
+  // Sign: MD5(base64(bodyJson) + paymentKey)
+  const sign = await md5(btoa(bodyJson) + paymentKey);
+  const response = await fetch('https://api.heleket.com/v1/payment', {
+    method: 'POST',
+    headers: { 'merchant': merchantId, 'sign': sign, 'Content-Type': 'application/json' },
+    body: bodyJson,
+  });
+  // Extract result.url from response
 }
 ```
 
-### Subscription expiry lock in Billing.tsx:
+### BuyerOrders service ID fix:
 ```typescript
-// Full-page overlay when subscription_status === 'expired'
-if (subscription?.status === 'expired' && currentPlan !== 'free') {
-  // Lock all panel pages except /panel/billing
-  // Show "Your subscription has expired. Please renew to continue."
-}
-```
+// Change service join to include display_order
+service?: { name: string; display_order?: number } | null;
 
-### Auto-renewal in usePanel.tsx:
-```typescript
-// During expiry check, if balance >= plan price:
-if (sub?.expires_at && new Date(sub.expires_at) < new Date()) {
-  if (panel.balance >= planPrice) {
-    // Auto-renew via balance-payment
-  } else {
-    // Mark as expired (existing logic)
-  }
-}
+// Display: show panel-local ID instead of provider ID
+{selectedOrder.service?.display_order && (
+  <Badge variant="secondary" className="text-xs font-mono">
+    ID: #{selectedOrder.service.display_order}
+  </Badge>
+)}
 ```
 
