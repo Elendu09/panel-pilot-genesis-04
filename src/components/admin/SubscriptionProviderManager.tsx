@@ -202,6 +202,30 @@ const providerFieldConfig: Record<string, {
     hasField2: true,
     docsUrl: 'https://docs.lemonsqueezy.com/api'
   },
+  korapay: {
+    field1Label: 'Public Key',
+    field1Placeholder: 'pk_test_... or pk_live_...',
+    field1Description: 'Korapay Dashboard → Settings → API Keys',
+    field1Key: 'publicKey',
+    field2Label: 'Secret Key',
+    field2Placeholder: 'sk_test_... or sk_live_...',
+    field2Description: 'Server-side key for API calls',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://docs.korapay.com/'
+  },
+  heleket: {
+    field1Label: 'Merchant ID',
+    field1Placeholder: 'Your Heleket Merchant UUID',
+    field1Description: 'Heleket Dashboard → Settings → Merchant ID',
+    field1Key: 'merchantId',
+    field2Label: 'Payment API Key',
+    field2Placeholder: 'Your Heleket Payment API Key',
+    field2Description: 'Used for signing payment requests',
+    field2Key: 'secretKey',
+    hasField2: true,
+    docsUrl: 'https://doc.heleket.com/'
+  },
 };
 
 const getProviderFieldConfig = (providerName: string) => {
