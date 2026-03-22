@@ -286,6 +286,11 @@ export const SubscriptionProviderManager = () => {
   const [testing, setTesting] = useState<string | null>(null);
   const [configs, setConfigs] = useState<Record<string, ProviderConfig>>({});
   const [activeCategory, setActiveCategory] = useState('all');
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+
+  const toggleFieldVisibility = (key: string) => {
+    setVisibleFields(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   useEffect(() => {
     fetchProviders();
