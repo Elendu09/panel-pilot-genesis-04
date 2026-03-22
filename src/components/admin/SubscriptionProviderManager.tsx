@@ -419,7 +419,13 @@ export const SubscriptionProviderManager = () => {
   const enabledCount = providers.filter(p => p.is_enabled).length;
   const configuredCount = providers.filter(p => {
     const config = configs[p.provider_name];
-    return p.is_enabled && config?.secretKey;
+    if (!p.is_enabled || !config) return false;
+    const fc = getProviderFieldConfig(p.provider_name);
+    // Check field1 key; if hasField2, also require field2
+    const field1Val = (config as any)[fc.field1Key];
+    const field2Val = (config as any)[fc.field2Key];
+    if (fc.hasField2) return !!(field1Val?.length > 0 || field2Val?.length > 0);
+    return !!(field1Val?.length > 0);
   }).length;
 
   if (loading) {
