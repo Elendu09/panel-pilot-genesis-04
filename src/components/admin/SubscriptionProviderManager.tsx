@@ -499,7 +499,10 @@ export const SubscriptionProviderManager = () => {
             publicKey: '', secretKey: '', testMode: true, webhookSecret: '' 
           };
           const logoUrl = provider.logo_url || providerLogos[provider.provider_name];
-          const isConfigured = config.secretKey?.length > 0;
+          const fieldCfg = getProviderFieldConfig(provider.provider_name);
+          const isConfigured = fieldCfg.hasField2
+            ? !!((config as any)[fieldCfg.field2Key]?.length > 0)
+            : !!((config as any)[fieldCfg.field1Key]?.length > 0);
           const webhookUrl = getWebhookUrl(provider.provider_name);
           
           return (
