@@ -888,6 +888,63 @@ serve(async (req) => {
         break;
       }
 
+      case 'heleket': {
+        // Heleket crypto payment integration
+        const heleketMerchantId = gatewayConfig.merchantId || gatewayConfig.apiKey;
+        const heleketApiKey = gatewayConfig.secretKey;
+        
+        if (!heleketMerchantId || !heleketApiKey) {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Heleket not configured. Please add Merchant ID and API Key.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Heleket uses MD5 signature: MD5(base64(body_json) + api_key)
+        const heleketPayload = {
+          amount: amount.toString(),
+          currency: currency.toUpperCase() === 'USD' ? 'USD' : currency.toUpperCase(),
+          order_id: transactionIdToUse,
+          url_return: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          url_callback: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=heleket`,
+          is_payment_multiple: false,
+          lifetime: 3600,
+          additional_data: JSON.stringify({ panelId, buyerId }),
+        };
+
+        const heleketBodyJson = JSON.stringify(heleketPayload);
+        const heleketEncoder = new TextEncoder();
+        const heleketPayloadBase64 = btoa(heleketBodyJson);
+        const heleketSignData = heleketEncoder.encode(heleketPayloadBase64 + heleketApiKey);
+        const heleketHashBuffer = await crypto.subtle.digest('MD5', heleketSignData);
+        const heleketHashArray = Array.from(new Uint8Array(heleketHashBuffer));
+        const heleketSign = heleketHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const heleketResponse = await fetch('https://api.heleket.com/v1/payment', {
+          method: 'POST',
+          headers: {
+            'merchant': heleketMerchantId,
+            'sign': heleketSign,
+            'Content-Type': 'application/json',
+          },
+          body: heleketBodyJson,
+        });
+
+        const heleketData = await heleketResponse.json();
+        
+        if (!heleketData.result?.url) {
+          console.error('[process-payment] Heleket error:', heleketData);
+          return new Response(
+            JSON.stringify({ success: false, error: heleketData.message || 'Heleket payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        redirectUrl = heleketData.result.url;
+        paymentId = heleketData.result.uuid;
+        break;
+      }
+
       case 'razorpay': {
         // Razorpay integration (creates an order, frontend handles payment)
         const razorpayKeyId = gatewayConfig.apiKey;
