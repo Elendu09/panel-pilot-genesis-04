@@ -616,13 +616,24 @@ export const SubscriptionProviderManager = () => {
                             {fieldConfig.hasField2 && (
                               <div className="space-y-1.5">
                                 <Label className="text-xs font-medium">{fieldConfig.field2Label}</Label>
-                                <Input
-                                  type="password"
-                                  placeholder={fieldConfig.field2Placeholder}
-                                  value={(config as any)[fieldConfig.field2Key] || ''}
-                                  onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field2Key, e.target.value)}
-                                  className="h-9 text-sm font-mono bg-background/50"
-                                />
+                                <div className="relative">
+                                  <Input
+                                    type={visibleFields[`${provider.provider_name}_field2`] ? 'text' : 'password'}
+                                    placeholder={fieldConfig.field2Placeholder}
+                                    value={(config as any)[fieldConfig.field2Key] || ''}
+                                    onChange={(e) => updateConfig(provider.provider_name, fieldConfig.field2Key, e.target.value)}
+                                    className="h-9 text-sm font-mono bg-background/50 pr-9"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 h-9 w-9"
+                                    onClick={() => toggleFieldVisibility(`${provider.provider_name}_field2`)}
+                                  >
+                                    {visibleFields[`${provider.provider_name}_field2`] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                  </Button>
+                                </div>
                                 <p className="text-[10px] text-muted-foreground">{fieldConfig.field2Description}</p>
                               </div>
                             )}
