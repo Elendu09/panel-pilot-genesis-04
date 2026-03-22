@@ -44,7 +44,7 @@ interface Order {
   progress: number;
   created_at: string;
   service_name?: string | null;
-  service?: { name: string; provider_service_id?: string } | null;
+  service?: { name: string; display_order?: number; provider_service_id?: string } | null;
 }
 
 const BuyerOrders = () => {
