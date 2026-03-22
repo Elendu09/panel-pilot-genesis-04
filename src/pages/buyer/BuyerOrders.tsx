@@ -534,9 +534,9 @@ const OrderCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium text-sm truncate">{order.service?.name || order.service_name || 'Unknown'}</p>
-            {order.service?.provider_service_id && (
+            {order.service?.display_order && (
               <Badge variant="secondary" className="text-[10px] font-mono px-1 py-0 h-4 shrink-0">
-                ID: {order.service.provider_service_id}
+                ID: #{order.service.display_order}
               </Badge>
             )}
           </div>
