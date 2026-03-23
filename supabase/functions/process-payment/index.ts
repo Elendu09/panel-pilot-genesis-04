@@ -533,6 +533,7 @@ serve(async (req) => {
         const stripeSecretKey = gatewayConfig.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
         
         if (!stripeSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Stripe not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Stripe not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
