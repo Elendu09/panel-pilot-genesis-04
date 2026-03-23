@@ -154,9 +154,9 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   // Summary stats
   const summary = useMemo(() => {
     const total = transactions.length;
-    const completed = transactions.filter(tx => tx.status === 'completed' || !tx.status).length;
-    const failed = transactions.filter(tx => tx.status === 'failed').length;
-    const pending = transactions.filter(tx => tx.status === 'pending').length;
+    const completed = transactions.filter(tx => tx.status === 'completed').length;
+    const failed = transactions.filter(tx => tx.status === 'failed' || tx.status === 'cancelled').length;
+    const pending = transactions.filter(tx => tx.status === 'pending' || tx.status === 'processing' || tx.status === 'pending_verification').length;
     return { total, completed, failed, pending };
   }, [transactions]);
 
