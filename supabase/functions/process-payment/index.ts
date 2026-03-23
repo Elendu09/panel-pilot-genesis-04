@@ -901,6 +901,7 @@ serve(async (req) => {
         
         if (!koraData.status) {
           console.error('[process-payment] Kora Pay error:', koraData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Kora Pay error: ${koraData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: koraData.message || 'Kora Pay payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
