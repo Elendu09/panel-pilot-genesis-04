@@ -919,6 +919,7 @@ serve(async (req) => {
         const heleketApiKey = gatewayConfig.secretKey;
         
         if (!heleketMerchantId || !heleketApiKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Heleket not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Heleket not configured. Please add Merchant ID and API Key.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
