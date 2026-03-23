@@ -216,8 +216,10 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     switch (status) {
       case "completed": return "bg-green-500";
       case "pending": return "bg-yellow-500";
-      case "failed": return "bg-red-500";
-      default: return "bg-green-500";
+      case "processing": return "bg-blue-500";
+      case "pending_verification": return "bg-amber-500";
+      case "failed": case "cancelled": return "bg-red-500";
+      default: return "bg-muted-foreground";
     }
   };
 
