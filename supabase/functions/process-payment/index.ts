@@ -817,6 +817,7 @@ serve(async (req) => {
         const paystackSecretKey = gatewayConfig.secretKey;
         
         if (!paystackSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Paystack not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Paystack not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
