@@ -737,8 +737,12 @@ serve(async (req) => {
             coinbaseResult = checkoutData;
             coinbaseOk = true;
           } else {
-            const errMsg = checkoutData.error?.message || chargeData.error?.message || 'Coinbase payment creation failed';
+            const chargeMsg = chargeData.error?.message || 'unknown';
+            const checkoutMsg = checkoutData.error?.message || 'unknown';
+            const errMsg = `Coinbase Commerce payment failed. Your API key may be from the deprecated Commerce platform. Please create a new API key at commerce.coinbase.com. (Charges: ${chargeMsg}, Checkouts: ${checkoutMsg})`;
             console.error('[process-payment] Both Coinbase endpoints failed. Charges:', JSON.stringify(chargeData), 'Checkouts:', JSON.stringify(checkoutData));
+            // Mark transaction as failed
+            await supabase.from('transactions').update({ status: 'failed', description: `Coinbase error: ${chargeMsg}` }).eq('id', transactionIdToUse);
             return new Response(
               JSON.stringify({ success: false, error: errMsg }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
