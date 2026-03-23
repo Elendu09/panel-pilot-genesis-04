@@ -565,6 +565,7 @@ serve(async (req) => {
         
         if (session.error) {
           console.error('[process-payment] Stripe error:', session.error);
+          await supabase.from('transactions').update({ status: 'failed', description: `Stripe error: ${session.error.message}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: session.error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
