@@ -477,7 +477,19 @@ serve(async (req) => {
     let txId = transactionId;
     if (!txId) {
       const txType = metadata?.type === 'subscription' ? 'subscription' : (orderId ? 'order_payment' : 'deposit');
-      const txDescription = orderId ? `Order payment via ${gateway}` : `Deposit via ${gateway}`;
+      // Build descriptive transaction description
+      const gatewayDisplayName = gateway.charAt(0).toUpperCase() + gateway.slice(1);
+      let txDescription = '';
+      if (metadata?.type === 'subscription') {
+        const planLabel = (metadata.plan || 'basic').charAt(0).toUpperCase() + (metadata.plan || 'basic').slice(1);
+        txDescription = `Subscription upgrade to ${planLabel} via ${gatewayDisplayName}`;
+      } else if (orderId) {
+        txDescription = `Order payment via ${gatewayDisplayName}`;
+      } else if (metadata?.type === 'panel_deposit') {
+        txDescription = `Panel deposit via ${gatewayDisplayName}`;
+      } else {
+        txDescription = `Deposit via ${gatewayDisplayName}`;
+      }
       
       const { data: newTx, error: txError } = await supabase
         .from('transactions')
@@ -521,6 +533,7 @@ serve(async (req) => {
         const stripeSecretKey = gatewayConfig.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
         
         if (!stripeSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Stripe not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Stripe not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -552,6 +565,7 @@ serve(async (req) => {
         
         if (session.error) {
           console.error('[process-payment] Stripe error:', session.error);
+          await supabase.from('transactions').update({ status: 'failed', description: `Stripe error: ${session.error.message}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: session.error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -647,6 +661,7 @@ serve(async (req) => {
         
         if (!coinbaseApiKey) {
           console.error('[process-payment] Coinbase API key not found. Config keys available:', Object.keys(gatewayConfig));
+          await supabase.from('transactions').update({ status: 'failed', description: 'Coinbase Commerce API key not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Crypto payment not configured. Admin needs to set the API key in platform payment providers settings.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -722,8 +737,12 @@ serve(async (req) => {
             coinbaseResult = checkoutData;
             coinbaseOk = true;
           } else {
-            const errMsg = checkoutData.error?.message || chargeData.error?.message || 'Coinbase payment creation failed';
+            const chargeMsg = chargeData.error?.message || 'unknown';
+            const checkoutMsg = checkoutData.error?.message || 'unknown';
+            const errMsg = `Coinbase Commerce payment failed. Your API key may be from the deprecated Commerce platform. Please create a new API key at commerce.coinbase.com. (Charges: ${chargeMsg}, Checkouts: ${checkoutMsg})`;
             console.error('[process-payment] Both Coinbase endpoints failed. Charges:', JSON.stringify(chargeData), 'Checkouts:', JSON.stringify(checkoutData));
+            // Mark transaction as failed
+            await supabase.from('transactions').update({ status: 'failed', description: `Coinbase error: ${chargeMsg}` }).eq('id', transactionIdToUse);
             return new Response(
               JSON.stringify({ success: false, error: errMsg }),
               { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -741,6 +760,7 @@ serve(async (req) => {
         const flwSecretKey = gatewayConfig.secretKey;
         
         if (!flwSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Flutterwave not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Flutterwave not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -780,6 +800,7 @@ serve(async (req) => {
         
         if (flwData.status !== 'success') {
           console.error('[process-payment] Flutterwave error:', flwData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Flutterwave error: ${flwData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: flwData.message || 'Flutterwave payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -796,6 +817,7 @@ serve(async (req) => {
         const paystackSecretKey = gatewayConfig.secretKey;
         
         if (!paystackSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Paystack not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Paystack not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -829,6 +851,7 @@ serve(async (req) => {
         
         if (!paystackData.status) {
           console.error('[process-payment] Paystack error:', paystackData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Paystack error: ${paystackData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: paystackData.message || 'Paystack payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -845,6 +868,7 @@ serve(async (req) => {
         const koraSecretKey = gatewayConfig.secretKey;
         
         if (!koraSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Kora Pay not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Kora Pay not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -877,6 +901,7 @@ serve(async (req) => {
         
         if (!koraData.status) {
           console.error('[process-payment] Kora Pay error:', koraData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Kora Pay error: ${koraData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: koraData.message || 'Kora Pay payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -894,6 +919,7 @@ serve(async (req) => {
         const heleketApiKey = gatewayConfig.secretKey;
         
         if (!heleketMerchantId || !heleketApiKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Heleket not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Heleket not configured. Please add Merchant ID and API Key.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -934,6 +960,7 @@ serve(async (req) => {
         
         if (!heleketData.result?.url) {
           console.error('[process-payment] Heleket error:', heleketData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Heleket error: ${heleketData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: heleketData.message || 'Heleket payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

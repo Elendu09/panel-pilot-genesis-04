@@ -55,11 +55,11 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   // Poll pending transactions every 10s as realtime fallback (faster for status updates)
   useEffect(() => {
     if (!panelId) return;
-    const hasPending = transactions.some(tx => tx.status === 'pending');
+    const hasPending = transactions.some(tx => tx.status === 'pending' || tx.status === 'processing');
     if (!hasPending) return;
 
     const interval = setInterval(async () => {
-      const pendingIds = transactions.filter(tx => tx.status === 'pending').map(tx => tx.id);
+      const pendingIds = transactions.filter(tx => tx.status === 'pending' || tx.status === 'processing').map(tx => tx.id);
       if (pendingIds.length === 0) return;
 
       const { data } = await supabase
@@ -154,9 +154,9 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   // Summary stats
   const summary = useMemo(() => {
     const total = transactions.length;
-    const completed = transactions.filter(tx => tx.status === 'completed' || !tx.status).length;
-    const failed = transactions.filter(tx => tx.status === 'failed').length;
-    const pending = transactions.filter(tx => tx.status === 'pending').length;
+    const completed = transactions.filter(tx => tx.status === 'completed').length;
+    const failed = transactions.filter(tx => tx.status === 'failed' || tx.status === 'cancelled').length;
+    const pending = transactions.filter(tx => tx.status === 'pending' || tx.status === 'processing' || tx.status === 'pending_verification').length;
     return { total, completed, failed, pending };
   }, [transactions]);
 
@@ -185,7 +185,9 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     switch (status) {
       case "completed": return "bg-green-500/10 text-green-500 border-green-500/20";
       case "pending": return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
-      case "failed": return "bg-red-500/10 text-red-500 border-red-500/20";
+      case "processing": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      case "pending_verification": return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+      case "failed": case "cancelled": return "bg-red-500/10 text-red-500 border-red-500/20";
       default: return "bg-muted text-muted-foreground";
     }
   };
@@ -214,8 +216,10 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
     switch (status) {
       case "completed": return "bg-green-500";
       case "pending": return "bg-yellow-500";
-      case "failed": return "bg-red-500";
-      default: return "bg-green-500";
+      case "processing": return "bg-blue-500";
+      case "pending_verification": return "bg-amber-500";
+      case "failed": case "cancelled": return "bg-red-500";
+      default: return "bg-muted-foreground";
     }
   };
 

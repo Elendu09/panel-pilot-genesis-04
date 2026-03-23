@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -512,18 +513,35 @@ const OrderManagement = () => {
                 <p className="text-muted-foreground text-xs">Target URL</p>
                 <p className="break-all text-xs">{selectedOrder.target_url}</p>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-muted-foreground text-xs">Quantity</p>
                   <p className="font-medium">{selectedOrder.quantity?.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Price</p>
-                  <p className="font-medium">${selectedOrder.price?.toFixed(2)}</p>
+                  <p className="text-muted-foreground text-xs">Start Count</p>
+                  <p className="font-medium">{selectedOrder.start_count ?? '—'}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Cost</p>
-                  <p className="font-medium">${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
+              </div>
+              {/* Profit breakdown */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Earnings Breakdown</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Customer Paid</span>
+                  <span className="text-sm font-semibold text-green-500">${selectedOrder.price?.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Provider Cost</span>
+                  <span className="text-sm font-semibold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</span>
+                </div>
+                <div className="border-t border-border/50 pt-2 flex items-center justify-between">
+                  <span className="text-sm font-bold">Your Profit</span>
+                  <span className={cn(
+                    "text-sm font-bold",
+                    (selectedOrder.price - (selectedOrder.provider_cost || 0)) >= 0 ? "text-green-500" : "text-red-500"
+                  )}>
+                    ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
+                  </span>
                 </div>
               </div>
               <div>

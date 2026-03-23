@@ -1,0 +1,1 @@
+UPDATE platform_payment_providers SET supports_subscriptions = true WHERE provider_name IN ('coinbase', 'crypto');
