@@ -851,6 +851,7 @@ serve(async (req) => {
         
         if (!paystackData.status) {
           console.error('[process-payment] Paystack error:', paystackData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Paystack error: ${paystackData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: paystackData.message || 'Paystack payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
