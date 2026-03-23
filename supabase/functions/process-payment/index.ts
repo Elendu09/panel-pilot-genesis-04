@@ -960,6 +960,7 @@ serve(async (req) => {
         
         if (!heleketData.result?.url) {
           console.error('[process-payment] Heleket error:', heleketData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Heleket error: ${heleketData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: heleketData.message || 'Heleket payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

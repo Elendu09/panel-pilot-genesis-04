@@ -55,11 +55,11 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
   // Poll pending transactions every 10s as realtime fallback (faster for status updates)
   useEffect(() => {
     if (!panelId) return;
-    const hasPending = transactions.some(tx => tx.status === 'pending');
+    const hasPending = transactions.some(tx => tx.status === 'pending' || tx.status === 'processing');
     if (!hasPending) return;
 
     const interval = setInterval(async () => {
-      const pendingIds = transactions.filter(tx => tx.status === 'pending').map(tx => tx.id);
+      const pendingIds = transactions.filter(tx => tx.status === 'pending' || tx.status === 'processing').map(tx => tx.id);
       if (pendingIds.length === 0) return;
 
       const { data } = await supabase
