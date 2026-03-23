@@ -868,6 +868,7 @@ serve(async (req) => {
         const koraSecretKey = gatewayConfig.secretKey;
         
         if (!koraSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Kora Pay not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Kora Pay not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
