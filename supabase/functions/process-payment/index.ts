@@ -477,7 +477,19 @@ serve(async (req) => {
     let txId = transactionId;
     if (!txId) {
       const txType = metadata?.type === 'subscription' ? 'subscription' : (orderId ? 'order_payment' : 'deposit');
-      const txDescription = orderId ? `Order payment via ${gateway}` : `Deposit via ${gateway}`;
+      // Build descriptive transaction description
+      const gatewayDisplayName = gateway.charAt(0).toUpperCase() + gateway.slice(1);
+      let txDescription = '';
+      if (metadata?.type === 'subscription') {
+        const planLabel = (metadata.plan || 'basic').charAt(0).toUpperCase() + (metadata.plan || 'basic').slice(1);
+        txDescription = `Subscription upgrade to ${planLabel} via ${gatewayDisplayName}`;
+      } else if (orderId) {
+        txDescription = `Order payment via ${gatewayDisplayName}`;
+      } else if (metadata?.type === 'panel_deposit') {
+        txDescription = `Panel deposit via ${gatewayDisplayName}`;
+      } else {
+        txDescription = `Deposit via ${gatewayDisplayName}`;
+      }
       
       const { data: newTx, error: txError } = await supabase
         .from('transactions')
