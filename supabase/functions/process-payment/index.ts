@@ -661,6 +661,7 @@ serve(async (req) => {
         
         if (!coinbaseApiKey) {
           console.error('[process-payment] Coinbase API key not found. Config keys available:', Object.keys(gatewayConfig));
+          await supabase.from('transactions').update({ status: 'failed', description: 'Coinbase Commerce API key not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Crypto payment not configured. Admin needs to set the API key in platform payment providers settings.' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
