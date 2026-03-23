@@ -760,6 +760,7 @@ serve(async (req) => {
         const flwSecretKey = gatewayConfig.secretKey;
         
         if (!flwSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Flutterwave not configured' }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: 'Flutterwave not configured' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
