@@ -800,6 +800,7 @@ serve(async (req) => {
         
         if (flwData.status !== 'success') {
           console.error('[process-payment] Flutterwave error:', flwData);
+          await supabase.from('transactions').update({ status: 'failed', description: `Flutterwave error: ${flwData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
             JSON.stringify({ success: false, error: flwData.message || 'Flutterwave payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
