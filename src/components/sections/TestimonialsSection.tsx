@@ -1,64 +1,38 @@
 import { Star, Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { BackgroundEffects } from "@/components/effects/BackgroundEffects";
-import { useLanguage } from "@/contexts/LanguageContext";
+
+const testimonials = [
+  {
+    name: "Daniel K.",
+    role: "Panel Owner",
+    text: "I launched my panel in under 10 minutes and had my first paying customer the same day. The multi-panel feature lets me run three separate brands from one account. Nothing else comes close.",
+    rating: 5,
+    avatar: "D",
+    color: "from-blue-500 to-cyan-500",
+  },
+  {
+    name: "Aisha M.",
+    role: "SMM Reseller",
+    text: "The automated order processing saves me hours every day. I connect providers via API, set my markup, and the platform handles everything. My revenue has tripled since switching to HOME OF SMM.",
+    rating: 5,
+    avatar: "A",
+    color: "from-purple-500 to-pink-500",
+  },
+  {
+    name: "Carlos R.",
+    role: "Agency Owner",
+    text: "What sold me was the white-label branding and custom domain support. My clients have no idea I am using HOME OF SMM. The analytics dashboard gives me full visibility into every order and user.",
+    rating: 5,
+    avatar: "C",
+    color: "from-amber-500 to-orange-500",
+  },
+];
 
 export const TestimonialsSection = () => {
-  const { t } = useLanguage();
-  const testimonials = [
-    {
-      name: "teateagram",
-      text: "Great SMM panel, I have been using it basically from the start of the platform. There is not much to say other than that Socpanel is far ahead of competitors in terms of product. Its very convenient to work with SMM services here.",
-      rating: 5,
-      avatar: "T",
-      color: "from-blue-500 to-cyan-500"
-    },
-    {
-      name: "allpanel",
-      text: "Socpanel changed my life, I became biggest telegram provider due to this platform. Very good functions to make my own services. By the way, you can find me on top providers list 😎",
-      rating: 5,
-      avatar: "A",
-      color: "from-purple-500 to-pink-500"
-    },
-    {
-      name: "sochype",
-      text: "I was surprised when I ran into Socpanel, truly no-code solution. Before I had issues with my panel with free scripts and etc. Here I created a truly amazing SMM panel.",
-      rating: 5,
-      avatar: "S",
-      color: "from-amber-500 to-orange-500"
-    }
-  ];
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2
-      }
-    }
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 40, rotateX: -10 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      rotateX: 0,
-      transition: {
-        type: "spring" as const,
-        stiffness: 80,
-        damping: 15
-      }
-    }
-  };
-
   return (
-    <section id="testimonials" className="py-24 bg-background relative overflow-hidden scroll-mt-20" aria-labelledby="testimonials-heading">
-      {/* Grid, Bubbles & Particles */}
+    <section id="testimonials" className="py-20 md:py-28 bg-background relative overflow-hidden" aria-labelledby="testimonials-heading">
       <BackgroundEffects variant="section" showGrid showBubbles showParticles bubbleCount={3} particleCount={8} />
-      
-      {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -72,84 +46,58 @@ export const TestimonialsSection = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            whileInView={{ scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
-          >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Quote className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">{t('testimonials.badge')}</span>
-          </motion.div>
-          
+            <span className="text-sm font-medium text-primary">Testimonials</span>
+          </div>
           <h2 id="testimonials-heading" className="text-3xl md:text-5xl font-bold mb-4">
-            {t('testimonials.title.what')}{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
-              {t('testimonials.title.users_say')}
-            </span>
+            Trusted by{" "}
+            <span className="bg-gradient-primary bg-clip-text text-transparent">Panel Owners</span>
+            {" "}Worldwide
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {t('testimonials.subtitle')}
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Hear from entrepreneurs who have built successful SMM businesses using our platform.
           </p>
         </motion.div>
 
         <motion.div
           className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-          variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
+          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.2 } } }}
         >
           {testimonials.map((testimonial, index) => (
-            <motion.div 
+            <motion.div
               key={index}
-              variants={cardVariants}
-              whileHover={{ 
-                y: -10,
-                transition: { type: "spring", stiffness: 300 }
+              variants={{
+                hidden: { opacity: 0, y: 40, rotateX: -10 },
+                visible: { opacity: 1, y: 0, rotateX: 0, transition: { type: "spring", stiffness: 80, damping: 15 } },
               }}
-              className="relative group perspective-1000"
+              whileHover={{ y: -10, transition: { type: "spring", stiffness: 300 } }}
+              className="relative group"
             >
               <div className="glass-card p-8 h-full relative overflow-hidden">
-                {/* Background gradient on hover */}
                 <motion.div 
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{
-                    background: `radial-gradient(circle at top right, hsl(var(--primary) / 0.1) 0%, transparent 60%)`
-                  }}
+                  style={{ background: `radial-gradient(circle at top right, hsl(var(--primary) / 0.1) 0%, transparent 60%)` }}
                 />
 
-                {/* Quote icon */}
-                <motion.div
-                  className="absolute top-4 right-4 text-primary/10"
-                  initial={{ rotate: 0 }}
-                  whileHover={{ rotate: 12, scale: 1.1 }}
-                >
+                <div className="absolute top-4 right-4 text-primary/10">
                   <Quote className="w-12 h-12" />
-                </motion.div>
+                </div>
 
-                {/* Rating stars */}
+                {/* Stars */}
                 <div className="flex items-center space-x-1 mb-6 relative z-10">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                    >
-                      <Star className="w-5 h-5 fill-primary text-primary" />
-                    </motion.div>
+                    <Star key={i} className="w-5 h-5 fill-primary text-primary" />
                   ))}
                 </div>
 
-                {/* Testimonial text */}
                 <p className="text-muted-foreground mb-6 leading-relaxed relative z-10">
                   "{testimonial.text}"
                 </p>
 
-                {/* Author */}
                 <div className="flex items-center gap-3 relative z-10">
                   <motion.div 
                     className={`w-12 h-12 rounded-full bg-gradient-to-br ${testimonial.color} flex items-center justify-center text-white font-bold text-lg shadow-lg`}
@@ -158,12 +106,11 @@ export const TestimonialsSection = () => {
                     {testimonial.avatar}
                   </motion.div>
                   <div>
-                    <div className="font-semibold text-foreground">@{testimonial.name}</div>
-                    <div className="text-sm text-muted-foreground">Panel Owner</div>
+                    <div className="font-semibold text-foreground">{testimonial.name}</div>
+                    <div className="text-sm text-muted-foreground">{testimonial.role}</div>
                   </div>
                 </div>
 
-                {/* Bottom accent */}
                 <motion.div 
                   className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${testimonial.color}`}
                   initial={{ scaleX: 0 }}
@@ -180,3 +127,5 @@ export const TestimonialsSection = () => {
     </section>
   );
 };
+
+export default TestimonialsSection;
