@@ -25,17 +25,27 @@ export const Footer = () => {
       
       if (error) {
         if (error.code === '23505') {
-          toast({ title: "Already subscribed!", description: "This email is already on our newsletter list." });
+          toast({
+            title: "Already subscribed!",
+            description: "This email is already on our newsletter list.",
+          });
         } else {
           throw error;
         }
       } else {
-        toast({ title: "Subscribed!", description: "Thank you for subscribing. Stay tuned for updates!" });
+        toast({
+          title: "Subscribed!",
+          description: "Thank you for subscribing. Stay tuned for updates!",
+        });
         setEmail("");
       }
     } catch (error) {
       console.error('Newsletter subscription error:', error);
-      toast({ title: "Subscription failed", description: "Please try again later.", variant: "destructive" });
+      toast({
+        title: "Subscription failed",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -43,6 +53,7 @@ export const Footer = () => {
 
   return (
     <footer className="bg-card border-t border-border relative overflow-hidden">
+      {/* Grid pattern overlay */}
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
@@ -55,17 +66,31 @@ export const Footer = () => {
           {/* Brand */}
           <div className="col-span-3 md:col-span-1 space-y-2 sm:space-y-3 mb-3 md:mb-0">
             <Link to="/" className="flex items-center space-x-2">
-              <img src="/favicon.ico" alt="HOME OF SMM" className="w-7 h-7 rounded-lg object-cover" />
-              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">HOME OF SMM</span>
+              <img 
+                src="/favicon.ico" 
+                alt="HOME OF SMM" 
+                className="w-7 h-7 rounded-lg object-cover"
+              />
+              <span className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+                HOME OF SMM
+              </span>
             </Link>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              The most advanced multi-panel SMM platform. Create, manage, and scale your SMM business.
+              The most advanced white-label SMM panel platform.
             </p>
             <div className="flex space-x-3">
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Twitter className="w-4 h-4" /></a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Github className="w-4 h-4" /></a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors"><Linkedin className="w-4 h-4" /></a>
-              <a href="mailto:support@homeofsmm.com" className="text-muted-foreground hover:text-primary transition-colors"><Mail className="w-4 h-4" /></a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                <Twitter className="w-4 h-4" />
+              </a>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                <Github className="w-4 h-4" />
+              </a>
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
+                <Linkedin className="w-4 h-4" />
+              </a>
+              <a href="mailto:support@homeofsmm.com" className="text-muted-foreground hover:text-primary transition-colors">
+                <Mail className="w-4 h-4" />
+              </a>
             </div>
           </div>
 
@@ -73,9 +98,21 @@ export const Footer = () => {
           <nav aria-label="Product navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.product')}</h3>
             <ul className="space-y-1">
-              <li><Link to="/features" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.features')}</Link></li>
-              <li><Link to="/pricing" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.pricing')}</Link></li>
-              <li><Link to="/demo" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.demo')}</Link></li>
+              <li>
+                <Link to="/features" aria-label="Features page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.features')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/pricing" aria-label="Pricing page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.pricing')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/demo" aria-label="Demo page" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.demo')}
+                </Link>
+              </li>
             </ul>
           </nav>
 
@@ -83,9 +120,21 @@ export const Footer = () => {
           <nav aria-label="Resources navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.resources')}</h3>
             <ul className="space-y-1">
-              <li><Link to="/docs" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.docs')}</Link></li>
-              <li><Link to="/blog" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.blog')}</Link></li>
-              <li><Link to="/contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.contact')}</Link></li>
+              <li>
+                <Link to="/docs" aria-label="Documentation" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.docs')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blog" aria-label="Blog" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.blog')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" aria-label="Contact Us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.contact')}
+                </Link>
+              </li>
             </ul>
           </nav>
 
@@ -93,32 +142,61 @@ export const Footer = () => {
           <nav aria-label="Company navigation" className="space-y-2">
             <h3 className="font-semibold text-foreground text-xs sm:text-sm">{t('footer.company')}</h3>
             <ul className="space-y-1">
-              <li><Link to="/about" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.about')}</Link></li>
-              <li><Link to="/contact" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.contact')}</Link></li>
-              <li><Link to="/privacy" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.privacy')}</Link></li>
-              <li><Link to="/terms" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">{t('footer.terms')}</Link></li>
+              <li>
+                <Link to="/about" aria-label="About us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.about')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" aria-label="Contact us" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.contact')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" aria-label="Privacy Policy" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.privacy')}
+                </Link>
+              </li>
+              <li>
+                <Link to="/terms" aria-label="Terms of Service" className="block text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  {t('footer.terms')}
+                </Link>
+              </li>
             </ul>
           </nav>
         </div>
 
-        {/* Newsletter */}
+        {/* Newsletter Subscription */}
         <div className="border-t border-border mt-6 pt-6">
           <div className="max-w-md mx-auto text-center">
             <h3 className="text-sm font-semibold mb-2">{t('footer.newsletter')}</h3>
-            <p className="text-xs text-muted-foreground mb-3">{t('footer.newsletter.desc')}</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              {t('footer.newsletter.desc')}
+            </p>
             <form onSubmit={handleSubscribe} className="flex gap-2">
-              <Input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-8 text-xs" required disabled={isLoading} />
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-8 text-xs"
+                required
+                disabled={isLoading}
+              />
               <Button type="submit" size="sm" className="h-8 text-xs px-4" disabled={isLoading}>
                 {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : t('footer.subscribe')}
               </Button>
             </form>
+            <p className="text-[10px] text-muted-foreground/60 mt-2">
+              📧 Email notifications for new blog posts coming soon!
+            </p>
           </div>
         </div>
 
-        {/* Copyright */}
+        {/* Built with love */}
         <div className="border-t border-border mt-6 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
           <p className="text-muted-foreground text-xs">
-            &copy; 2025 HOME OF SMM. {t('footer.rights')}
+            © 2024 HOME OF SMM. {t('footer.rights')}
           </p>
           <p className="text-muted-foreground text-xs flex items-center gap-1.5">
             {t('footer.built')} 
