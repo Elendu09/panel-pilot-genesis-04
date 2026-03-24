@@ -800,9 +800,16 @@ serve(async (req) => {
         
         if (flwData.status !== 'success') {
           console.error('[process-payment] Flutterwave error:', flwData);
+          // Surface actionable error messages for common Flutterwave account issues
+          let userMessage = flwData.message || 'Flutterwave payment failed';
+          if (userMessage.toLowerCase().includes('channel') && userMessage.toLowerCase().includes('enabled')) {
+            userMessage = 'Flutterwave: Your account does not have any payment channel enabled for checkout. Please log in to your Flutterwave dashboard, go to Settings > Account, and activate live mode with at least one payment channel (card, bank transfer, etc.).';
+          } else if (userMessage.toLowerCase().includes('unauthorized') || userMessage.toLowerCase().includes('invalid key')) {
+            userMessage = 'Flutterwave: Invalid API key. Please verify your secret key in the admin payment settings. Make sure you are using a live secret key, not a test key.';
+          }
           await supabase.from('transactions').update({ status: 'failed', description: `Flutterwave error: ${flwData.message || 'unknown'}` }).eq('id', transactionIdToUse);
           return new Response(
-            JSON.stringify({ success: false, error: flwData.message || 'Flutterwave payment failed' }),
+            JSON.stringify({ success: false, error: userMessage }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
