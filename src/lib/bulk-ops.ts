@@ -477,21 +477,22 @@ export async function bulkUpdateCategories(
 }
 
 /**
- * Bulk update display order (for drag-and-drop reordering)
+ * Bulk update sort order (for drag-and-drop reordering)
+ * Uses sort_order column so display_order (stable service ID) is NOT changed
  */
 export async function bulkUpdateDisplayOrder(
   updates: Array<{ id: string; display_order: number }>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Use a transaction-like batch update
+    // Update sort_order (NOT display_order) to preserve stable service IDs
     const promises = updates.map(({ id, display_order }) =>
-      supabase.from('services').update({ display_order }).eq('id', id)
+      supabase.from('services').update({ sort_order: display_order }).eq('id', id)
     );
 
     await Promise.all(promises);
     return { success: true };
   } catch (error) {
-    console.error('Error updating display order:', error);
+    console.error('Error updating sort order:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
