@@ -477,97 +477,131 @@ const OrderManagement = () => {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-lg p-4 sm:p-6">
+        <DialogContent className="max-w-lg p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-primary" />
+              Order Details
+            </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-muted-foreground text-xs">Order #</p>
-                  <p className="font-mono text-xs break-all">{selectedOrder.order_number}</p>
+            <div className="space-y-4 text-sm">
+              {/* Row 1: Order # + Status */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Order #</p>
+                  <p className="font-mono text-xs font-semibold break-all">{selectedOrder.order_number}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Status</p>
-                  <Badge className={getStatusColor(selectedOrder.status)}>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Status</p>
+                  <Badge className={cn("mt-0.5", getStatusColor(selectedOrder.status))}>
                     {getStatusIcon(selectedOrder.status)}
                     <span className="ml-1 capitalize">{selectedOrder.status.replace('_', ' ')}</span>
                   </Badge>
                 </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Service</p>
-                <p className="font-medium">{selectedOrder.service?.name || 'Deleted service'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Provider</p>
-                <p>{selectedOrder.service?.provider?.name || '—'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Customer</p>
-                <p className="font-medium">{selectedOrder.buyer?.full_name || 'N/A'}</p>
-                <p className="text-muted-foreground text-xs break-all">{selectedOrder.buyer?.email}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Target URL</p>
-                <p className="break-all text-xs">{selectedOrder.target_url}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-muted-foreground text-xs">Quantity</p>
-                  <p className="font-medium">{selectedOrder.quantity?.toLocaleString()}</p>
+
+              {/* Row 2: Service + Provider */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Service</p>
+                  <p className="font-medium text-xs leading-snug">{selectedOrder.service?.name || 'Deleted service'}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Start Count</p>
-                  <p className="font-medium">{selectedOrder.start_count ?? '—'}</p>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider</p>
+                  <p className="text-xs">{selectedOrder.service?.provider?.name || '—'}</p>
                 </div>
               </div>
-              {/* Profit breakdown */}
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Earnings Breakdown</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Customer Paid</span>
-                  <span className="text-sm font-semibold text-green-500">${selectedOrder.price?.toFixed(2)}</span>
+
+              {/* Row 3: Customer + Quantity */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Customer</p>
+                  <p className="font-medium text-xs">{selectedOrder.buyer?.full_name || 'N/A'}</p>
+                  <p className="text-muted-foreground text-[10px] break-all">{selectedOrder.buyer?.email}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Provider Cost</span>
-                  <span className="text-sm font-semibold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</span>
-                </div>
-                <div className="border-t border-border/50 pt-2 flex items-center justify-between">
-                  <span className="text-sm font-bold">Your Profit</span>
-                  <span className={cn(
-                    "text-sm font-bold",
-                    (selectedOrder.price - (selectedOrder.provider_cost || 0)) >= 0 ? "text-green-500" : "text-red-500"
-                  )}>
-                    ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
-                  </span>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Quantity / Start</p>
+                  <p className="font-medium text-xs">{selectedOrder.quantity?.toLocaleString()}</p>
+                  <p className="text-muted-foreground text-[10px]">Start: {selectedOrder.start_count ?? '—'}</p>
                 </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Progress</p>
+
+              {/* Target URL */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Target URL</p>
+                <div className="flex items-center gap-2">
+                  <p className="break-all text-xs flex-1">{selectedOrder.target_url}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 shrink-0"
+                    onClick={() => {
+                      const url = selectedOrder.target_url;
+                      const finalUrl = url.startsWith('http') ? url : (url.startsWith('@') ? `https://instagram.com/${url.replace('@', '')}` : `https://${url}`);
+                      window.open(finalUrl, '_blank');
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Earnings Breakdown */}
+              <div className="p-3 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Earnings Breakdown</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Customer Paid</p>
+                    <p className="text-sm font-bold text-green-500">${selectedOrder.price?.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Provider Cost</p>
+                    <p className="text-sm font-bold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Your Profit</p>
+                    <p className={cn(
+                      "text-sm font-bold",
+                      (selectedOrder.price - (selectedOrder.provider_cost || 0)) >= 0 ? "text-green-500" : "text-red-500"
+                    )}>
+                      ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Progress</p>
                 <Progress value={selectedOrder.progress || 0} className="h-2 mt-1" />
                 <span className="text-xs text-muted-foreground">{Math.round(selectedOrder.progress || 0)}%</span>
               </div>
-              {selectedOrder.provider_order_id && (
-                <div>
-                  <p className="text-muted-foreground text-xs">Provider Order ID</p>
-                  <p className="font-mono text-xs">{selectedOrder.provider_order_id}</p>
-                </div>
-              )}
-              {selectedOrder.notes && (
-                <div>
-                  <p className="text-muted-foreground text-xs">Notes</p>
-                  <p className="text-xs">{selectedOrder.notes}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-muted-foreground text-xs">Created</p>
+
+              {/* Provider Order ID + Notes */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedOrder.provider_order_id && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider Order ID</p>
+                    <p className="font-mono text-xs">{selectedOrder.provider_order_id}</p>
+                  </div>
+                )}
+                {selectedOrder.notes && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Notes</p>
+                    <p className="text-xs">{selectedOrder.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Created</p>
                   <p className="text-xs">{new Date(selectedOrder.created_at).toLocaleString()}</p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Updated</p>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Updated</p>
                   <p className="text-xs">{new Date(selectedOrder.updated_at).toLocaleString()}</p>
                 </div>
               </div>

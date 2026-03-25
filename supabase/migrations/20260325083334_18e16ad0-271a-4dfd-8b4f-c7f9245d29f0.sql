@@ -1,0 +1,1 @@
+ALTER TABLE public.services ADD COLUMN IF NOT EXISTS sort_order integer; UPDATE public.services SET sort_order = display_order WHERE sort_order IS NULL; CREATE INDEX IF NOT EXISTS idx_services_sort_order ON public.services (panel_id, sort_order);

@@ -7,8 +7,10 @@ import { MainHomepageSchemas, FAQPageSchema } from "@/components/seo/JsonLdSchem
 
 // Lazy load all below-the-fold sections with webpackChunkName for better caching
 const PlatformFeaturesSection = lazy(() => import(/* webpackChunkName: "platform-features" */ "@/components/sections/PlatformFeaturesSection").then(m => ({ default: m.PlatformFeaturesSection })));
+const WhyHomeOfSMMSection = lazy(() => import(/* webpackChunkName: "why-section" */ "@/components/sections/WhyHomeOfSMMSection").then(m => ({ default: m.WhyHomeOfSMMSection })));
 const StatsSection = lazy(() => import(/* webpackChunkName: "stats" */ "@/components/sections/StatsSection").then(m => ({ default: m.StatsSection })));
 const FeaturesSection = lazy(() => import(/* webpackChunkName: "features" */ "@/components/sections/FeaturesSection").then(m => ({ default: m.FeaturesSection })));
+const HomePricingSection = lazy(() => import(/* webpackChunkName: "home-pricing" */ "@/components/sections/HomePricingSection").then(m => ({ default: m.HomePricingSection })));
 const TestimonialsSection = lazy(() => import(/* webpackChunkName: "testimonials" */ "@/components/sections/TestimonialsSection").then(m => ({ default: m.TestimonialsSection })));
 const FAQSection = lazy(() => import(/* webpackChunkName: "faq" */ "@/components/sections/FAQSection").then(m => ({ default: m.FAQSection })));
 
@@ -35,7 +37,7 @@ const Index = () => {
   }, []);
   
   // SEO-optimized title and description with proper pixel lengths
-  const seoTitle = "HOME OF SMM: Create and Manage Your Own SMM Panel";
+  const seoTitle = "HOME OF SMM: Launch and Manage Your Own SMM Panel";
   const seoDescription = "Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue";
   const seoKeywords = "HOME OF SMM, SMM panel, create SMM panel, best SMM panel, perfect SMM panel, SMM panel platform, SMM reseller panel, SMM panel software, white label SMM panel, SMM panel provider, SMM panel 2026, how to create SMM panel, make money SMM panel, SMM business, social media marketing panel, SMM automation";
   
@@ -98,10 +100,16 @@ const Index = () => {
           <PlatformFeaturesSection />
         </Suspense>
         <Suspense fallback={null}>
+          <WhyHomeOfSMMSection />
+        </Suspense>
+        <Suspense fallback={null}>
           <StatsSection />
         </Suspense>
         <Suspense fallback={null}>
           <FeaturesSection />
+        </Suspense>
+        <Suspense fallback={null}>
+          <HomePricingSection />
         </Suspense>
         <Suspense fallback={null}>
           <TestimonialsSection />

@@ -186,6 +186,7 @@ async function handleServices(supabase: any, panelId: string) {
     .select('*')
     .eq('panel_id', panelId)
     .eq('is_active', true)
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('display_order', { ascending: true });
 
   if (error) {
@@ -193,8 +194,9 @@ async function handleServices(supabase: any, panelId: string) {
     return errorResponse('Failed to fetch services');
   }
 
+  // Return display_order as the panel's own service ID (not provider_service_id)
   const formattedServices = services.map((s: any) => ({
-    service: s.provider_service_id || s.id,
+    service: s.display_order || s.id,
     name: s.name,
     type: s.service_type || 'Default',
     category: formatCategory(s.category),
