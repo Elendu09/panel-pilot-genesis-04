@@ -3754,6 +3754,7 @@ export type Database = {
           provider_service_ref: string | null
           refill_available: boolean | null
           service_type: string | null
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -3789,6 +3790,7 @@ export type Database = {
           provider_service_ref?: string | null
           refill_available?: boolean | null
           service_type?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -3824,6 +3826,7 @@ export type Database = {
           provider_service_ref?: string | null
           refill_available?: boolean | null
           service_type?: string | null
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: [
