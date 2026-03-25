@@ -23,7 +23,7 @@ const plans = [
     period: "/month",
     description: "For growing businesses",
     icon: Zap,
-    features: ["2 Panels", "Custom Domain", "4% Commission", "Priority Support"],
+    features: ["2 Panels", "Custom Domain", "No Commission", "Priority Support"],
     gradient: "from-primary/20 to-primary/5",
     popular: false,
   },
@@ -33,7 +33,7 @@ const plans = [
     period: "/month",
     description: "For serious panel owners",
     icon: Crown,
-    features: ["5 Panels", "Custom Domain", "3% Commission", "24/7 Support", "Advanced Analytics"],
+    features: ["5 Panels", "Custom Domain", "No Commission", "24/7 Support", "Advanced Analytics"],
     gradient: "from-primary/30 to-primary/10",
     popular: true,
   },
@@ -41,9 +41,12 @@ const plans = [
 
 export const HomePricingSection = () => {
   return (
-    <section className="py-24 bg-card/50 border-t border-border relative overflow-hidden" aria-labelledby="pricing-heading">
+    <section
+      className="py-24 bg-card/50 border-t border-border relative overflow-hidden"
+      aria-labelledby="pricing-heading"
+    >
       <BackgroundEffects variant="section" showGrid bubbleCount={3} particleCount={6} />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           className="text-center mb-16"
@@ -64,9 +67,7 @@ export const HomePricingSection = () => {
           </motion.div>
 
           <h2 id="pricing-heading" className="text-4xl md:text-5xl font-bold mb-4">
-            Simple,{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">Transparent</span>
-            {" "}Pricing
+            Simple, <span className="bg-gradient-primary bg-clip-text text-transparent">Transparent</span> Pricing
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Start free and scale as you grow. No hidden fees.
@@ -82,14 +83,18 @@ export const HomePricingSection = () => {
               viewport={{ once: true }}
               transition={{ delay: index * 0.15, duration: 0.5 }}
             >
-              <Card className={`relative p-6 h-full bg-gradient-to-br ${plan.gradient} border ${plan.popular ? "border-primary/40 shadow-lg shadow-primary/10" : "border-border/50"}`}>
+              <Card
+                className={`relative p-6 h-full bg-gradient-to-br ${plan.gradient} border ${plan.popular ? "border-primary/40 shadow-lg shadow-primary/10" : "border-border/50"}`}
+              >
                 {plan.popular && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">
                     Most Popular
                   </Badge>
                 )}
                 <div className="text-center mb-6">
-                  <plan.icon className={`w-8 h-8 mx-auto mb-3 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
+                  <plan.icon
+                    className={`w-8 h-8 mx-auto mb-3 ${plan.popular ? "text-primary" : "text-muted-foreground"}`}
+                  />
                   <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
                   <p className="text-muted-foreground text-sm">{plan.description}</p>
                   <div className="mt-4">
