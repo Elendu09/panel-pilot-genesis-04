@@ -340,30 +340,32 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              { value: 'all', label: 'All', dotColor: '' },
-              { value: 'deposit', label: 'Deposits', dotColor: 'bg-green-500' },
-              { value: 'subscription', label: 'Subs', dotColor: 'bg-blue-500' },
-              { value: 'commission', label: 'Commission', dotColor: 'bg-purple-500' },
-              { value: 'ads', label: 'Ads', dotColor: 'bg-amber-500' },
-            ].map((tab) => (
-              <Button
-                key={tab.value}
-                variant={filter === tab.value ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  "h-7 text-xs rounded-full px-3 gap-1.5",
-                  filter === tab.value ? "shadow-sm" : "bg-background/60"
-                )}
-                onClick={() => { setFilter(tab.value as typeof filter); setPage(1); }}
-              >
-                {tab.dotColor && (
-                  <span className={cn("w-2 h-2 rounded-full", tab.dotColor)} />
-                )}
-                {tab.label}
-              </Button>
-            ))}
+          <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+            <div className="flex gap-1.5 w-max">
+              {[
+                { value: 'all', label: 'All', dotColor: '' },
+                { value: 'deposit', label: 'Deposits', dotColor: 'bg-green-500' },
+                { value: 'subscription', label: 'Subs', dotColor: 'bg-blue-500' },
+                { value: 'commission', label: 'Commission', dotColor: 'bg-purple-500' },
+                { value: 'ads', label: 'Ads', dotColor: 'bg-amber-500' },
+              ].map((tab) => (
+                <Button
+                  key={tab.value}
+                  variant={filter === tab.value ? "default" : "outline"}
+                  size="sm"
+                  className={cn(
+                    "h-7 text-xs rounded-full px-3 gap-1.5 shrink-0",
+                    filter === tab.value ? "shadow-sm" : "bg-background/60"
+                  )}
+                  onClick={() => { setFilter(tab.value as typeof filter); setPage(1); }}
+                >
+                  {tab.dotColor && (
+                    <span className={cn("w-2 h-2 rounded-full", tab.dotColor)} />
+                  )}
+                  {tab.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </CardHeader>

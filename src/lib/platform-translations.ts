@@ -212,9 +212,9 @@ export const platformTranslations = {
     
     // Homepage Hero
     'home.badge': 'Automate Your Business',
-    'home.title.line1': 'Create Your Own',
+    'home.title.line1': 'Launch Your Own',
     'home.title.line2': 'SMM Panel',
-    'home.cta.create': 'Create panel',
+    'home.cta.create': 'Launch panel',
     'home.cta.tools': 'Service Tools',
     'home.animated.profit': 'for profit',
     'home.animated.clients': 'for clients',

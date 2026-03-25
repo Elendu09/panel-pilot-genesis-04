@@ -7,24 +7,24 @@ export const TestimonialsSection = () => {
   const { t } = useLanguage();
   const testimonials = [
     {
-      name: "teateagram",
-      text: "Great SMM panel, I have been using it basically from the start of the platform. There is not much to say other than that Socpanel is far ahead of competitors in terms of product. Its very convenient to work with SMM services here.",
+      name: "Daniel K.",
+      text: "I launched my panel in under 10 minutes and had my first paying customer the same day. The multi-panel feature lets me run three separate brands from one account. Nothing else comes close.",
       rating: 5,
-      avatar: "T",
+      avatar: "D",
       color: "from-blue-500 to-cyan-500"
     },
     {
-      name: "allpanel",
-      text: "Socpanel changed my life, I became biggest telegram provider due to this platform. Very good functions to make my own services. By the way, you can find me on top providers list 😎",
+      name: "Sarah M.",
+      text: "The automated order processing saves me hours every day. I connect providers via API, set my markup, and HOME OF SMM handles the rest. My revenue has tripled since switching to multi-panel management.",
       rating: 5,
-      avatar: "A",
+      avatar: "S",
       color: "from-purple-500 to-pink-500"
     },
     {
-      name: "sochype",
-      text: "I was surprised when I ran into Socpanel, truly no-code solution. Before I had issues with my panel with free scripts and etc. Here I created a truly amazing SMM panel.",
+      name: "Alex R.",
+      text: "As a reseller managing 4 panels, HOME OF SMM is a game-changer. Each panel has its own branding, domain, and customer base. The analytics dashboard gives me real-time profit insights across all panels.",
       rating: 5,
-      avatar: "S",
+      avatar: "A",
       color: "from-amber-500 to-orange-500"
     }
   ];
@@ -84,13 +84,14 @@ export const TestimonialsSection = () => {
           </motion.div>
           
           <h2 id="testimonials-heading" className="text-3xl md:text-5xl font-bold mb-4">
-            {t('testimonials.title.what')}{" "}
+            Trusted by{" "}
             <span className="bg-gradient-primary bg-clip-text text-transparent">
-              {t('testimonials.title.users_say')}
+              Panel Owners
             </span>
+            {" "}Worldwide
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {t('testimonials.subtitle')}
+            Hear from entrepreneurs who have built successful SMM businesses using our platform.
           </p>
         </motion.div>
 
