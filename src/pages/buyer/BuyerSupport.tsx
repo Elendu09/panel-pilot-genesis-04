@@ -323,17 +323,30 @@ const BuyerSupport = () => {
 
   // Chat: create new session
   const handleStartChat = async () => {
-    if (!buyer?.id || !panel?.id) return;
-    const { data, error } = await supabase.from('chat_sessions').insert({
-      panel_id: panel.id,
-      visitor_id: buyer.id,
-      visitor_name: buyer.full_name || buyer.email,
-      visitor_email: buyer.email,
-      status: 'active'
-    }).select().single();
-    if (!error && data) {
-      setChatSessions(prev => [data, ...prev]);
-      setSelectedChat(data);
+    if (!buyer?.id || !panel?.id) {
+      toast({ variant: "destructive", title: "Please log in to start a chat" });
+      return;
+    }
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          panelId: panel.id,
+          action: 'create-chat-session',
+          buyerId: buyer.id,
+          buyerName: buyer.full_name || buyer.email,
+          buyerEmail: buyer.email,
+        }
+      });
+      if (fnError || fnData?.error) {
+        toast({ variant: "destructive", title: fnData?.error || "Failed to start chat" });
+        return;
+      }
+      if (fnData?.session) {
+        setChatSessions(prev => [fnData.session, ...prev]);
+        setSelectedChat(fnData.session);
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to start chat" });
     }
   };
 

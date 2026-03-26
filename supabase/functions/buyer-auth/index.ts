@@ -422,6 +422,8 @@ serve(async (req) => {
         return await handleResendVerification(supabaseAdmin, body);
       case 'transactions':
         return await handleTransactions(supabaseAdmin, body);
+      case 'create-chat-session':
+        return await handleCreateChatSession(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -1329,4 +1331,44 @@ async function handleTransactions(supabaseAdmin: any, body: any) {
   }
 
   return jsonResponse({ transactions: transactions || [] });
+}
+
+// Handle creating a chat session for buyer (bypasses RLS)
+async function handleCreateChatSession(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId, buyerName, buyerEmail } = body;
+
+  if (!buyerId || !panelId) {
+    return jsonResponse({ error: 'Missing buyerId or panelId' });
+  }
+
+  // Verify buyer belongs to panel
+  const { data: buyer } = await supabaseAdmin
+    .from('client_users')
+    .select('id')
+    .eq('id', buyerId)
+    .eq('panel_id', panelId)
+    .single();
+
+  if (!buyer) {
+    return jsonResponse({ error: 'Invalid buyer' });
+  }
+
+  const { data: session, error } = await supabaseAdmin
+    .from('chat_sessions')
+    .insert({
+      panel_id: panelId,
+      visitor_id: buyerId,
+      visitor_name: buyerName || buyerEmail || 'Buyer',
+      visitor_email: buyerEmail || null,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create chat session:', error);
+    return jsonResponse({ error: 'Failed to start chat session' });
+  }
+
+  return jsonResponse({ session });
 }

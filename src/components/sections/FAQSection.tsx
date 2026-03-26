@@ -240,7 +240,7 @@ export const FAQSection = () => {
             {t('faq.still_questions')}
           </p>
           <motion.a
-            href="/support"
+            href="/contact"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/10 border border-primary/20 text-primary font-medium hover:bg-primary/20 transition-all"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.98 }}

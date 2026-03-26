@@ -99,7 +99,25 @@ interface TenantDetectionResult {
 
 // Cache for tenant data to avoid refetching on navigation
 const tenantCache = new Map<string, { panel: TenantPanel | null; timestamp: number }>();
-const CACHE_TTL = 30 * 1000; // 30 seconds - fast sync for design updates while staying snappy
+const CACHE_TTL = 30 * 1000; // 30 seconds
+
+// localStorage cache helpers for instant first-paint
+const LS_TENANT_KEY_PREFIX = 'tenant_cache_';
+
+function writeTenantToStorage(hostname: string, panel: TenantPanel | null) {
+  try {
+    if (panel) {
+      localStorage.setItem(LS_TENANT_KEY_PREFIX + hostname, JSON.stringify(panel));
+    }
+  } catch { /* quota exceeded or private mode */ }
+}
+
+function readTenantFromStorage(hostname: string): TenantPanel | null {
+  try {
+    const raw = localStorage.getItem(LS_TENANT_KEY_PREFIX + hostname);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 // Retry function with exponential backoff
 async function fetchWithRetry<T>(
@@ -131,7 +149,11 @@ export function useTenant(): TenantDetectionResult {
   const initialIsPlatform = initialConfig.type === 'platform' || initialConfig.type === 'development';
   const initialIsTenant = initialConfig.type === 'subdomain' || initialConfig.type === 'custom' || initialConfig.type === 'external';
   
-  const [panel, setPanel] = useState<TenantPanel | null>(null);
+  // Initialize from localStorage for instant first paint on tenant domains
+  const [panel, setPanel] = useState<TenantPanel | null>(() => {
+    if (initialIsTenant) return readTenantFromStorage(hostname);
+    return null;
+  });
   const [loading, setLoading] = useState(!initialIsPlatform); // Only load if tenant domain
   const [error, setError] = useState<string | null>(null);
   const [isTenantDomain, setIsTenantDomain] = useState(initialIsTenant);
@@ -506,6 +528,7 @@ export function useTenant(): TenantDetectionResult {
 
           // Cache the result
           tenantCache.set(hostname, { panel: resolvedPanel, timestamp: Date.now() });
+          writeTenantToStorage(hostname, resolvedPanel);
           
           if (isMounted) {
             setPanel(resolvedPanel);
