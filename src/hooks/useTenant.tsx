@@ -528,6 +528,7 @@ export function useTenant(): TenantDetectionResult {
 
           // Cache the result
           tenantCache.set(hostname, { panel: resolvedPanel, timestamp: Date.now() });
+          writeTenantToStorage(hostname, resolvedPanel);
           
           if (isMounted) {
             setPanel(resolvedPanel);
