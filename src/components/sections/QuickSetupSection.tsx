@@ -12,7 +12,7 @@ const steps = [
   {
     icon: PenTool,
     title: "Name Your Panel",
-    description: "Choose your panel name and subdomain to get started.",
+    description: "Choose your panel name and subdomain/custom domain to get started.",
     gradient: "from-purple-500 to-pink-500",
   },
   {
