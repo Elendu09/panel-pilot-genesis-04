@@ -944,7 +944,14 @@ export const FloatingChatWidget = ({
                   </motion.button>
                 )}
                 
-                {/* Login prompt for non-authenticated users who want human support */}
+                {/* Auth state for human support */}
+                {panelId && isAuthenticated && (
+                  <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20">
+                    <p className="text-sm text-center text-green-600 dark:text-green-400 font-medium">
+                      ✓ Already logged in
+                    </p>
+                  </div>
+                )}
                 {panelId && !isAuthenticated && (
                   <div className="p-3 bg-muted/30 rounded-xl border border-dashed border-border">
                     <p className="text-sm text-center text-muted-foreground mb-2">

@@ -6,6 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { MainHomepageSchemas, FAQPageSchema } from "@/components/seo/JsonLdSchema";
 
 // Lazy load all below-the-fold sections with webpackChunkName for better caching
+const QuickSetupSection = lazy(() => import(/* webpackChunkName: "quick-setup" */ "@/components/sections/QuickSetupSection").then(m => ({ default: m.QuickSetupSection })));
 const PlatformFeaturesSection = lazy(() => import(/* webpackChunkName: "platform-features" */ "@/components/sections/PlatformFeaturesSection").then(m => ({ default: m.PlatformFeaturesSection })));
 const WhyHomeOfSMMSection = lazy(() => import(/* webpackChunkName: "why-section" */ "@/components/sections/WhyHomeOfSMMSection").then(m => ({ default: m.WhyHomeOfSMMSection })));
 const StatsSection = lazy(() => import(/* webpackChunkName: "stats" */ "@/components/sections/StatsSection").then(m => ({ default: m.StatsSection })));
@@ -96,6 +97,9 @@ const Index = () => {
       <Navigation />
       <main role="main" aria-label="Main content" itemScope itemType="https://schema.org/WebPage">
         <HeroSection />
+        <Suspense fallback={null}>
+          <QuickSetupSection />
+        </Suspense>
         <Suspense fallback={null}>
           <PlatformFeaturesSection />
         </Suspense>

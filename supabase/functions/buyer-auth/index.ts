@@ -422,6 +422,8 @@ serve(async (req) => {
         return await handleResendVerification(supabaseAdmin, body);
       case 'transactions':
         return await handleTransactions(supabaseAdmin, body);
+      case 'create-chat-session':
+        return await handleCreateChatSession(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }

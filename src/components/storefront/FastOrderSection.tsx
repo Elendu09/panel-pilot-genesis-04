@@ -1857,7 +1857,6 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                       value={guestEmail}
                       onChange={(e) => setGuestEmail(e.target.value)}
                       className="pl-10"
-                      disabled
                     />
                   </div>
                 </div>
