@@ -1,86 +1,85 @@
 
-Plan: Fix panel-owner transaction status finalization, subscription visibility, Coinbase Commerce redirects/failures, and order profit details.
 
-1. Fix transaction history data model so statuses do not linger incorrectly
-- Audit all owner-payment paths in `process-payment` and `payment-webhook` so every initiated owner transaction ends in a real terminal state: `completed` on confirmed payment, `failed` on rejected/expired/cancelled gateway result.
-- Normalize the “in-flight” states:
-  - use `processing` only after a gateway checkout/payment link is successfully created,
-  - keep `pending` only before external checkout creation,
-  - mark failures explicitly when Coinbase/other gateway init fails instead of leaving rows pending.
-- Update `TransactionHistory.tsx` summary/filter logic to count `processing`, `pending_verification`, `cancelled`, and `failed` correctly instead of treating missing/unknown statuses as completed.
+# Plan: Quick Setup Section, FAQ Link Fix, Tenant Sync, Chat Widget Auth, Support Chat, and Fast Order Login
 
-2. Make subscription payments always appear in panel-owner transaction history
-- Ensure all subscription flows create transaction rows with:
-  - `type: 'subscription'`
-  - correct `panel_id`
-  - correct owner `user_id`
-  - clear description like “Subscription upgrade to Pro via Coinbase Commerce”.
-- Review onboarding and billing subscription flows together:
-  - `OnboardingPaymentStep.tsx`
-  - `Billing.tsx`
-  - `PanelOnboardingV2.tsx`
-- Remove any fallback behavior that updates `panel_subscriptions` / `panels.subscription_status` without keeping the matching transaction properly finalized and visible.
-- Update `TransactionHistory.tsx` filtering so “Subs” reliably includes all `type='subscription'` rows regardless of gateway.
+## 1. Add "Quick Setup (How It Works)" Section After Hero
 
-3. Fix Coinbase Commerce so it redirects properly and no longer throws ForbiddenError silently
-- Root cause from inspection:
-  - Coinbase is enabled in `platform_payment_providers`, but currently `supports_subscriptions` is false, so onboarding/billing can exclude or mis-handle it for subscription use.
-  - current owner Coinbase transactions are being created repeatedly and left `pending`/`processing`, which means checkout creation or finalization is breaking before terminal update.
-  - current implementation tries both `/charges` and `/checkouts`, but the app does not persist enough failure detail or fail the transaction row when both fail.
-- Fixes:
-  - update admin provider data/migration so Coinbase supports subscriptions where intended,
-  - tighten Coinbase config resolution to use the correct Commerce API key field consistently,
-  - store/initiate owner subscription and deposit transactions only after gateway eligibility is confirmed,
-  - if Coinbase returns 403/Forbidden, capture the exact response body in logs and mark the transaction `failed`,
-  - only set `external_id` + `processing` after a valid `hosted_url` is returned,
-  - ensure returned `redirectUrl` is always sent back to onboarding and billing callers.
-- Also update verification flow so Coinbase can be finalized by:
-  - direct verify-payment polling on return,
-  - webhook completion if Coinbase callback arrives,
-  - failed status if provider says expired/failed/forbidden.
-- Add stronger user-facing errors in billing/onboarding instead of generic “Deposit Failed”.
+Create `QuickSetupSection.tsx` with 4-6 steps showing how to launch a panel:
+1. Sign Up — Create your free account
+2. Name Your Panel — Choose name and subdomain
+3. Add Services — Import from providers or create custom
+4. Configure Payments — Set up payment methods
+5. Customize Design — Brand with your colors and logo
+6. Launch — Go live and start earning
 
-4. Align admin gateway selection with subscription availability
-- `useAdminPaymentGateways.tsx` currently fetches all enabled admin gateways for billing deposits.
-- Split the admin-gateway usage clearly:
-  - billing deposit can show enabled owner-billing gateways,
-  - onboarding subscription and plan upgrade should only show gateways with `supports_subscriptions = true`.
-- Ensure Coinbase appears for subscriptions only if admin has enabled it and marked it subscription-capable.
+Place it in `Index.tsx` between `<HeroSection />` and `<PlatformFeaturesSection />`.
 
-5. Show explicit profit breakdown in order details
-- `OrderManagement.tsx` already has `price` and `provider_cost`; add a dedicated “Profit” field in the order details dialog:
-  - profit = `price - provider_cost`
-- Also show a clearer earnings breakdown in the clicked order details:
-  - Customer paid
-  - Provider cost
-  - Your profit
-- Keep using persisted `orders.provider_cost` so deleted/changed services do not break historical profit calculations.
+## 2. Fix FAQ "Contact Us" Link
 
-6. Hardening and consistency updates
-- Update owner transaction descriptions so deposits, subscriptions, and commission payments are clearly distinguishable in history.
-- Expand `TransactionHistory.tsx` status badges/colors for `processing` and `pending_verification`.
-- Ensure cancelled returns from billing/onboarding can mark transactions failed/cancelled instead of leaving them pending forever when the gateway flow never completes.
+In `FAQSection.tsx` line 243, change `href="/support"` to `href="/contact"`.
 
-Technical details
-- Files to update:
-  - `supabase/functions/process-payment/index.ts`
-  - `supabase/functions/payment-webhook/index.ts`
-  - `src/components/billing/TransactionHistory.tsx`
-  - `src/hooks/useAdminPaymentGateways.tsx`
-  - `src/components/onboarding/OnboardingPaymentStep.tsx`
-  - `src/pages/panel/Billing.tsx`
-  - `src/pages/panel/PanelOnboardingV2.tsx`
-  - `src/pages/OrderManagement.tsx`
-  - new migration for `platform_payment_providers` Coinbase flags if needed
-- Key implementation rules:
-  - never leave a failed gateway init as `pending`,
-  - never mark a transaction `processing` unless checkout URL exists,
-  - never activate subscription without the matching transaction being traceable,
-  - always preserve profit from persisted `orders.provider_cost`.
+## 3. Enhance Tenant Page Load Speed (Reduce Loading Spinner)
 
-What I found during analysis
-- Panel-owner transaction history currently reads only `transactions`, and many owner deposits/subscription attempts remain `pending`.
-- There are real subscription transactions in the database, but current UI/filtering/finalization logic is inconsistent.
-- Coinbase is enabled in the database, but its provider row currently shows `supports_subscriptions = false`, which conflicts with using it for onboarding/upgrade subscriptions.
-- Multiple Coinbase owner transactions exist with `external_id = null` and `status = pending`, confirming checkout initialization/failure handling is incomplete.
-- Order details already show provider cost, but not explicit profit.
+The loading spinner in the screenshot (image 2) is caused by `panelLoading || authLoading` checks showing a spinner while tenant data resolves. To reduce perceived loading:
+- In `BuyerLayout.tsx`, cache the panel theme (colors, fonts, name) in `localStorage` on first load and apply them immediately on mount before the async fetch completes
+- Show a skeleton layout with cached theme colors instead of a blank spinner
+- This gives instant visual feedback with correct branding while data loads in the background
+
+Files: `src/pages/buyer/BuyerLayout.tsx`, `src/hooks/useTenant.tsx` (add localStorage cache write/read)
+
+## 4. FloatingChatWidget: Show "Already Logged In" When Authenticated
+
+In `FloatingChatWidget.tsx` lines 948-965, the login prompt shows for non-authenticated users. Add the inverse case: when `isAuthenticated` is true, show a green "Already logged in" badge instead of the Sign In button, and make it non-clickable.
+
+```tsx
+{panelId && isAuthenticated && (
+  <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20">
+    <p className="text-sm text-center text-green-600 dark:text-green-400 font-medium">
+      ✓ Already logged in
+    </p>
+  </div>
+)}
+{panelId && !isAuthenticated && (
+  // existing login prompt
+)}
+```
+
+## 5. Fix "Start Chat" Button in Tenant Support Page
+
+The `handleStartChat` function (line 325) silently fails because `chat_sessions` insert likely hits an RLS policy. The function checks `if (!buyer?.id || !panel?.id) return;` — if either is null it returns silently with no feedback.
+
+Fix:
+- Add a toast error when `buyer?.id` or `panel?.id` is missing
+- Add error handling for the insert: if RLS blocks it, show a user-facing error
+- Verify the `chat_sessions` RLS policy allows buyers to insert rows where `visitor_id = auth.uid()` — but since buyers use custom auth (not Supabase auth), the RLS won't match. Need to use the `buyer-auth` edge function or create an edge function for chat session creation that bypasses RLS.
+
+Create a `buyer-chat` action in the existing `buyer-auth` edge function (or a small new function) that:
+- Accepts `buyerId`, `panelId`, `token` 
+- Validates the buyer token
+- Inserts into `chat_sessions` using the service role client
+- Returns the new session
+
+Update `BuyerSupport.tsx` `handleStartChat` to call this edge function instead of direct Supabase insert.
+
+## 6. Fix Fast Order Login — Email Field Disabled
+
+In `FastOrderSection.tsx` line 1860, the email `<Input>` has `disabled` attribute. This prevents users from editing their email to log in. 
+
+The flow is: user enters email in step 1 → if account exists → shows login form with email pre-filled but locked. The issue is the user cannot correct their email from this screen.
+
+Fix: Remove `disabled` from the email input on the login form (line 1860), so users can edit the email if needed.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| New: `src/components/sections/QuickSetupSection.tsx` | Create 6-step "How It Works" section |
+| `src/pages/Index.tsx` | Add QuickSetupSection after HeroSection |
+| `src/components/sections/FAQSection.tsx` | Change `/support` to `/contact` on line 243 |
+| `src/pages/buyer/BuyerLayout.tsx` | Add localStorage theme cache for instant branding |
+| `src/hooks/useTenant.tsx` | Write panel theme to localStorage on fetch, read on init |
+| `src/components/storefront/FloatingChatWidget.tsx` | Show "Already logged in" when authenticated |
+| `src/pages/buyer/BuyerSupport.tsx` | Fix handleStartChat to use edge function for RLS bypass |
+| `supabase/functions/buyer-auth/index.ts` | Add `create-chat-session` action |
+| `src/components/storefront/FastOrderSection.tsx` | Remove `disabled` from email input on login form |
+
