@@ -119,11 +119,28 @@ const BuyerOrders = () => {
         ? { key: buyerApiKey, action: 'get-orders' }
         : { key: '__buyer_id_auth__', action: 'get-orders', buyerId: buyer.id, panelId: panel?.id };
       
-      const { data, error } = await supabase.functions.invoke('buyer-api', {
+      const { data, error: fnError } = await supabase.functions.invoke('buyer-api', {
         body: requestBody
       });
       
-      if (error) throw error;
+      if (fnError) {
+        // Fallback: try direct query if edge function fails
+        console.warn('buyer-api failed, trying direct query:', fnError);
+        const { data: directData, error: directError } = await supabase
+          .from('orders')
+          .select('*, service:services(name, display_order)')
+          .eq('buyer_id', buyer.id)
+          .order('created_at', { ascending: false });
+        if (directError) throw directError;
+        const fallbackOrders: Order[] = (directData || []).map((o: any) => ({
+          id: o.id, order_number: o.order_number, target_url: o.target_url,
+          quantity: o.quantity, price: o.price, status: o.status || 'pending',
+          progress: o.progress || 0, created_at: o.created_at,
+          service_name: o.service_name, service: o.service,
+        }));
+        setOrders(fallbackOrders);
+        return;
+      }
       if (data?.error) throw new Error(data.error);
 
       const ordersData = Array.isArray(data) ? data : [];
@@ -406,7 +423,7 @@ const BuyerOrders = () => {
         {/* Other status orders (cancelled, partial, refunded) */}
         {filteredOrders.filter(o => !['awaiting_payment', 'pending', 'processing', 'in_progress', 'completed'].includes(o.status)).length > 0 && (
           <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-3">{t('orders.other_orders')}</h3>
+            <h3 className="text-lg font-semibold mb-3">All Orders</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredOrders
                 .filter(o => !['awaiting_payment', 'pending', 'processing', 'in_progress', 'completed'].includes(o.status))
