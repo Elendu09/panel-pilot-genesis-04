@@ -408,10 +408,10 @@ const BuyerSupport = () => {
         </motion.div>
 
         {/* Tabs: Tickets | Live Chat | FAQ */}
-        <Tabs defaultValue="tickets" className="w-full">
+        <Tabs defaultValue="chat" className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="tickets" className="gap-2"><MessageSquare className="w-4 h-4" />Tickets</TabsTrigger>
             <TabsTrigger value="chat" className="gap-2"><MessagesSquare className="w-4 h-4" />Live Chat</TabsTrigger>
+            <TabsTrigger value="tickets" className="gap-2"><MessageSquare className="w-4 h-4" />Tickets</TabsTrigger>
             <TabsTrigger value="faq" className="gap-2"><HelpCircle className="w-4 h-4" />FAQ</TabsTrigger>
           </TabsList>
 
@@ -489,103 +489,117 @@ const BuyerSupport = () => {
             )}
           </TabsContent>
 
-          {/* ===== LIVE CHAT TAB ===== */}
+          {/* ===== LIVE CHAT TAB (Twitter-style unified) ===== */}
           <TabsContent value="chat" className="mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[500px]">
-              {/* Chat sessions list */}
-              <Card className="glass-card md:col-span-1">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Conversations</h3>
-                    <Button size="sm" variant="outline" onClick={handleStartChat} className="gap-1 text-xs">
-                      <Plus className="w-3 h-3" />New
-                    </Button>
+            <Card className="glass-card overflow-hidden">
+              <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+                {/* Chat Header */}
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MessagesSquare className="w-4 h-4 text-primary" />
                   </div>
-                  {chatLoading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                  ) : chatSessions.length === 0 ? (
-                    <div className="text-center py-8">
-                      <MessagesSquare className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-3">No conversations yet</p>
-                      <Button size="sm" onClick={handleStartChat}>Start Chat</Button>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm">{panel?.name || 'Support'}</h3>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Online
                     </div>
-                  ) : (
-                    <ScrollArea className="h-[400px]">
-                      <div className="space-y-2">
-                        {chatSessions.map(session => (
-                          <div
-                            key={session.id}
-                            onClick={() => setSelectedChat(session)}
+                  </div>
+                  {selectedChat && (
+                    <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
+                      {selectedChat.status}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Messages Area */}
+                <ScrollArea className="flex-1 px-4">
+                  <div className="space-y-3 py-4">
+                    {chatLoading ? (
+                      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+                    ) : !selectedChat && chatSessions.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                          <MessagesSquare className="w-8 h-8 text-primary" />
+                        </div>
+                        <h3 className="font-semibold mb-1">Start a Conversation</h3>
+                        <p className="text-sm text-muted-foreground mb-4">Type a message below to chat with support</p>
+                      </div>
+                    ) : (
+                      <>
+                        {chatMessages.map(msg => (
+                          <motion.div
+                            key={msg.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
                             className={cn(
-                              "p-3 rounded-lg cursor-pointer transition-colors",
-                              selectedChat?.id === session.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
+                              "flex gap-2",
+                              msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
                             )}
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium truncate">{session.visitor_name || 'Chat'}</span>
-                              <Badge variant={session.status === 'active' ? 'default' : 'secondary'} className="text-[10px] px-1.5">
-                                {session.status}
-                              </Badge>
+                            <div className={cn(
+                              "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                              msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                            )}>
+                              {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Chat messages */}
-              <Card className="glass-card md:col-span-2">
-                <CardContent className="p-4 flex flex-col h-full min-h-[500px]">
-                  {selectedChat ? (
-                    <>
-                      <div className="flex items-center gap-2 pb-3 border-b border-border/50 mb-3">
-                        <MessagesSquare className="w-5 h-5 text-primary" />
-                        <span className="font-semibold text-sm">Chat with Support</span>
-                        <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="ml-auto text-xs">
-                          {selectedChat.status}
-                        </Badge>
-                      </div>
-                      <ScrollArea className="flex-1 pr-2">
-                        <div className="space-y-3 py-2">
-                          {chatMessages.map(msg => (
-                            <div key={msg.id} className={cn("max-w-[80%] p-3 rounded-xl text-sm", msg.sender_type === 'visitor' ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}>
+                            <div className={cn(
+                              "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
+                              msg.sender_type === 'visitor'
+                                ? "bg-primary text-primary-foreground rounded-br-sm"
+                                : "bg-muted rounded-bl-sm"
+                            )}>
                               <p>{msg.content}</p>
-                              <p className={cn("text-[10px] mt-1", msg.sender_type === 'visitor' ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                                {new Date(msg.created_at).toLocaleTimeString()}
+                              <p className={cn(
+                                "text-[10px] mt-1",
+                                msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
+                              )}>
+                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
-                          ))}
-                          <div ref={chatEndRef} />
-                        </div>
-                      </ScrollArea>
-                      {selectedChat.status === 'active' && (
-                        <div className="flex gap-2 pt-3 border-t border-border/50 mt-auto">
-                          <Input
-                            placeholder="Type a message..."
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSendChatMessage()}
-                          />
-                          <Button onClick={handleSendChatMessage} disabled={!chatInput.trim()}>
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <MessagesSquare className="w-12 h-12 text-muted-foreground mb-3" />
-                      <p className="text-muted-foreground text-sm">Select a conversation or start a new one</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                          </motion.div>
+                        ))}
+                        <div ref={chatEndRef} />
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                {/* Input Area */}
+                <div className="px-4 py-3 border-t border-border/50 bg-card/80">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Type a message..."
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter' && chatInput.trim()) {
+                          if (!selectedChat) {
+                            await handleStartChat();
+                          }
+                          if (selectedChat || chatSessions.length > 0) {
+                            handleSendChatMessage();
+                          }
+                        }
+                      }}
+                      className="bg-muted/50 border-0"
+                    />
+                    <Button
+                      size="icon"
+                      disabled={!chatInput.trim()}
+                      onClick={async () => {
+                        if (!selectedChat && chatSessions.length === 0) {
+                          await handleStartChat();
+                        }
+                        handleSendChatMessage();
+                      }}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
@@ -693,10 +707,7 @@ const BuyerSupport = () => {
         </Dialog>
       </div>
 
-      {/* Live Chat Widget */}
-      {panel?.id && (
-        <FloatingChatWidget panelId={panel.id} panelName={panel.name} pageContext="Buyer Support Page" enableAI={true} />
-      )}
+      {/* Live Chat Widget hidden on support page to avoid disturbance */}
     </BuyerLayout>
   );
 };
