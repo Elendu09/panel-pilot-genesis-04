@@ -311,13 +311,24 @@ const BuyerSupport = () => {
     } catch { toast({ variant: "destructive", title: "Failed to update ticket" }); }
   };
 
-  // Chat: send message
-  const handleSendChatMessage = async () => {
-    if (!chatInput.trim() || !selectedChat) return;
-    const { error } = await supabase.from('chat_messages').insert({ session_id: selectedChat.id, sender_type: 'visitor', content: chatInput.trim() });
-    if (!error) {
-      setChatInput("");
-      await supabase.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', selectedChat.id);
+  // Chat: send message via edge function (bypasses RLS)
+  const handleSendChatMessage = async (sessionOverride?: ChatSession) => {
+    const activeSession = sessionOverride || selectedChat;
+    if (!chatInput.trim() || !activeSession || !buyer?.id) return;
+    const msgContent = chatInput.trim();
+    setChatInput("");
+    
+    const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+      body: {
+        action: 'send-chat-message',
+        sessionId: activeSession.id,
+        buyerId: buyer.id,
+        content: msgContent,
+      }
+    });
+    if (fnError || fnData?.error) {
+      toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
+      setChatInput(msgContent); // restore on failure
     }
   };
 
