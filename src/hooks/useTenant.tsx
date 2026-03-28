@@ -429,40 +429,10 @@ export function useTenant(): TenantDetectionResult {
           }
         }
 
-        // PRIORITY 4: Fallback subdomain search for non-smmpilot domains
-        if (!panelData && subdomain && !isSubdomainOfPlatform) {
-          searchAttempts.push(`subdomain=${subdomain}`);
-            const { data: subdomainPanel, error: subdomainError } = await (supabase as any)
-            .from('panels_public')
-            .select(panelFields)
-            .eq('subdomain', subdomain)
-            .maybeSingle();
-
-          console.log('[useTenant] Subdomain search result:', { subdomainPanel, subdomainError });
-          panelData = subdomainPanel;
-          panelError = subdomainError;
-        }
-
-        // Also try just the first part of hostname as subdomain (for custom domains)
+        // SECURITY: No more fallback subdomain matching for custom domains.
+        // Only explicitly registered and verified domains/subdomains can load panels.
         if (!panelData && !isSubdomainOfPlatform) {
-          const extractedSubdomain = hostname.split('.')[0];
-          
-          // Avoid searching for common prefixes
-          if (!['www', 'api', 'admin', 'mail', 'smtp', 'ftp'].includes(extractedSubdomain)) {
-            searchAttempts.push(`extracted_subdomain=${extractedSubdomain}`);
-            
-            console.log('[useTenant] Trying extracted subdomain:', extractedSubdomain);
-            
-            const { data: fallbackPanel, error: fallbackError } = await (supabase as any)
-              .from('panels_public')
-              .select(panelFields)
-              .eq('subdomain', extractedSubdomain)
-              .maybeSingle();
-
-            console.log('[useTenant] Fallback search result:', { fallbackPanel, fallbackError });
-            panelData = fallbackPanel;
-            panelError = fallbackError;
-          }
+          console.log('[useTenant] No panel found for custom domain:', hostname, '- domain not registered in platform');
         }
 
         if (isMounted) {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -120,9 +120,16 @@ const PanelOnboarding = () => {
     checkExistingPanel();
   }, [user, profile, navigate]);
 
-  // Auto-generate subdomain from panel name
+  // Auto-generate subdomain from panel name - only on naming step, not domain step
+  const hasVisitedDomainStep = useRef(false);
   useEffect(() => {
-    if (panelName && !subdomain) {
+    if (currentStep >= 2) {
+      hasVisitedDomainStep.current = true;
+    }
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (panelName && !subdomain && !hasVisitedDomainStep.current) {
       const generated = panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
       setSubdomain(generated);
       if (generated.length >= 3) {
