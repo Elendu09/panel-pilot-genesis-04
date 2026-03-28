@@ -196,7 +196,7 @@ export const Footer = () => {
         {/* Built with love */}
         <div className="border-t border-border mt-6 pt-4 flex flex-col md:flex-row justify-between items-center gap-2">
           <p className="text-muted-foreground text-xs">
-            © 2024 HOME OF SMM. {t('footer.rights')}
+            © 2025 HOME OF SMM. {t('footer.rights')}
           </p>
           <p className="text-muted-foreground text-xs flex items-center gap-1.5">
             {t('footer.built')} 
