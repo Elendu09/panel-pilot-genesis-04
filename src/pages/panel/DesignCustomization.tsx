@@ -2191,7 +2191,7 @@ export default function DesignCustomization() {
             </div>
             <div>
               <Label>Copyright Text</Label>
-              <Input value={customization.footerText} onChange={(e) => updateCustomization('footerText', e.target.value)} placeholder="© 2024 Your Panel. All rights reserved." />
+              <Input value={customization.footerText} onChange={(e) => updateCustomization('footerText', e.target.value)} placeholder="© 2025 Your Panel. All rights reserved." />
             </div>
             <div className="space-y-2">
               <Label>Social Links</Label>
