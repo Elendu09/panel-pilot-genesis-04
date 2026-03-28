@@ -332,11 +332,11 @@ const BuyerSupport = () => {
     }
   };
 
-  // Chat: create new session
-  const handleStartChat = async () => {
+  // Chat: create new session - returns the session for immediate use
+  const handleStartChat = async (): Promise<ChatSession | null> => {
     if (!buyer?.id || !panel?.id) {
       toast({ variant: "destructive", title: "Please log in to start a chat" });
-      return;
+      return null;
     }
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
@@ -350,14 +350,43 @@ const BuyerSupport = () => {
       });
       if (fnError || fnData?.error) {
         toast({ variant: "destructive", title: fnData?.error || "Failed to start chat" });
-        return;
+        return null;
       }
       if (fnData?.session) {
         setChatSessions(prev => [fnData.session, ...prev]);
         setSelectedChat(fnData.session);
+        return fnData.session;
       }
+      return null;
     } catch {
       toast({ variant: "destructive", title: "Failed to start chat" });
+      return null;
+    }
+  };
+
+  // Quick reply chips
+  const quickReplies = [
+    { label: '💰 Deposit Issue', text: 'I need help with a deposit' },
+    { label: '📦 Order Issue', text: 'I have an issue with my order' },
+    { label: '💳 Transaction', text: 'I need help with a transaction' },
+    { label: '🔑 Account', text: 'I need help with my account' },
+  ];
+
+  const handleQuickReply = async (text: string) => {
+    setChatInput(text);
+    let session = selectedChat;
+    if (!session) {
+      session = await handleStartChat();
+    }
+    if (session) {
+      const tempInput = text;
+      setChatInput("");
+      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'send-chat-message', sessionId: session.id, buyerId: buyer?.id, content: tempInput }
+      });
+      if (fnData?.error) {
+        toast({ variant: "destructive", title: fnData.error });
+      }
     }
   };
 
@@ -576,6 +605,23 @@ const BuyerSupport = () => {
                   </div>
                 </ScrollArea>
 
+                {/* Quick Replies */}
+                {chatMessages.length === 0 && !selectedChat && (
+                  <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-border/30">
+                    {quickReplies.map((qr, i) => (
+                      <Button
+                        key={i}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs rounded-full"
+                        onClick={() => handleQuickReply(qr.text)}
+                      >
+                        {qr.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
                 {/* Input Area */}
                 <div className="px-4 py-3 border-t border-border/50 bg-card/80">
                   <div className="flex gap-2">
@@ -585,11 +631,12 @@ const BuyerSupport = () => {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={async (e) => {
                         if (e.key === 'Enter' && chatInput.trim()) {
-                          if (!selectedChat) {
-                            await handleStartChat();
+                          let session = selectedChat;
+                          if (!session) {
+                            session = await handleStartChat();
                           }
-                          if (selectedChat || chatSessions.length > 0) {
-                            handleSendChatMessage();
+                          if (session) {
+                            handleSendChatMessage(session);
                           }
                         }
                       }}
@@ -599,10 +646,13 @@ const BuyerSupport = () => {
                       size="icon"
                       disabled={!chatInput.trim()}
                       onClick={async () => {
-                        if (!selectedChat && chatSessions.length === 0) {
-                          await handleStartChat();
+                        let session = selectedChat;
+                        if (!session) {
+                          session = await handleStartChat();
                         }
-                        handleSendChatMessage();
+                        if (session) {
+                          handleSendChatMessage(session);
+                        }
                       }}
                     >
                       <Send className="w-4 h-4" />
