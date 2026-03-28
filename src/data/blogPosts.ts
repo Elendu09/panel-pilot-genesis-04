@@ -16,12 +16,12 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     id: 1,
-    title: "The Future of Social Media Marketing: Trends for 2024",
-    slug: "the-future-of-social-media-marketing-trends-for-2024",
+    title: "The Future of Social Media Marketing: Trends for 2025",
+    slug: "the-future-of-social-media-marketing-trends-for-2025",
     excerpt: "Discover the latest trends in social media marketing and how they can impact your business growth strategy.",
     content: `
       <h2 id="introduction-to-smm-trends" class="text-2xl font-bold mb-4">Introduction to SMM Trends</h2>
-      <p class="mb-4">Social media marketing continues to evolve rapidly. In 2024, we're seeing significant shifts in how brands connect with their audiences. The landscape is more competitive than ever, but also more opportunity-rich for those who stay ahead of the curve.</p>
+      <p class="mb-4">Social media marketing continues to evolve rapidly. In 2025, we're seeing significant shifts in how brands connect with their audiences. The landscape is more competitive than ever, but also more opportunity-rich for those who stay ahead of the curve.</p>
       
       <h2 id="key-trends-to-watch" class="text-2xl font-bold mb-4 mt-6">Key Trends to Watch</h2>
       <p class="mb-4"><strong>1. Short-form video content dominates</strong> - TikTok, Reels, and Shorts are leading engagement metrics. Brands that master the art of quick, captivating content are seeing exponential growth in their reach and engagement rates.</p>
@@ -35,10 +35,10 @@ export const blogPosts: BlogPost[] = [
       <p class="mb-4">Staying ahead in social media marketing requires constant adaptation and a willingness to experiment with new formats and platforms. The brands that will thrive are those that prioritize genuine connection over vanity metrics.</p>
     `,
     category: "Marketing",
-    tags: ["social media", "trends", "2024", "marketing strategy"],
+    tags: ["social media", "trends", "2025", "marketing strategy"],
     readTime: "5 min read",
-    date: "Jan 15, 2024",
-    isoDate: "2024-01-15",
+    date: "Jan 15, 2025",
+    isoDate: "2025-01-15",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=300&fit=crop"
   },
@@ -65,8 +65,8 @@ export const blogPosts: BlogPost[] = [
     category: "Business",
     tags: ["SMM panel", "business", "entrepreneurship", "automation"],
     readTime: "8 min read",
-    date: "Jan 12, 2024",
-    isoDate: "2024-01-12",
+    date: "Jan 12, 2025",
+    isoDate: "2025-01-12",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=300&fit=crop"
   },
@@ -93,8 +93,8 @@ export const blogPosts: BlogPost[] = [
     category: "Instagram",
     tags: ["Instagram", "growth", "engagement", "reels", "content strategy"],
     readTime: "6 min read",
-    date: "Jan 10, 2024",
-    isoDate: "2024-01-10",
+    date: "Jan 10, 2025",
+    isoDate: "2025-01-10",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&h=300&fit=crop"
   },
@@ -121,8 +121,8 @@ export const blogPosts: BlogPost[] = [
     category: "YouTube",
     tags: ["YouTube", "video marketing", "SEO", "content creation"],
     readTime: "12 min read",
-    date: "Jan 8, 2024",
-    isoDate: "2024-01-08",
+    date: "Jan 8, 2025",
+    isoDate: "2025-01-08",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=600&h=300&fit=crop"
   },
@@ -149,8 +149,8 @@ export const blogPosts: BlogPost[] = [
     category: "TikTok",
     tags: ["TikTok", "viral content", "algorithm", "short-form video"],
     readTime: "7 min read",
-    date: "Jan 5, 2024",
-    isoDate: "2024-01-05",
+    date: "Jan 5, 2025",
+    isoDate: "2025-01-05",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=600&h=300&fit=crop"
   },
@@ -177,8 +177,8 @@ export const blogPosts: BlogPost[] = [
     category: "Analytics",
     tags: ["analytics", "ROI", "metrics", "data-driven marketing"],
     readTime: "10 min read",
-    date: "Jan 3, 2024",
-    isoDate: "2024-01-03",
+    date: "Jan 3, 2025",
+    isoDate: "2025-01-03",
     author: "HOME OF SMM Team",
     image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=300&fit=crop"
   }
