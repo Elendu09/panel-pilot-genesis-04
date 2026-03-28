@@ -1,85 +1,118 @@
 
 
-# Plan: Quick Setup Section, FAQ Link Fix, Tenant Sync, Chat Widget Auth, Support Chat, and Fast Order Login
+# Plan: Hero Text "Launch", Custom Domain Security, Subdomain Auto-fill, and Live Chat Fixes
 
-## 1. Add "Quick Setup (How It Works)" Section After Hero
+## 1. Change Hero Text to "Launch" (keep CTA button as "Create Panel")
 
-Create `QuickSetupSection.tsx` with 4-6 steps showing how to launch a panel:
-1. Sign Up — Create your free account
-2. Name Your Panel — Choose name and subdomain
-3. Add Services — Import from providers or create custom
-4. Configure Payments — Set up payment methods
-5. Customize Design — Brand with your colors and logo
-6. Launch — Go live and start earning
+Update `home.title.line1` in all 10 languages in `platform-translations.ts` to use "Launch" equivalents. The `home.cta.create` key stays unchanged ("Create panel", "Crear panel", etc.).
 
-Place it in `Index.tsx` between `<HeroSection />` and `<PlatformFeaturesSection />`.
+| Language | Current `home.title.line1` | New value |
+|----------|---------------------------|-----------|
+| EN | "Create Your Own" | "Launch Your Own" |
+| ES | "Crea tu propio" | "Lanza tu propio" |
+| PT | "Crie seu próprio" | "Lance seu próprio" |
+| AR | "أنشئ" | "أطلق" |
+| TR | "Kendi" | "Kendi" (line2 changes: "smm panelinizi başlatın") |
+| RU | "Создайте свою" | "Запустите свою" |
+| FR | "Créez votre propre" | "Lancez votre propre" |
+| DE | "Erstellen Sie Ihr eigenes" | "Starten Sie Ihr eigenes" |
+| ZH | "创建您自己的" | "启动您自己的" |
+| HI | "अपना खुद का" | "अपना खुद का" (line2 changes: "SMM पैनल लॉन्च करें") |
 
-## 2. Fix FAQ "Contact Us" Link
+**File**: `src/lib/platform-translations.ts` — update only `home.title.line1` (and line2 for TR/HI where verb is in line2).
 
-In `FAQSection.tsx` line 243, change `href="/support"` to `href="/contact"`.
+---
 
-## 3. Enhance Tenant Page Load Speed (Reduce Loading Spinner)
+## 2. Fix Custom Domain Security — Prevent Unauthorized Domain Loading
 
-The loading spinner in the screenshot (image 2) is caused by `panelLoading || authLoading` checks showing a spinner while tenant data resolves. To reduce perceived loading:
-- In `BuyerLayout.tsx`, cache the panel theme (colors, fonts, name) in `localStorage` on first load and apply them immediately on mount before the async fetch completes
-- Show a skeleton layout with cached theme colors instead of a blank spinner
-- This gives instant visual feedback with correct branding while data loads in the background
+**Root cause**: `useTenant.tsx` has aggressive fallback searches (PRIORITY 4 and the extracted subdomain fallback) that match ANY domain's first segment against existing panel subdomains. If someone adds `mypanel.com` to Vercel and `mypanel` matches a panel subdomain, it loads that panel's full storefront + auth — even though the domain was never configured in the platform.
 
-Files: `src/pages/buyer/BuyerLayout.tsx`, `src/hooks/useTenant.tsx` (add localStorage cache write/read)
+**Security fix in `useTenant.tsx`**:
 
-## 4. FloatingChatWidget: Show "Already Logged In" When Authenticated
+1. **Remove PRIORITY 4** (lines 432-444) — fallback subdomain search for non-platform domains. This is dangerous because it matches arbitrary custom domains to panels by extracting their hostname prefix.
 
-In `FloatingChatWidget.tsx` lines 948-965, the login prompt shows for non-authenticated users. Add the inverse case: when `isAuthenticated` is true, show a green "Already logged in" badge instead of the Sign In button, and make it non-clickable.
+2. **Remove the extracted subdomain fallback** (lines 446-466) — same issue, tries `hostname.split('.')[0]` as subdomain.
 
-```tsx
-{panelId && isAuthenticated && (
-  <div className="p-3 bg-green-500/10 rounded-xl border border-green-500/20">
-    <p className="text-sm text-center text-green-600 dark:text-green-400 font-medium">
-      ✓ Already logged in
-    </p>
-  </div>
-)}
-{panelId && !isAuthenticated && (
-  // existing login prompt
-)}
+3. **For custom domains (PRIORITY 0, 2, 3)**: Only serve the panel if the domain is explicitly registered:
+   - PRIORITY 0: `custom_domain` column match — keep but add a verification check
+   - PRIORITY 2: `panels.custom_domain` OR match — keep  
+   - PRIORITY 3: `panel_domains` table with `verification_status = 'verified'` — already correct
+
+4. **After removing fallbacks**: If no panel found for a custom domain, show "Panel not found" (existing behavior) instead of accidentally matching a panel.
+
+**File**: `src/hooks/useTenant.tsx`
+
+---
+
+## 3. Fix Subdomain Auto-fill in Onboarding Domain Step
+
+**Root cause**: `PanelOnboarding.tsx` line 124-131 has a `useEffect` that auto-generates subdomain from `panelName` whenever `subdomain` is empty. When the user navigates to the domain step, if subdomain is `''`, it fills in a generated value (e.g., first letters of panel name).
+
+**Fix**: Change the condition to only auto-generate on the Name step (step 1), not when the user reaches the Domain step. Add a flag `hasManuallyEditedSubdomain` or simply remove the auto-generate effect and let the subdomain input start empty.
+
+Simpler fix: Only run auto-generate when the current step is the name step, not on the domain step. Or add a `useRef` flag that tracks whether the user has already visited the domain step.
+
+**File**: `src/pages/panel/PanelOnboarding.tsx` — gate the auto-generate `useEffect` with a step check or remove auto-generation entirely so the subdomain input starts blank.
+
+---
+
+## 4. Fix Live Chat — Messages Not Sending
+
+**Root cause**: Two bugs:
+
+**Bug A**: `handleCreateChatSession` is called in the edge function dispatch (line 425) but the function is **never defined** in `buyer-auth/index.ts`. This means `handleStartChat()` always fails with a runtime error.
+
+**Fix**: Add the `handleCreateChatSession` function to `buyer-auth/index.ts` that:
+- Validates `buyerId` and `panelId`
+- Inserts into `chat_sessions` using service role
+- Returns the created session
+
+**Bug B**: In `BuyerSupport.tsx` lines 575-583, after `await handleStartChat()`, `selectedChat` is still `null` because React state hasn't updated yet. So `handleSendChatMessage()` returns early (line 316: `if (!chatInput.trim() || !selectedChat) return`).
+
+**Fix**: Make `handleStartChat` return the session, then pass it directly to a modified send function:
+
+```typescript
+const handleStartChat = async (): Promise<ChatSession | null> => {
+  // ... create session via edge function ...
+  const session = fnData.session;
+  setChatSessions(prev => [session, ...prev]);
+  setSelectedChat(session);
+  return session;
+};
+
+// In send flow:
+const handleSendWithSession = async (session: ChatSession) => {
+  // Send via edge function (RLS bypass) not direct supabase insert
+};
 ```
 
-## 5. Fix "Start Chat" Button in Tenant Support Page
+**Bug C**: `handleSendChatMessage` uses direct `supabase.from('chat_messages').insert(...)` which hits RLS since buyer uses custom auth. Must route through edge function.
 
-The `handleStartChat` function (line 325) silently fails because `chat_sessions` insert likely hits an RLS policy. The function checks `if (!buyer?.id || !panel?.id) return;` — if either is null it returns silently with no feedback.
+**Fix**: Add a `send-chat-message` action to `buyer-auth/index.ts` and call it from the frontend instead of direct insert.
 
-Fix:
-- Add a toast error when `buyer?.id` or `panel?.id` is missing
-- Add error handling for the insert: if RLS blocks it, show a user-facing error
-- Verify the `chat_sessions` RLS policy allows buyers to insert rows where `visitor_id = auth.uid()` — but since buyers use custom auth (not Supabase auth), the RLS won't match. Need to use the `buyer-auth` edge function or create an edge function for chat session creation that bypasses RLS.
+**Quick reply chips**: Add pre-defined quick reply buttons above the input area:
+```tsx
+const quickReplies = [
+  { label: '💰 Deposit Issue', text: 'I need help with a deposit' },
+  { label: '📦 Order Issue', text: 'I have an issue with my order' },
+  { label: '💳 Transaction', text: 'I need help with a transaction' },
+  { label: '🔑 Account', text: 'I need help with my account' },
+];
+```
 
-Create a `buyer-chat` action in the existing `buyer-auth` edge function (or a small new function) that:
-- Accepts `buyerId`, `panelId`, `token` 
-- Validates the buyer token
-- Inserts into `chat_sessions` using the service role client
-- Returns the new session
+Show these when no messages exist or as a persistent row above the input.
 
-Update `BuyerSupport.tsx` `handleStartChat` to call this edge function instead of direct Supabase insert.
+**Files**: `supabase/functions/buyer-auth/index.ts`, `src/pages/buyer/BuyerSupport.tsx`
 
-## 6. Fix Fast Order Login — Email Field Disabled
-
-In `FastOrderSection.tsx` line 1860, the email `<Input>` has `disabled` attribute. This prevents users from editing their email to log in. 
-
-The flow is: user enters email in step 1 → if account exists → shows login form with email pre-filled but locked. The issue is the user cannot correct their email from this screen.
-
-Fix: Remove `disabled` from the email input on the login form (line 1860), so users can edit the email if needed.
+---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| New: `src/components/sections/QuickSetupSection.tsx` | Create 6-step "How It Works" section |
-| `src/pages/Index.tsx` | Add QuickSetupSection after HeroSection |
-| `src/components/sections/FAQSection.tsx` | Change `/support` to `/contact` on line 243 |
-| `src/pages/buyer/BuyerLayout.tsx` | Add localStorage theme cache for instant branding |
-| `src/hooks/useTenant.tsx` | Write panel theme to localStorage on fetch, read on init |
-| `src/components/storefront/FloatingChatWidget.tsx` | Show "Already logged in" when authenticated |
-| `src/pages/buyer/BuyerSupport.tsx` | Fix handleStartChat to use edge function for RLS bypass |
-| `supabase/functions/buyer-auth/index.ts` | Add `create-chat-session` action |
-| `src/components/storefront/FastOrderSection.tsx` | Remove `disabled` from email input on login form |
+| File | Changes |
+|------|---------|
+| `src/lib/platform-translations.ts` | Update `home.title.line1` to "Launch" in all 10 languages |
+| `src/hooks/useTenant.tsx` | Remove PRIORITY 4 and extracted subdomain fallback (security fix) |
+| `src/pages/panel/PanelOnboarding.tsx` | Gate subdomain auto-generate to not fill on domain step |
+| `supabase/functions/buyer-auth/index.ts` | Add `handleCreateChatSession` + `handleSendChatMessage` functions |
+| `src/pages/buyer/BuyerSupport.tsx` | Fix send flow (await session before send), add quick reply chips, route messages through edge function |
 
