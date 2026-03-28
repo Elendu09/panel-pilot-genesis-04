@@ -424,6 +424,8 @@ serve(async (req) => {
         return await handleTransactions(supabaseAdmin, body);
       case 'create-chat-session':
         return await handleCreateChatSession(supabaseAdmin, body);
+      case 'send-chat-message':
+        return await handleSendChatMessage(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -1371,4 +1373,48 @@ async function handleCreateChatSession(supabaseAdmin: any, body: any) {
   }
 
   return jsonResponse({ session });
+}
+
+// Handle sending a chat message for buyer (bypasses RLS)
+async function handleSendChatMessage(supabaseAdmin: any, body: any) {
+  const { sessionId, buyerId, content } = body;
+
+  if (!sessionId || !buyerId || !content?.trim()) {
+    return jsonResponse({ error: 'Missing sessionId, buyerId, or content' });
+  }
+
+  // Verify session belongs to buyer
+  const { data: session } = await supabaseAdmin
+    .from('chat_sessions')
+    .select('id, visitor_id')
+    .eq('id', sessionId)
+    .eq('visitor_id', buyerId)
+    .single();
+
+  if (!session) {
+    return jsonResponse({ error: 'Invalid session' });
+  }
+
+  const { data: message, error } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      session_id: sessionId,
+      sender_type: 'visitor',
+      content: content.trim(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to send chat message:', error);
+    return jsonResponse({ error: 'Failed to send message' });
+  }
+
+  // Update last_message_at
+  await supabaseAdmin
+    .from('chat_sessions')
+    .update({ last_message_at: new Date().toISOString() })
+    .eq('id', sessionId);
+
+  return jsonResponse({ message });
 }
