@@ -309,25 +309,27 @@ async function hashPassword(password: string): Promise<string> {
     256
   );
   
-  // Format: $pbkdf2$iterations$salt$hash
+  // Use hex encoding for consistency (avoids btoa/atob edge cases)
   const hashArray = new Uint8Array(derivedBits);
-  const saltB64 = btoa(String.fromCharCode(...salt));
-  const hashB64 = btoa(String.fromCharCode(...hashArray));
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
   
-  return `$pbkdf2$${iterations}$${saltB64}$${hashB64}`;
+  return `$pbkdf2-hex$${iterations}$${saltHex}$${hashHex}`;
 }
 
 // Verify password against hash
 async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   try {
-    // PBKDF2 format: $pbkdf2$iterations$salt$hash
-    if (storedHash.startsWith('$pbkdf2$')) {
+    // New hex-based PBKDF2 format: $pbkdf2-hex$iterations$saltHex$hashHex
+    if (storedHash.startsWith('$pbkdf2-hex$')) {
       const parts = storedHash.split('$');
       if (parts.length !== 5) return false;
       
       const iterations = parseInt(parts[2]);
-      const salt = Uint8Array.from(atob(parts[3]), c => c.charCodeAt(0));
-      const storedHashB64 = parts[4];
+      const saltHex = parts[3];
+      const storedHashHex = parts[4];
+      
+      const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
       
       const encoder = new TextEncoder();
       const keyMaterial = await crypto.subtle.importKey(
@@ -349,7 +351,56 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
         256
       );
       
-      const hashB64 = btoa(String.fromCharCode(...new Uint8Array(derivedBits)));
+      const hashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex === storedHashHex;
+    }
+    
+    // Legacy base64 PBKDF2 format: $pbkdf2$iterations$salt$hash
+    if (storedHash.startsWith('$pbkdf2$')) {
+      const parts = storedHash.split('$');
+      if (parts.length !== 5) return false;
+      
+      const iterations = parseInt(parts[2]);
+      const saltB64 = parts[3];
+      const storedHashB64 = parts[4];
+      
+      // Decode salt from base64
+      const saltStr = atob(saltB64);
+      const salt = new Uint8Array(saltStr.length);
+      for (let i = 0; i < saltStr.length; i++) {
+        salt[i] = saltStr.charCodeAt(i);
+      }
+      
+      const encoder = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveBits']
+      );
+      
+      const derivedBits = await crypto.subtle.deriveBits(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: iterations,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+      );
+      
+      // Re-encode to base64 matching original encoding
+      const hashArray = new Uint8Array(derivedBits);
+      let hashB64 = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < hashArray.length; i += chunkSize) {
+        const chunk = hashArray.subarray(i, Math.min(i + chunkSize, hashArray.length));
+        hashB64 += String.fromCharCode(...chunk);
+      }
+      hashB64 = btoa(hashB64);
+      
       return hashB64 === storedHashB64;
     }
     

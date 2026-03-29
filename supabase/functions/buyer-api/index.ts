@@ -426,6 +426,49 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
     return errorResponse("Failed to create order");
   }
 
+  // ── 5% Commission deduction for free/trial plans ──
+  try {
+    const { data: panelData } = await supabase
+      .from('panels')
+      .select('subscription_tier, balance, owner_id')
+      .eq('id', panelId)
+      .single();
+
+    const tier = (panelData?.subscription_tier || 'free').toLowerCase();
+    if (tier === 'free' || tier === 'trial') {
+      const commissionAmount = parseFloat((price * 0.05).toFixed(4));
+      if (commissionAmount > 0) {
+        const currentPanelBalance = parseFloat(panelData?.balance || 0);
+        await supabase.from('panels')
+          .update({ balance: currentPanelBalance - commissionAmount })
+          .eq('id', panelId);
+
+        await supabase.from('platform_fees').insert({
+          panel_id: panelId,
+          order_id: order.id,
+          order_amount: price,
+          fee_amount: commissionAmount,
+          fee_percentage: 5,
+          description: `5% platform commission on order #${order.order_number}`,
+        });
+
+        await supabase.from('transactions').insert({
+          panel_id: panelId,
+          user_id: panelData?.owner_id || null,
+          type: 'commission',
+          amount: commissionAmount,
+          status: 'completed',
+          payment_method: 'balance',
+          description: `5% commission on order #${order.order_number}`,
+        });
+
+        console.log(`[buyer-api] Deducted ${commissionAmount} commission from panel ${panelId} (free plan)`);
+      }
+    }
+  } catch (commErr) {
+    console.error('[buyer-api] Commission deduction error (non-fatal):', commErr);
+  }
+
   // Forward to upstream provider
   const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
