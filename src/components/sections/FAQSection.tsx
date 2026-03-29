@@ -78,6 +78,18 @@ export const FAQSection = () => {
       answer: "You can start completely free with HOME OF SMM. There are no setup fees, no monthly subscriptions required, and you only pay a 5% commission on completed orders. Upgrade to Basic ($5/mo) or Pro ($15/mo) for advanced features like custom domains and unlimited services.",
       iconKey: "credit",
       gradient: "from-red-500 to-rose-500"
+    },
+    {
+      question: "Does HOME OF SMM offer API access for automation?",
+      answer: "Yes! Every panel on HOME OF SMM comes with a full REST API (v2) that supports automation. Panel owners can share API credentials with developers or third-party tools to automate order placement, check order status, fetch services, and manage balances programmatically. The API follows industry-standard SMM panel API formats for easy integration.",
+      iconKey: "globe",
+      gradient: "from-teal-500 to-cyan-500"
+    },
+    {
+      question: "Can I customize the design of my SMM panel?",
+      answer: "Absolutely! HOME OF SMM offers extensive design customization options including 5+ pre-built themes, custom colors, fonts, logos, favicons, and full CSS overrides. You can match your brand identity perfectly with custom domains and white-label branding — your customers will never know the panel is powered by HOME OF SMM.",
+      iconKey: "target",
+      gradient: "from-violet-500 to-purple-500"
     }
   ];
 
