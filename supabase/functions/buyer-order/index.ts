@@ -279,6 +279,55 @@ serve(async (req) => {
       console.log(`[buyer-order] Provider forwarding result:`, providerResult);
     }
 
+    // ── 5% Commission deduction for free/trial plans ──
+    if (paymentType === 'balance') {
+      try {
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('subscription_tier, balance, owner_id')
+          .eq('id', panelId)
+          .single();
+
+        const tier = (panelData?.subscription_tier || 'free').toLowerCase();
+        if (tier === 'free' || tier === 'trial') {
+          const commissionAmount = parseFloat((verifiedPrice * 0.05).toFixed(4));
+          if (commissionAmount > 0) {
+            const currentPanelBalance = parseFloat(panelData?.balance || 0);
+            const newPanelBalance = currentPanelBalance - commissionAmount;
+
+            await supabase.from('panels')
+              .update({ balance: newPanelBalance })
+              .eq('id', panelId);
+
+            // Record platform fee
+            await supabase.from('platform_fees').insert({
+              panel_id: panelId,
+              order_id: order.id,
+              order_amount: verifiedPrice,
+              fee_amount: commissionAmount,
+              fee_percentage: 5,
+              description: `5% platform commission on order #${orderNumber}`,
+            });
+
+            // Record commission transaction for panel owner visibility
+            await supabase.from('transactions').insert({
+              panel_id: panelId,
+              user_id: panelData?.owner_id || null,
+              type: 'commission',
+              amount: commissionAmount,
+              status: 'completed',
+              payment_method: 'balance',
+              description: `5% commission on order #${orderNumber}`,
+            });
+
+            console.log(`[buyer-order] Deducted ${commissionAmount} commission from panel ${panelId} (free plan)`);
+          }
+        }
+      } catch (commErr) {
+        console.error('[buyer-order] Commission deduction error (non-fatal):', commErr);
+      }
+    }
+
     // Create buyer notification
     const notificationMessage = paymentType === 'direct'
       ? `Order #${orderNumber} created. Complete payment to start processing.`
