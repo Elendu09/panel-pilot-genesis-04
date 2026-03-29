@@ -240,7 +240,7 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
               {getTypeIcon(tx.type)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate">{tx.description || getTypeLabel(tx.type)}</p>
+              <p className="text-sm font-semibold whitespace-nowrap">{tx.description || getTypeLabel(tx.type)}</p>
               <div className="flex items-center gap-2 flex-wrap mt-1">
                 <Badge variant="outline" className={cn("text-[10px] capitalize", getTypeColor(tx.type))}>
                   {getTypeLabel(tx.type)}
