@@ -425,7 +425,7 @@ function isBcryptHash(str: string): boolean {
 
 // Check if a string is a PBKDF2 hash
 function isPbkdf2Hash(str: string): boolean {
-  return Boolean(str && str.startsWith('$pbkdf2$'));
+  return Boolean(str && (str.startsWith('$pbkdf2$') || str.startsWith('$pbkdf2-hex$')));
 }
 
 serve(async (req) => {
@@ -604,6 +604,20 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
     if (isPbkdf2Hash(storedHash)) {
       // Modern PBKDF2 verification
       passwordMatch = await verifyPassword(password, storedHash);
+      
+      // Re-hash legacy base64 format to hex for future consistency
+      if (passwordMatch && storedHash.startsWith('$pbkdf2$')) {
+        try {
+          console.log('Migrating legacy base64 PBKDF2 to hex format for user:', user.id);
+          const newHash = await hashPassword(password);
+          await supabaseAdmin
+            .from('client_users')
+            .update({ password_hash: newHash, password_temp: null })
+            .eq('id', user.id);
+        } catch (rehashErr) {
+          console.error('Re-hash migration error (non-fatal):', rehashErr);
+        }
+      }
     } else if (isBcryptHash(storedHash)) {
       // Bcrypt - cannot verify without workers, prompt for password reset
       console.log('Bcrypt hash detected, user needs password reset:', user.id);
