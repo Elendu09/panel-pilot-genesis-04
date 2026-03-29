@@ -382,11 +382,15 @@ export const TransactionHistory = ({ panelId }: TransactionHistoryProps) => {
           </div>
         ) : (
           <>
-            {/* Mobile Timeline View */}
-            <div className="block md:hidden space-y-1 divide-y divide-border/30">
-              {paginatedTransactions.map((tx) => (
-                <TransactionCard key={tx.id} tx={tx} />
-              ))}
+            {/* Mobile Timeline View with horizontal scroll */}
+            <div className="block md:hidden">
+              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+                <div className="min-w-[500px] space-y-1 divide-y divide-border/30">
+                  {paginatedTransactions.map((tx) => (
+                    <TransactionCard key={tx.id} tx={tx} />
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Desktop Table View */}
