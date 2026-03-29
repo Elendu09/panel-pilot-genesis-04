@@ -707,16 +707,18 @@ const Billing = () => {
           <QuickDeposit onDeposit={handleDeposit} loading={depositLoading} />
         </div>
 
-        {/* Sidebar - Commission */}
-        <div className="space-y-6">
-          <CommissionTracker 
-            commissionRate={commissionData.commissionRate}
-            earnedThisMonth={commissionData.earnedThisMonth}
-            pendingCommission={commissionData.pendingCommission}
-            paidCommission={commissionData.paidCommission}
-            onPayCommission={handlePayCommission} 
-          />
-        </div>
+        {/* Sidebar - Commission (only for free plan) */}
+        {(!currentPlan || currentPlan === 'free') && (
+          <div className="space-y-6">
+            <CommissionTracker 
+              commissionRate={commissionData.commissionRate}
+              earnedThisMonth={commissionData.earnedThisMonth}
+              pendingCommission={commissionData.pendingCommission}
+              paidCommission={commissionData.paidCommission}
+              onPayCommission={handlePayCommission} 
+            />
+          </div>
+        )}
       </motion.div>
 
 
