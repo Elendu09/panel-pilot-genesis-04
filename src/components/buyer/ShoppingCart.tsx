@@ -232,18 +232,18 @@ const ShoppingCart = ({
         </SheetHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="mx-6 mt-4 grid grid-cols-3">
-            <TabsTrigger value="cart" className="gap-1.5 text-xs">
-              <CartIcon className="w-3.5 h-3.5" />
+          <TabsList className="mx-4 sm:mx-6 mt-4 grid grid-cols-3 text-[10px] sm:text-xs">
+            <TabsTrigger value="cart" className="gap-1 sm:gap-1.5 px-1 sm:px-2">
+              <CartIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               ({cart.length})
             </TabsTrigger>
-            <TabsTrigger value="bulk" className="gap-1.5 text-xs">
-              <Layers className="w-3.5 h-3.5" />
-              {t('cart.bulk_add')}
+            <TabsTrigger value="bulk" className="gap-1 sm:gap-1.5 px-1 sm:px-2">
+              <Layers className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              Mass Order
             </TabsTrigger>
-            <TabsTrigger value="repeat" className="gap-1.5 text-xs">
-              <Repeat className="w-3.5 h-3.5" />
-              {t('cart.quick_repeat')}
+            <TabsTrigger value="repeat" className="gap-1 sm:gap-1.5 px-1 sm:px-2">
+              <Repeat className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              Repeat
             </TabsTrigger>
           </TabsList>
 
