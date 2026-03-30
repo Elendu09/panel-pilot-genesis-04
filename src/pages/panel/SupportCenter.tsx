@@ -63,7 +63,7 @@ const SupportCenter = () => {
   const { panel } = useTenant();
   const isMobile = useIsMobile();
   
-  const [activeTab, setActiveTab] = useState("knowledge");
+  const [activeTab, setActiveTab] = useState("livechat");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");

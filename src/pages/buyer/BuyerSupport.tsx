@@ -113,7 +113,8 @@ const defaultFAQs = [
 const BuyerSupport = () => {
   const { buyer, loading: authLoading, panelId: authPanelId } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
-  const resolvedPanelId = authPanelId || panel?.id;
+  // Triple fallback for panel ID: auth context -> tenant hook -> localStorage
+  const resolvedPanelId = authPanelId || panel?.id || (typeof window !== 'undefined' ? localStorage.getItem('current_panel_id') : null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
