@@ -285,7 +285,7 @@ serve(async (req) => {
     // Forward order to upstream provider (only for balance-paid orders)
     let providerResult = null;
     if (paymentType === 'balance') {
-      providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id);
+      providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id, { runs, interval, delay, comments });
       console.log(`[buyer-order] Provider forwarding result:`, providerResult);
     }
 
