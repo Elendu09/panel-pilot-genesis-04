@@ -592,10 +592,51 @@ const BuyerSupport = () => {
                           <MessagesSquare className="w-8 h-8 text-primary" />
                         </div>
                         <h3 className="font-semibold mb-1">Start a Conversation</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Type a message below to chat with support</p>
+                        <p className="text-sm text-muted-foreground mb-4">Type a message below or tap a quick reply to chat with support</p>
+                      </div>
+                    ) : !selectedChat ? (
+                      /* Session List */
+                      <div className="space-y-2">
+                        {chatSessions
+                          .filter(s => chatFilter === 'archived' 
+                            ? (s.status === 'closed' || s.status === 'archived')
+                            : (s.status === 'active' || s.status === 'open'))
+                          .map(session => (
+                            <motion.div
+                              key={session.id}
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-3 rounded-xl bg-muted/40 hover:bg-muted/60 cursor-pointer transition-colors"
+                              onClick={() => setSelectedChat(session)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">Chat #{session.id.slice(0, 6)}</p>
+                                <Badge variant={session.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">{session.status}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
+                              </p>
+                            </motion.div>
+                          ))}
+                        {chatSessions.filter(s => chatFilter === 'archived' 
+                          ? (s.status === 'closed' || s.status === 'archived')
+                          : (s.status === 'active' || s.status === 'open')).length === 0 && (
+                          <div className="text-center py-8 text-sm text-muted-foreground">
+                            No {chatFilter} conversations
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <>
+                        {/* Back button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1 mb-2"
+                          onClick={() => setSelectedChat(null)}
+                        >
+                          ← Back to chats
+                        </Button>
                         {chatMessages.map(msg => (
                           <motion.div
                             key={msg.id}
@@ -628,6 +669,19 @@ const BuyerSupport = () => {
                             </div>
                           </motion.div>
                         ))}
+                        {/* Continue with AI button when chat has messages but no recent reply */}
+                        {chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.sender_type === 'visitor' && (
+                          <div className="flex justify-center pt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1.5 rounded-full"
+                              onClick={() => setShowAIChat(true)}
+                            >
+                              🤖 Continue with AI
+                            </Button>
+                          </div>
+                        )}
                         <div ref={chatEndRef} />
                       </>
                     )}
@@ -690,6 +744,23 @@ const BuyerSupport = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* AI Chat Modal */}
+            {showAIChat && (
+              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end justify-center sm:items-center">
+                <div className="w-full max-w-md h-[80vh] relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 z-10"
+                    onClick={() => setShowAIChat(false)}
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </Button>
+                  <FloatingChatWidget />
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
