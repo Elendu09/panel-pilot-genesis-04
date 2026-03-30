@@ -153,6 +153,7 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
           .eq('panel_id', panelId)
           .eq('is_active', true)
           .eq('is_hidden', false)
+          .order('sort_order', { ascending: true, nullsFirst: false })
           .order('display_order', { ascending: true })
           .range(from, from + PAGE_SIZE - 1);
 

@@ -140,7 +140,7 @@ const BuyerContact = () => {
     }
   };
 
-  const defaultEmail = 'support@homeofsmm.com';
+  const defaultEmail = '';
   const contactMethods = [
     {
       icon: Mail,

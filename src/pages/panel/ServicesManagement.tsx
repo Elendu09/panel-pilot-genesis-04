@@ -616,7 +616,7 @@ const ServicesManagement = () => {
           query = query.order('name', { ascending: true });
           break;
         default:
-          query = query.order('display_order', { ascending: true });
+          query = query.order('sort_order', { ascending: true, nullsFirst: false }).order('display_order', { ascending: true });
       }
 
       // Pagination with range
@@ -819,18 +819,19 @@ const ServicesManagement = () => {
       const newIndex = services.findIndex((item) => item.id === over.id);
       
       const newOrder = arrayMove(services, oldIndex, newIndex);
+      // Keep displayOrder (service ID) stable — only update visual sort position
       const updatedOrder = newOrder.map((item, index) => ({
         ...item,
-        displayOrder: index + 1,
+        sortOrder: index + 1,
       }));
       
       // Optimistic update
       setServices(updatedOrder);
       
-      // Queue the database update (debounced)
+      // Queue the database update (debounced) — updates sort_order, NOT display_order
       const updates = updatedOrder.map((s, idx) => ({
         id: s.id,
-        display_order: idx + 1,
+        display_order: idx + 1, // This maps to sort_order in bulkUpdateDisplayOrder
       }));
       setPendingOrderUpdates(updates);
     }
@@ -1784,7 +1785,7 @@ const ServicesManagement = () => {
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,
-          display_order: activeCount + idx + 1,
+          display_order: maxDisplayOrder + idx + 1,
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
