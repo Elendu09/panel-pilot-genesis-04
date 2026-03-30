@@ -665,7 +665,54 @@ const SupportCenter = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="knowledge" className="mt-4 sm:mt-6">
+        <TabsContent value="knowledge" className="mt-4 sm:mt-6 space-y-6">
+          {/* FAQ Management for tenant users */}
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  Tenant FAQs
+                </div>
+                <Button size="sm" onClick={handleAddFaq} className="gap-1">
+                  <Plus className="w-4 h-4" />
+                  Add FAQ
+                </Button>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage FAQs shown to your tenant users on their Support page.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {panelFaqs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <HelpCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p>No FAQs added yet. Default FAQs will be shown to your users.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {panelFaqs.map((faq, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{faq.question}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{faq.answer}</p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditFaq(idx)}>
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFaq(idx)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Panel owner knowledge base */}
           <KnowledgeBase />
         </TabsContent>
 
