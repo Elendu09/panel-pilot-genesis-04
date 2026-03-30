@@ -269,7 +269,7 @@ const BuyerSupport = () => {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
         body: {
           action: 'create-support-ticket',
-          panelId: panel.id,
+          panelId: resolvedPanelId,
           buyerId: buyer.id,
           subject: newTicket.subject,
           message: newTicket.message,
