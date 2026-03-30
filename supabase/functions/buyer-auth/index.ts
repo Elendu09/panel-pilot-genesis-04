@@ -756,13 +756,17 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
   });
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, api_key: _ak, ...safeUser } = user;
+  const { password_hash, password_temp, api_key: _ak, mfa_secret, ...safeUser } = user;
+  
+  // Check if MFA is enabled
+  const mfaRequired = user.mfa_verified === true && !!user.mfa_secret;
   
   return jsonResponse({ 
     success: true, 
     user: safeUser,
     token: token,
-    expiresIn: JWT_EXPIRY_SECONDS
+    expiresIn: JWT_EXPIRY_SECONDS,
+    mfa_required: mfaRequired
   });
 }
 
