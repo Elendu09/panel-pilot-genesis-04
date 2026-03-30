@@ -505,6 +505,75 @@ const GeneralSettings = () => {
               </CardContent>
             </Card>
 
+            {/* SMTP Email Configuration */}
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-primary" />
+                  Email Configuration (SMTP)
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Configure SMTP to send password reset and verification emails to tenant users.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>SMTP Host</Label>
+                    <Input
+                      value={(settings as any).smtpHost || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value } as any)}
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Port</Label>
+                    <Input
+                      value={(settings as any).smtpPort || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpPort: e.target.value } as any)}
+                      placeholder="587"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Username</Label>
+                    <Input
+                      value={(settings as any).smtpUsername || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpUsername: e.target.value } as any)}
+                      placeholder="your-email@gmail.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>SMTP Password</Label>
+                    <Input
+                      type="password"
+                      value={(settings as any).smtpPassword || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpPassword: e.target.value } as any)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>From Email</Label>
+                    <Input
+                      value={(settings as any).smtpFromEmail || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpFromEmail: e.target.value } as any)}
+                      placeholder="noreply@yourpanel.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>From Name</Label>
+                    <Input
+                      value={(settings as any).smtpFromName || ""}
+                      onChange={(e) => setSettings({ ...settings, smtpFromName: e.target.value } as any)}
+                      placeholder="Your Panel Name"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Without SMTP, password resets show a temporary password on screen. With SMTP, the temp password is emailed directly.
+                </p>
+              </CardContent>
+            </Card>
+
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
