@@ -1661,8 +1661,13 @@ serve(async (req) => {
           );
         }
         
+        const supportedList = 'Stripe, PayPal, Flutterwave, Paystack, Korapay, Razorpay, Coinbase, Cryptomus, Heleket, Monnify, NOWPayments, CoinGate, Binance Pay, Skrill, Perfect Money, Square, Braintree, BTCPay';
+        console.error(`[process-payment] Unsupported gateway: ${gateway}. Supported: ${supportedList}`);
         return new Response(
-          JSON.stringify({ success: false, error: `Unsupported gateway: ${gateway}` }),
+          JSON.stringify({ 
+            success: false, 
+            error: `Payment gateway "${gateway}" is configured but payment processing is not yet implemented for it. Please use one of the supported gateways: ${supportedList}.` 
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

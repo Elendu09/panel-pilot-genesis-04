@@ -18,27 +18,31 @@ const roleConfig: Record<PanelRole, {
   description: string;
   color: string;
   permissions: string[];
+  lockedPages: string[];
   tempPassword: string;
 }> = {
   panel_admin: {
     label: 'Admin',
-    description: 'Same rights as of main account',
+    description: 'Full access to all panel features including billing, settings, and team management.',
     color: 'border-primary bg-primary/10',
     permissions: ['Full access', 'Billing', 'Settings', 'Team'],
+    lockedPages: [],
     tempPassword: 'admin123'
   },
   manager: {
     label: 'Manager',
-    description: "Can't see balance, providers and panel settings. Can work with orders, edit services and answer in support.",
+    description: 'Can manage orders, edit services, handle support, and view customers. Cannot access billing, providers, or panel settings.',
     color: 'border-muted bg-muted/50',
-    permissions: ['Orders', 'Services', 'Support'],
+    permissions: ['Orders (edit)', 'Services (edit)', 'Support', 'Customers (view)'],
+    lockedPages: ['Billing', 'Providers', 'Settings', 'Team', 'Domain', 'Integrations', 'API'],
     tempPassword: 'manager123'
   },
   agent: {
     label: 'Agent',
-    description: "Has SEO rights. Can answer in support, see orders and services but cant edit. Doesn't see provider and panel settings.",
+    description: 'Can view orders and services (read-only), respond to support tickets, and manage SEO settings. Cannot edit services or access admin pages.',
     color: 'border-muted bg-muted/50',
-    permissions: ['View Orders', 'View Services', 'Support', 'SEO'],
+    permissions: ['Orders (view)', 'Services (view)', 'Support', 'SEO'],
+    lockedPages: ['Billing', 'Providers', 'Settings', 'Team', 'Domain', 'Integrations', 'API', 'Customers', 'Analytics'],
     tempPassword: 'agent123'
   }
 };
