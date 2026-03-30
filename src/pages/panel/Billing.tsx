@@ -563,7 +563,8 @@ const Billing = () => {
   const handlePayCommission = async () => {
     if (!panel?.id || !profile?.id || commissionData.pendingCommission <= 0) return;
 
-    if (!defaultGateway) {
+    const gatewayToUse = supportedGateways[0]?.id;
+    if (!gatewayToUse) {
       toast({
         variant: 'destructive',
         title: 'Payment Methods Unavailable',
@@ -575,7 +576,7 @@ const Billing = () => {
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: defaultGateway,
+          gateway: gatewayToUse,
           amount: commissionData.pendingCommission,
           panelId: panel.id,
           buyerId: profile.id,
