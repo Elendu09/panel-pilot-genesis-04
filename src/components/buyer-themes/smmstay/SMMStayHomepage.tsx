@@ -201,6 +201,30 @@ export const SMMStayHomepage = ({
       <article>
         {/* Hero Section */}
         <section id="hero" aria-label="Hero Section" className="relative" style={{ paddingTop: sectionPadding, paddingBottom: sectionPadding }}>
+          {customization.enableHeroImage && customization.heroImageUrl ? (
+            <div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center gap-8 lg:gap-12" style={{ maxWidth: containerMax }}>
+              <motion.div 
+                className="flex-1 text-left"
+                {...(enableAnimations ? { initial: { opacity: 0, y: 30 }, animate: { opacity: 1, y: 0 } } : {})}
+              >
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase mb-6">
+                  {(() => {
+                    const position = customization.heroAnimatedTextPosition || 'last';
+                    const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
+                    const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('smmstay');
+                    return (<>{before && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{before}{' '}</span>)}<AnimatedHeroText text={animatedWord} animationStyle={effectiveAnimStyle} primaryColor={primary} secondaryColor={secondary} enableAnimations={enableAnimations} />{after && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{' '}{after}</span>)}</>);
+                  })()}
+                </h1>
+                <p className="text-xl mb-8 max-w-2xl uppercase tracking-wide" style={{ color: mutedColor }}>{heroSubtitle}</p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {enableFastOrder ? (<><Button size="lg" onClick={() => navigate('/fast-order')} className="font-black uppercase text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}><Zap className="w-5 h-5 mr-2" />{t('buyer.fastOrder.title') || 'Fast Order'}</Button><Button size="lg" variant="outline" asChild className="font-black uppercase" style={{ borderColor: `${secondary}80`, color: secondary }}><Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link></Button></>) : (<><Button size="lg" onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')} className="font-black uppercase text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}>{buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" /></Button><Button size="lg" variant="outline" onClick={() => navigate('/fast-order')} className="font-black uppercase" style={{ borderColor: `${secondary}80`, color: secondary }}><Zap className="w-5 h-5 mr-2" />{t('buyer.fastOrder.title') || 'Fast Order'}</Button></>)}
+                </div>
+              </motion.div>
+              <motion.div {...(enableAnimations ? { initial: { opacity: 0, scale: 0.9 }, animate: { opacity: 1, scale: 1 } } : {})} className="w-full lg:w-2/5 flex-shrink-0">
+                <img src={customization.heroImageUrl} alt="Hero" className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl" loading="eager" />
+              </motion.div>
+            </div>
+          ) : (
           <motion.div 
             className="mx-auto px-4 sm:px-6 lg:px-8 text-center" 
             style={{ maxWidth: containerMax }}
