@@ -1631,3 +1631,137 @@ async function handleCreateSupportTicket(supabaseAdmin: any, body: any) {
 
   return jsonResponse({ ticket });
 }
+
+// ========= MFA HANDLER FUNCTIONS =========
+
+async function getMfaUser(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId, token } = body;
+  if (!buyerId || !panelId) return { error: 'Missing buyerId or panelId' };
+  
+  // Verify token
+  if (token) {
+    const v = await verifyJWT(token);
+    if (!v.valid || v.payload?.sub !== buyerId) return { error: 'Invalid token' };
+  }
+  
+  const { data: user } = await supabaseAdmin
+    .from('client_users')
+    .select('id, email, panel_id, mfa_secret, mfa_verified, mfa_backup_codes')
+    .eq('id', buyerId)
+    .eq('panel_id', panelId)
+    .single();
+  
+  if (!user) return { error: 'User not found' };
+  return { user };
+}
+
+async function handleMfaEnroll(supabaseAdmin: any, body: any) {
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+  const user = result.user;
+
+  const secretBytes = new Uint8Array(20);
+  crypto.getRandomValues(secretBytes);
+  const secret = base32Encode(secretBytes);
+  const backupCodes = generateMfaBackupCodes();
+
+  // Get panel name for issuer
+  const { data: panel } = await supabaseAdmin
+    .from('panels')
+    .select('name')
+    .eq('id', user.panel_id)
+    .single();
+
+  const issuer = panel?.name || 'SMM Panel';
+  const otpauthUri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(user.email)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+
+  await supabaseAdmin
+    .from('client_users')
+    .update({
+      mfa_secret: secret,
+      mfa_verified: false,
+      mfa_backup_codes: backupCodes.map((c: string) => ({ code: c, used: false }))
+    })
+    .eq('id', user.id);
+
+  return jsonResponse({ secret, otpauth_uri: otpauthUri, backup_codes: backupCodes });
+}
+
+async function handleMfaVerify(supabaseAdmin: any, body: any) {
+  const { mfaToken } = body;
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+  const user = result.user;
+
+  if (!mfaToken || mfaToken.length !== 6) return jsonResponse({ error: 'Invalid token format' });
+  if (!user.mfa_secret) return jsonResponse({ error: 'No MFA enrollment found' });
+
+  const valid = await verifyTOTP(user.mfa_secret, mfaToken);
+  if (!valid) return jsonResponse({ error: 'Invalid code. Please try again.' });
+
+  await supabaseAdmin
+    .from('client_users')
+    .update({ mfa_verified: true })
+    .eq('id', user.id);
+
+  return jsonResponse({ success: true });
+}
+
+async function handleMfaValidate(supabaseAdmin: any, body: any) {
+  const { mfaToken } = body;
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+  const user = result.user;
+
+  if (!user.mfa_verified || !user.mfa_secret) return jsonResponse({ error: 'MFA not enabled' });
+  if (!mfaToken || mfaToken.length !== 6) return jsonResponse({ error: 'Invalid token format' });
+
+  const valid = await verifyTOTP(user.mfa_secret, mfaToken);
+  return jsonResponse({ valid });
+}
+
+async function handleMfaBackup(supabaseAdmin: any, body: any) {
+  const { backupCode } = body;
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+  const user = result.user;
+
+  if (!user.mfa_verified || !user.mfa_secret) return jsonResponse({ error: 'MFA not enabled' });
+  if (!backupCode) return jsonResponse({ error: 'Backup code required' });
+
+  const codes = (user.mfa_backup_codes as any[]) || [];
+  const idx = codes.findIndex((c: any) => c.code === backupCode.toUpperCase() && !c.used);
+  if (idx === -1) return jsonResponse({ error: 'Invalid or already used backup code' });
+
+  codes[idx].used = true;
+  await supabaseAdmin
+    .from('client_users')
+    .update({ mfa_backup_codes: codes })
+    .eq('id', user.id);
+
+  return jsonResponse({ valid: true, remaining: codes.filter((c: any) => !c.used).length });
+}
+
+async function handleMfaDisable(supabaseAdmin: any, body: any) {
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+
+  await supabaseAdmin
+    .from('client_users')
+    .update({ mfa_secret: null, mfa_verified: false, mfa_backup_codes: [] })
+    .eq('id', result.user.id);
+
+  return jsonResponse({ success: true });
+}
+
+async function handleMfaStatus(supabaseAdmin: any, body: any) {
+  const result = await getMfaUser(supabaseAdmin, body);
+  if (result.error) return jsonResponse({ error: result.error });
+  const user = result.user;
+
+  return jsonResponse({
+    enabled: user.mfa_verified === true,
+    has_secret: !!user.mfa_secret,
+    backup_codes_remaining: ((user.mfa_backup_codes as any[]) || []).filter((c: any) => !c.used).length
+  });
+}
