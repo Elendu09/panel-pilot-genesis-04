@@ -1709,6 +1709,8 @@ export type Database = {
           buyer_id: string | null
           completed_at: string | null
           created_at: string
+          drip_feed_interval: number | null
+          drip_feed_runs: number | null
           estimated_completion: string | null
           id: string
           notes: string | null
@@ -1733,6 +1735,8 @@ export type Database = {
           buyer_id?: string | null
           completed_at?: string | null
           created_at?: string
+          drip_feed_interval?: number | null
+          drip_feed_runs?: number | null
           estimated_completion?: string | null
           id?: string
           notes?: string | null
@@ -1757,6 +1761,8 @@ export type Database = {
           buyer_id?: string | null
           completed_at?: string | null
           created_at?: string
+          drip_feed_interval?: number | null
+          drip_feed_runs?: number | null
           estimated_completion?: string | null
           id?: string
           notes?: string | null
