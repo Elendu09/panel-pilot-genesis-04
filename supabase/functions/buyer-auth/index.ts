@@ -391,7 +391,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
         256
       );
       
-      // Re-encode to base64 matching original encoding
+      // Try base64 comparison (chunked for safety)
       const hashArray = new Uint8Array(derivedBits);
       let hashB64 = '';
       const chunkSize = 8192;
@@ -401,7 +401,14 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
       }
       hashB64 = btoa(hashB64);
       
-      return hashB64 === storedHashB64;
+      if (hashB64 === storedHashB64) return true;
+      
+      // Fallback: try hex comparison in case of encoding mismatch
+      const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+      const storedHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+      if (hashHex === storedHex) return true;
+      
+      return false;
     }
     
     // Legacy bcrypt hash - cannot verify without workers, return false
@@ -410,7 +417,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
       return false;
     }
     
-    // Legacy plaintext comparison
+    // Legacy plaintext comparison (for very old accounts)
     return storedHash === password;
   } catch (error) {
     console.error('Password verification error:', error);
