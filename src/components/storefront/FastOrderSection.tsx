@@ -717,6 +717,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             price: totalPrice,
             paymentType: 'balance',
             notes: `Fast Order via ${panelName}`,
+            ...(selectedService && (selectedService as any).dripfeed_available && dripFeedRuns > 1 ? {
+              runs: dripFeedRuns,
+              interval: dripFeedInterval,
+            } : {}),
           }
         });
 
@@ -762,6 +766,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
             price: totalPrice,
             paymentType: 'direct',
             notes: `Fast Order via ${panelName}`,
+            ...(selectedService && (selectedService as any).dripfeed_available && dripFeedRuns > 1 ? {
+              runs: dripFeedRuns,
+              interval: dripFeedInterval,
+            } : {}),
           }
         });
 
