@@ -404,6 +404,12 @@ const BuyerNewOrder = () => {
             runs: dripFeedRuns,
             interval: dripFeedInterval,
           } : {}),
+          ...((selectedService as any).service_type === 'poll' && pollAnswers.trim() ? {
+            answers: pollAnswers.split('\n').filter(a => a.trim()).join(','),
+          } : {}),
+          ...((selectedService as any).service_type === 'subscriptions' && subscriptionExpiry ? {
+            expiry: subscriptionExpiry,
+          } : {}),
         }
       });
 
