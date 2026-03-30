@@ -203,6 +203,8 @@ export const GenericPaymentIcon = ({ className }: { className?: string }) => (
 );
 
 // Map gateway IDs to their icons
+import { extendedPaymentIcons } from "./PaymentIconsExtended";
+
 export const getPaymentIcon = (gatewayId: string): React.FC<{ className?: string }> => {
   const icons: Record<string, React.FC<{ className?: string }>> = {
     stripe: StripeIcon,
@@ -237,6 +239,7 @@ export const getPaymentIcon = (gatewayId: string): React.FC<{ className?: string
     binance_pay: BinancePayIcon,
     perfectmoney: PerfectMoneyIcon,
     perfect_money: PerfectMoneyIcon,
+    ...extendedPaymentIcons,
   };
   return icons[gatewayId.toLowerCase()] || GenericPaymentIcon;
 };
