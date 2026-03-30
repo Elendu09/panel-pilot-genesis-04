@@ -443,7 +443,7 @@ const Billing = () => {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: defaultGateway,
-          amount: plan.price,
+          amount: getPlanPrice(plan),
           panelId: panel.id,
           buyerId: profile.id,
           isOwnerDeposit: true,
