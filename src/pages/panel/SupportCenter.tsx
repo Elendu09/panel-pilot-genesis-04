@@ -869,6 +869,46 @@ const SupportCenter = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* FAQ Add/Edit Dialog */}
+      <Dialog open={faqDialogOpen} onOpenChange={setFaqDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingFaqIndex !== null ? 'Edit FAQ' : 'Add FAQ'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Question</Label>
+              <Input
+                value={faqQuestion}
+                onChange={(e) => setFaqQuestion(e.target.value)}
+                placeholder="e.g. How long does delivery take?"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Answer</Label>
+              <Textarea
+                value={faqAnswer}
+                onChange={(e) => setFaqAnswer(e.target.value)}
+                placeholder="Provide a clear, helpful answer..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setFaqDialogOpen(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveFaq}
+              disabled={savingFaqs || !faqQuestion.trim() || !faqAnswer.trim()}
+              className="w-full sm:w-auto"
+            >
+              {savingFaqs ? "Saving..." : editingFaqIndex !== null ? "Update" : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
