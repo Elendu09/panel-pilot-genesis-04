@@ -81,6 +81,8 @@ interface Order {
   notes: string | null;
   created_at: string;
   service_name?: string | null;
+  drip_feed_runs?: number | null;
+  drip_feed_interval?: number | null;
   service?: { name: string; category: string } | null;
   buyer?: { email: string; full_name: string | null } | null;
   buyer_id?: string | null;
@@ -493,6 +495,11 @@ const OrdersManagement = () => {
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {order.service?.name || order.service_name || 'Unknown Service'}
                               </p>
+                              {order.drip_feed_runs && order.drip_feed_runs >= 2 && (
+                                <Badge variant="outline" className="text-[10px] mt-1 bg-blue-500/10 text-blue-500 border-blue-500/20">
+                                  Drip: {order.drip_feed_runs} runs / {order.drip_feed_interval || 60}min
+                                </Badge>
+                              )}
                             </div>
                             <Checkbox
                               checked={selectedOrders.has(order.id)}
@@ -801,7 +808,12 @@ const OrdersManagement = () => {
                                 {statusInfo.label}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground truncate mb-1">{order.service?.name || order.service_name || 'Unknown Service'}</p>
+                            <p className="text-xs text-muted-foreground truncate mb-1">
+                              {order.service?.name || order.service_name || 'Unknown Service'}
+                              {order.drip_feed_runs && order.drip_feed_runs >= 2 && (
+                                <span className="ml-1 text-blue-500">[Drip: {order.drip_feed_runs}×{order.drip_feed_interval || 60}min]</span>
+                              )}
+                            </p>
                             <div className="flex items-center justify-between gap-2 text-xs">
                               <span className="text-muted-foreground truncate">{order.buyer?.email || 'Unknown'}</span>
                               <span className="font-semibold shrink-0">${order.price.toFixed(2)}</span>

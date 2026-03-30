@@ -398,7 +398,9 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
     price: price,
     status: 'pending',
     buyer_id: buyerId || null,
-    notes: comments || null
+    notes: comments || null,
+    ...(runs && runs >= 2 ? { drip_feed_runs: runs } : {}),
+    ...(interval && runs && runs >= 2 ? { drip_feed_interval: interval } : {}),
   };
   // Include service_name if available (column may or may not exist)
   if (serviceData.name) {

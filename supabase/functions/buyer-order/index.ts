@@ -239,6 +239,8 @@ serve(async (req) => {
       notes: notes || (promoCode ? `Promo: ${promoCode}` : null),
       provider_cost: providerCostAtOrder,
       provider_id: service.provider_id || null,
+      ...(runs && runs >= 2 ? { drip_feed_runs: runs } : {}),
+      ...(interval && runs && runs >= 2 ? { drip_feed_interval: interval } : {}),
     };
 
     // Only include service_name if the column exists (safe for schema drift)
