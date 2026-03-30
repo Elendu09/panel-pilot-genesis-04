@@ -876,12 +876,6 @@ const Billing = () => {
                         </>
                       )}
                     </Button>
-                      ) : (
-                        <>
-                          Upgrade <ArrowUpRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
