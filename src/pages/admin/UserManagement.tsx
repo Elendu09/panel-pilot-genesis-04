@@ -381,7 +381,7 @@ const UserManagement = () => {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="panel_owner">Panel Owner</SelectItem>
+                  <SelectItem value="panel_owner">User (Panel Owner)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
