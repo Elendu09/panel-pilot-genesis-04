@@ -571,7 +571,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   discord: { icon: DiscordIcon, label: "Discord", color: "#5865F2", bgColor: "bg-indigo-500" },
   whatsapp: { icon: WhatsAppIcon, label: "WhatsApp", color: "#25D366", bgColor: "bg-green-500" },
   snapchat: { icon: SnapchatIcon, label: "Snapchat", color: "#FFFC00", bgColor: "bg-yellow-400" },
-  threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-black" },
+  threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   reddit: { icon: RedditIcon, label: "Reddit", color: "#FF4500", bgColor: "bg-orange-600" },
   pinterest: { icon: PinterestIcon, label: "Pinterest", color: "#BD081C", bgColor: "bg-red-700" },
   tumblr: { icon: TumblrIcon, label: "Tumblr", color: "#36465D", bgColor: "bg-slate-700" },
