@@ -301,6 +301,7 @@ export const SMMStayHomepage = ({
               </div>
             )}
           </motion.div>
+          )}
         </section>
 
         {/* Stats */}
