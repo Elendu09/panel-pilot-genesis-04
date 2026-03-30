@@ -38,6 +38,7 @@ import { useBuyerAuth, BuyerAuthContext } from "@/contexts/BuyerAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useContext } from "react";
 import { ChangePasswordDialog } from "@/components/buyer/ChangePasswordDialog";
+import { BuyerMfaSetupDialog } from "@/components/buyer/BuyerMfaSetupDialog";
 
 // OAuth provider icons for profile display
 const OAuthProviderIcons: Record<string, React.ReactNode> = {
