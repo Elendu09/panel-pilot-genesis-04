@@ -1,115 +1,107 @@
 
 
-# Plan: Payment Method Configuration Overhaul, Webhook URL Fix, Live Chat Panel ID Fix, Tenant API URL Fix, Service Types & Drip Feed Implementation
+# Plan: Fix Tenant Auth (Username Forgot-Password, Email Delivery, Password Issues), Service Type UI, and Live Chat Panel ID
 
-## 1. Remove Test Mode & Add Per-Gateway Setup Instructions
+## Summary of Issues Found
 
-**Problems found**:
-- Line 907-913 in `PaymentMethods.tsx`: "Test Mode" toggle with `formData.testMode` — unnecessary, everything should be live/production.
-- Line 828-850: "Mode Detection" section that checks for "test"/"sandbox" in API key — misleading.
-- Webhook URL at line 881 uses `window.location.origin` which shows `lovable.app` instead of the tenant's subdomain/custom domain.
-- Many gateways (50+) lack per-gateway setup instructions in the config dialog.
-- `dripfeed` is hardcoded to `false` in `buyer-api/index.ts` line 208.
+1. **Username login**: Already works (line 578 queries `email OR username`). No fix needed.
+2. **Forgot password**: Only accepts email, not username. Also, no email is actually sent — the edge function generates a temp password and logs it but never delivers it.
+3. **Email verification**: Same — generates a token and logs it but never sends an email.
+4. **Incorrect password**: The PBKDF2 verification logic is correct. However, users with very old `password_temp` plaintext values may fail because `password_temp` is only checked after `password_hash` fails, and only as a fallback in the hash comparison. If `password_hash` is null and `password_temp` has a plaintext value, the code at line 610 reads `user.password_hash || user.password_temp` which should work. The real root cause for "incorrect password" for old users is likely that their passwords were hashed with the legacy base64 PBKDF2 format and the comparison at line 404-409 has a bug (it compares `hashHex` to itself via `storedHex` which is computed from the same `hashArray`). This needs fixing.
+5. **Drip feed UI**: Exists in BuyerNewOrder but missing from FastOrderSection.
+6. **Other service types (poll, subscription)**: No UI in either order flow.
+7. **Missing panel ID in live chat**: `handleStartChat` checks `!panel?.id` from `useTenant()` — if the hook hasn't resolved yet, the error fires. Need to use `panelId` from `BuyerAuthContext` as fallback.
+8. **Continue with AI**: The modal exists but just reopens the FloatingChatWidget AI chatbot (scripted responses). This is functional as-is — the "AI" is the built-in pattern-matching chatbot.
+
+---
+
+## 1. Forgot Password: Accept Username or Email
+
+**File**: `supabase/functions/buyer-auth/index.ts` (handleForgotPassword)
+
+- Accept an `identifier` field (not just `email`)
+- If identifier is not an email format, look up via `username` (case-insensitive) to find the associated email
+- Then proceed with the existing temp password generation flow
+
+**File**: `src/pages/buyer/BuyerAuth.tsx`
+
+- Change the forgot password dialog to accept "Email or Username" instead of just "Email"
+- Send `identifier` instead of `email` to the edge function
+
+---
+
+## 2. Actually Send Password Reset & Verification Emails
+
+**File**: `supabase/functions/buyer-auth/index.ts`
+
+The forgot-password handler (line 1100-1129) generates a new temp password but never emails it. The resend-verification handler (line 1290-1373) generates a token but never sends it.
+
+**Fix**: Instead of sending a reset link (which requires a token-based flow), the current approach generates a new temp password. We need to actually deliver it to the user. Options:
+
+- Use the platform's transactional email system if configured
+- As a pragmatic fix: **return the new temporary password in the response** and show it to the user in a dialog with instructions to log in and change it immediately. This mirrors how many SMM panels handle password resets (display temp password on screen).
+
+**Implementation**:
+- In `handleForgotPassword`: return `{ success: true, tempPassword: newPassword }` (already generates it, just needs to return it)
+- In `BuyerAuth.tsx`: Show a dialog with the temp password after successful reset, with a "Copy" button and instructions
+- For email verification: Since the user chose "optional reminder" — mark all new accounts as active by default (already the case), and add a banner in the dashboard reminding unverified users to verify. No blocking.
+
+---
+
+## 3. Fix Legacy Base64 PBKDF2 Password Comparison Bug
+
+**File**: `supabase/functions/buyer-auth/index.ts` (line 406-409)
+
+Current bug:
+```typescript
+const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+const storedHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+if (hashHex === storedHex) return true; // ALWAYS TRUE — compares same value
+```
+
+This "fallback" hex comparison always returns true because both `hashHex` and `storedHex` are derived from the same `hashArray` (the computed hash), not compared against the stored hash. This means any password matches for legacy base64 hashes after the initial b64 comparison fails.
+
+**Fix**: Remove the broken fallback (lines 406-409). The base64 comparison above it is the correct check. If it fails, the password is wrong.
+
+---
+
+## 4. Add Drip Feed UI to FastOrderSection
+
+**File**: `src/components/storefront/FastOrderSection.tsx`
+
+- Add `dripFeedRuns` and `dripFeedInterval` state variables
+- After the quantity input, conditionally show Drip Feed fields when the selected service has `dripfeed_available === true`
+- Pass `runs` and `interval` params in the order submission body (same pattern as BuyerNewOrder)
+
+---
+
+## 5. Add Poll & Subscription Service Type Fields
+
+**Files**: `src/pages/buyer/BuyerNewOrder.tsx`, `src/components/storefront/FastOrderSection.tsx`
+
+For services with `service_type === 'poll'`:
+- Show an "Answers" textarea (comma-separated poll options)
+- Pass `answers` in order body
+
+For services with `service_type === 'subscriptions'`:
+- Show an "Expiry" date picker or duration selector
+- Pass `expiry` in order body
+
+These fields render conditionally based on `selectedService.service_type`.
+
+---
+
+## 6. Fix "Missing Panel ID" in Tenant Live Chat
+
+**File**: `src/pages/buyer/BuyerSupport.tsx`
+
+The `handleStartChat` function (line 346) checks `!panel?.id` from `useTenant()`. The `panel` may not have resolved yet when the user clicks "New Chat".
 
 **Fix**:
-- Remove `testMode` from `formData` state and all references (lines 184, 344, 371, 907-913).
-- Remove the sandbox/test mode detection UI (lines 828-850).
-- Add a `gatewaySetupSteps` record with per-gateway step-by-step instructions on how to obtain live API keys, displayed in the config dialog. Example:
-```typescript
-const gatewaySetupSteps: Record<string, string[]> = {
-  stripe: [
-    "1. Go to stripe.com/dashboard → Developers → API Keys",
-    "2. Copy your Publishable Key (pk_live_...)",
-    "3. Copy your Secret Key (sk_live_...)",
-    "4. Ensure you're in Live mode (not Test)"
-  ],
-  paypal: [
-    "1. Go to developer.paypal.com → My Apps",
-    "2. Select your Live app (or create one)",
-    "3. Copy Client ID and Secret from Live tab"
-  ],
-  // ... for all 70+ gateways
-};
-```
-- Display these steps in the config dialog between the key inputs and the webhook URL section.
-
-## 2. Fix Webhook URL to Use Tenant Domain
-
-**Problem**: Line 881 uses `window.location.origin` which resolves to the panel owner's dashboard URL, not the tenant-facing URL.
-
-**Fix**: Construct webhook URL from `panel.custom_domain` or `panel.subdomain`:
-```typescript
-const tenantWebhookBase = panel?.custom_domain 
-  ? `https://${panel.custom_domain}`
-  : panel?.subdomain 
-    ? `https://${panel.subdomain}.smmpilot.online`
-    : window.location.origin;
-// Display: `${tenantWebhookBase}/api/webhooks/${selectedGateway?.id}`
-```
-
-## 3. Fix Tenant Live Chat "Missing Panel ID"
-
-**Problem**: In `BuyerSupport.tsx`, `handleStartChat` (line 346) checks `panel?.id` and early returns with toast if missing. The `panel` comes from `useTenant()`. If the tenant hook hasn't resolved yet or fails, `panel?.id` is undefined.
-
-**Fix**:
-- Add a loading guard — don't render the chat UI until `panel` is resolved.
-- Add better error messaging when `panel` is still loading vs actually missing.
-- Ensure the `panelId` is passed correctly in `handleStartChat` body (line 352 already does this — but verify `panel` is not null at call time).
-
-Also in `handleQuickReply` (line 384), `buyer?.id` might be undefined — add guard.
-
-## 4. Fix Tenant API URL Format
-
-**Problem**: `BuyerAPI.tsx` line 49 shows URL as `https://soc.smmpilot.online/api/v2/buyer-api`. The standard SMM panel API format should be just `https://domain.com/api/v2` — not `/api/v2/buyer-api`. The `/buyer-api` suffix is an internal edge function name, not part of the public API URL.
-
-**Fix**: Change the displayed URL to end at `/api/v2`:
-```typescript
-const apiBaseUrl = panel?.custom_domain 
-  ? `https://${panel.custom_domain}/api/v2`
-  : panel?.subdomain 
-    ? `https://${panel.subdomain}.${platformDomain}/api/v2`
-    : `https://yourpanel.${platformDomain}/api/v2`;
-```
-
-The actual routing (edge function `buyer-api`) happens server-side — the user-facing API documentation should show the clean `/api/v2` endpoint.
-
-## 5. Implement Service Types (Poll, Subscription, Drip Feed) in Tenant Orders
-
-**Problem**: The database has `service_type` column on `services` table (values: followers, likes, views, poll, subscriptions, drip_feed, etc.), but:
-- `BuyerNewOrder.tsx` and `FastOrderSection.tsx` don't show service-type-specific form fields (e.g., drip feed needs `runs` + `interval`; poll needs `answers`; subscription needs `expiry`).
-- `buyer-api/index.ts` line 208 hardcodes `dripfeed: false`.
-- The order creation doesn't pass drip feed parameters to the provider.
-
-**Fix**:
-
-### buyer-api/index.ts
-- Change line 208: read `dripfeed` from the service's actual data:
-```typescript
-dripfeed: s.dripfeed_available || false,
-```
-- In `handleAddOrder`, accept and forward `runs`, `interval`, `delay` parameters to the upstream provider when placing orders.
-
-### BuyerNewOrder.tsx
-- After service selection, check `service.service_type` or `service.dripfeed_available`:
-  - If drip feed available: show "Runs" and "Interval (minutes)" inputs
-  - Save these in order metadata and pass to `buyer-order`/`buyer-api`
-- For subscription-type services: show "Expiry" date picker
-- For poll-type services: show "Answers" textarea (comma-separated)
-
-### FastOrderSection.tsx
-- Same conditional fields for drip feed when service supports it
-
-### buyer-order edge function
-- Accept `runs`, `interval`, `delay`, `answers`, `expiry` params and forward to provider API
-
-### ServicesManagement.tsx
-- Show `service_type` and `dripfeed_available` columns in the service list so panel owners can see/verify what types their imported services have
-
-## 6. Ensure `dripfeed_available` is Read from Provider Import
-
-**Current state**: `sync-provider-services` and `import-provider-services` already read `dripfeed` from provider API responses and store in `provider_services.dripfeed_available`. But when creating the `services` table entry, this field may not be copied over.
-
-**Fix**: Ensure import logic copies `dripfeed_available` from `provider_services` to `services` table during import/sync.
+- Use `panelId` from `useBuyerAuth()` as the primary source (already available and resolved before the support page renders since auth redirects unauthenticated users)
+- Fallback to `panel?.id` from `useTenant()`
+- Update `handleStartChat`, `handleSendChatMessage`, `handleQuickReply`, and chat session fetching to use this resolved panel ID
+- Disable the "New" chat button while panel ID is still resolving
 
 ---
 
@@ -117,12 +109,9 @@ dripfeed: s.dripfeed_available || false,
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/PaymentMethods.tsx` | Remove test mode toggle/detection; add `gatewaySetupSteps` with live key instructions for all gateways; fix webhook URL to use tenant domain; display setup steps in config dialog |
-| `src/pages/buyer/BuyerAPI.tsx` | Fix API URL: remove `/buyer-api` suffix, show clean `/api/v2` |
-| `src/pages/buyer/BuyerSupport.tsx` | Add loading guard for panel ID in chat; improve error handling |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Add drip feed fields (runs, interval) when service supports it; add poll/subscription fields |
-| `src/components/storefront/FastOrderSection.tsx` | Add drip feed fields when applicable |
-| `supabase/functions/buyer-api/index.ts` | Fix `dripfeed` to read from DB; accept/forward runs, interval, delay params |
-| `supabase/functions/buyer-order/index.ts` | Accept/forward drip feed and service-type-specific params |
-| `src/pages/panel/ServicesManagement.tsx` | Show service_type and dripfeed_available in service list |
+| `supabase/functions/buyer-auth/index.ts` | Fix forgot-password to accept username; return temp password; fix legacy PBKDF2 comparison bug (remove self-comparing hex fallback) |
+| `src/pages/buyer/BuyerAuth.tsx` | Update forgot password dialog to accept username or email; show temp password in dialog after reset |
+| `src/pages/buyer/BuyerSupport.tsx` | Use `panelId` from `useBuyerAuth()` as primary; disable New Chat button while loading |
+| `src/components/storefront/FastOrderSection.tsx` | Add drip feed UI (runs/interval) for supported services |
+| `src/pages/buyer/BuyerNewOrder.tsx` | Add poll answers and subscription expiry fields |
 
