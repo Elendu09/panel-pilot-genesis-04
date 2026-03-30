@@ -70,6 +70,8 @@ const AdminOverview = () => {
     activePanels: 0,
     suspendedPanels: 0
   });
+  const [planDistribution, setPlanDistribution] = useState({ free: 0, basic: 0, pro: 0 });
+  const [recentSignups, setRecentSignups] = useState<{ id: string; email: string; full_name: string; created_at: string }[]>([]);
   const [statsChanges, setStatsChanges] = useState<{
     panels: { value: string; trend: 'up' | 'down' | 'neutral' };
     users: { value: string; trend: 'up' | 'down' | 'neutral' };
