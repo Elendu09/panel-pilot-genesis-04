@@ -125,6 +125,9 @@ const Billing = () => {
   const [panelBalance, setPanelBalance] = useState(0);
   const [depositLoading, setDepositLoading] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
   const [commissionData, setCommissionData] = useState<CommissionData>({
     commissionRate: 5,
     earnedThisMonth: 0,
@@ -141,6 +144,17 @@ const Billing = () => {
   const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 
   const defaultGateway = availableGateways[0]?.id;
+
+  // Helper to get plan price based on billing cycle
+  const getPlanPrice = (plan: typeof plans[0]) => {
+    if (plan.monthlyPrice === 0) return 0;
+    return billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+  };
+
+  const getYearlySavings = (plan: typeof plans[0]) => {
+    if (plan.monthlyPrice === 0) return 0;
+    return (plan.monthlyPrice * 12) - plan.yearlyPrice;
+  };
 
   useEffect(() => {
     if (panel?.id) {
