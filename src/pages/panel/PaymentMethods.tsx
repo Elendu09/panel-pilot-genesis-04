@@ -171,7 +171,7 @@ const paymentGateways = {
   bank: [
     { id: "ach", name: "ACH Transfer", Icon: StripeIcon, regions: ["US"], fee: "$0.25", docsUrl: "https://stripe.com/docs/ach" },
     { id: "sepa", name: "SEPA Transfer", Icon: StripeIcon, regions: ["Europe"], fee: "€0.35", docsUrl: "https://stripe.com/docs/sepa" },
-    { id: "wiretransfer", name: "Wire Transfer", Icon: WireTransferIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "" },
+    
     { id: "ideal", name: "iDEAL", Icon: IDealIcon, regions: ["Netherlands"], fee: "€0.29", docsUrl: "https://www.ideal.nl/en/developers" },
     { id: "bancontact", name: "Bancontact", Icon: BancontactIcon, regions: ["Belgium"], fee: "€0.25", docsUrl: "https://www.bancontact.com" },
     { id: "boleto", name: "Boleto Bancário", Icon: BoletoIcon, regions: ["Brazil"], fee: "R$3.49", docsUrl: "https://stripe.com/docs/payments/boleto" },
