@@ -76,6 +76,8 @@ export interface ServiceItem {
   imageUrl?: string;
   displayOrder: number;
   description?: string;
+  serviceType?: string;
+  dripfeedAvailable?: boolean;
 }
 
 interface DraggableServiceItemProps {
@@ -186,6 +188,16 @@ export const DraggableServiceItem = ({
               <Badge variant="secondary" className="text-[10px] sm:text-xs capitalize px-1.5">
                 {service.category}
               </Badge>
+              {service.serviceType && service.serviceType !== 'Default' && (
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 capitalize">
+                  {service.serviceType}
+                </Badge>
+              )}
+              {service.dripfeedAvailable && (
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 text-blue-500 border-blue-500/30">
+                  Drip
+                </Badge>
+              )}
               <span className="text-[10px] sm:text-xs text-muted-foreground">
                 {service.minQty.toLocaleString()} - {service.maxQty.toLocaleString()}
               </span>

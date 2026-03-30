@@ -16,6 +16,10 @@ interface OrderRequest {
   promoCode?: string;
   notes?: string;
   paymentType?: 'balance' | 'direct';
+  runs?: number;
+  interval?: number;
+  delay?: number;
+  comments?: string;
 }
 
 // Resolve the external service ID that the provider API expects
@@ -35,7 +39,8 @@ async function forwardToProvider(
   serviceId: string,
   targetUrl: string,
   quantity: number,
-  orderId: string
+  orderId: string,
+  extraParams?: { runs?: number; interval?: number; delay?: number; comments?: string }
 ): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
   try {
     const { data: service } = await supabase
@@ -74,6 +79,11 @@ async function forwardToProvider(
     formData.append('service', externalServiceId);
     formData.append('link', targetUrl);
     formData.append('quantity', String(quantity));
+    // Forward drip feed params to upstream provider
+    if (extraParams?.runs) formData.append('runs', String(extraParams.runs));
+    if (extraParams?.interval) formData.append('interval', String(extraParams.interval));
+    if (extraParams?.delay) formData.append('delay', String(extraParams.delay));
+    if (extraParams?.comments) formData.append('comments', extraParams.comments);
 
     const response = await fetch(provider.api_endpoint, {
       method: 'POST',
@@ -132,7 +142,7 @@ serve(async (req) => {
     );
 
     const body: OrderRequest = await req.json();
-    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes, paymentType = 'balance' } = body;
+    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes, paymentType = 'balance', runs, interval, delay, comments } = body;
 
     console.log(`[buyer-order] Creating order for buyer ${buyerId} on panel ${panelId}, paymentType: ${paymentType}`);
 
@@ -275,7 +285,7 @@ serve(async (req) => {
     // Forward order to upstream provider (only for balance-paid orders)
     let providerResult = null;
     if (paymentType === 'balance') {
-      providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id);
+      providerResult = await forwardToProvider(supabase, serviceId, targetUrl, quantity, order.id, { runs, interval, delay, comments });
       console.log(`[buyer-order] Provider forwarding result:`, providerResult);
     }
 

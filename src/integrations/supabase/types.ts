@@ -3730,6 +3730,7 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number | null
+          dripfeed_available: boolean | null
           estimated_time: string | null
           features: Json | null
           hidden_at: string | null
@@ -3766,6 +3767,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number | null
+          dripfeed_available?: boolean | null
           estimated_time?: string | null
           features?: Json | null
           hidden_at?: string | null
@@ -3802,6 +3804,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number | null
+          dripfeed_available?: boolean | null
           estimated_time?: string | null
           features?: Json | null
           hidden_at?: string | null

@@ -205,7 +205,7 @@ async function handleServices(supabase: any, panelId: string) {
     max: s.max_quantity,
     refill: s.refill_available || false,
     cancel: s.cancel_available || false,
-    dripfeed: false,
+    dripfeed: s.dripfeed_available || false,
     desc: s.description || '',
     average_time: s.average_time || s.estimated_time || 'N/A'
   }));
@@ -230,7 +230,8 @@ async function forwardOrderToProvider(
   serviceId: string,
   targetUrl: string,
   quantity: number,
-  orderId: string
+  orderId: string,
+  extraParams?: { runs?: number; interval?: number; delay?: number; comments?: string }
 ): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
   try {
     const { data: service } = await supabase
@@ -264,6 +265,11 @@ async function forwardOrderToProvider(
     formData.append('service', externalServiceId);
     formData.append('link', targetUrl);
     formData.append('quantity', String(quantity));
+    // Forward drip feed params to upstream provider
+    if (extraParams?.runs) formData.append('runs', String(extraParams.runs));
+    if (extraParams?.interval) formData.append('interval', String(extraParams.interval));
+    if (extraParams?.delay) formData.append('delay', String(extraParams.delay));
+    if (extraParams?.comments) formData.append('comments', extraParams.comments);
 
     const response = await fetch(provider.api_endpoint, {
       method: 'POST',
@@ -295,7 +301,7 @@ async function forwardOrderToProvider(
 
 // Add new order — with balance check & deduction
 async function handleAddOrder(supabase: any, panelId: string, buyerId: string | null, params: BuyerApiRequest) {
-  const { service, link, quantity, comments } = params;
+  const { service, link, quantity, comments, runs, interval, delay } = params;
 
   if (!service) return errorResponse("Service ID is required");
   if (!link) return errorResponse("Link is required");
@@ -470,7 +476,7 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   }
 
   // Forward to upstream provider
-  const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
+  const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id, { runs, interval, delay, comments });
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
 
   // Surface provider errors alongside order number
