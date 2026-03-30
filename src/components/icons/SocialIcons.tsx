@@ -601,7 +601,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   // Music Platforms
   audiomack: { icon: HeadphonesWrapper, label: "Audiomack", color: "#FFA200", bgColor: "bg-orange-400" },
   deezer: { icon: MusicWrapper, label: "Deezer", color: "#00C7F2", bgColor: "bg-cyan-500" },
-  tidal: { icon: RadioWrapper, label: "Tidal", color: "#000000", bgColor: "bg-black" },
+  tidal: { icon: RadioWrapper, label: "Tidal", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   napster: { icon: MusicWrapper, label: "Napster", color: "#000000", bgColor: "bg-gray-900" },
   shazam: { icon: MusicWrapper, label: "Shazam", color: "#0088FF", bgColor: "bg-blue-500" },
   reverbnation: { icon: MusicWrapper, label: "ReverbNation", color: "#E43526", bgColor: "bg-red-600" },
