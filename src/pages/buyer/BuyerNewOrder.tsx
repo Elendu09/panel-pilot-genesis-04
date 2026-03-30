@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
   SelectContent,
@@ -42,7 +43,8 @@ import {
   UserPlus,
   Star,
   Bell,
-  Bookmark
+  Bookmark,
+  Clock
 } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { motion, AnimatePresence } from "framer-motion";
@@ -115,6 +117,10 @@ const BuyerNewOrder = () => {
   // Drip feed state
   const [dripFeedRuns, setDripFeedRuns] = useState<number>(1);
   const [dripFeedInterval, setDripFeedInterval] = useState<number>(60);
+  
+  // Poll & subscription state
+  const [pollAnswers, setPollAnswers] = useState<string>("");
+  const [subscriptionExpiry, setSubscriptionExpiry] = useState<string>("");
   
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -397,6 +403,12 @@ const BuyerNewOrder = () => {
           ...(((selectedService as any).dripfeed_available && dripFeedRuns > 1) ? {
             runs: dripFeedRuns,
             interval: dripFeedInterval,
+          } : {}),
+          ...((selectedService as any).service_type === 'poll' && pollAnswers.trim() ? {
+            answers: pollAnswers.split('\n').filter(a => a.trim()).join(','),
+          } : {}),
+          ...((selectedService as any).service_type === 'subscriptions' && subscriptionExpiry ? {
+            expiry: subscriptionExpiry,
           } : {}),
         }
       });
@@ -798,6 +810,59 @@ const BuyerNewOrder = () => {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {dripFeedRuns} runs × {quantity} quantity every {dripFeedInterval} minutes
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Poll Answers (for poll-type services) */}
+                <AnimatePresence>
+                  {selectedService && (selectedService as any).service_type === 'poll' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20"
+                    >
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                        Poll Answers
+                      </Label>
+                      <Textarea
+                        placeholder="Enter each answer on a new line, e.g.&#10;Option A&#10;Option B&#10;Option C"
+                        value={pollAnswers}
+                        onChange={(e) => setPollAnswers(e.target.value)}
+                        className="min-h-[80px] bg-background/50 font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter poll options separated by new lines
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Subscription Expiry (for subscription-type services) */}
+                <AnimatePresence>
+                  {selectedService && (selectedService as any).service_type === 'subscriptions' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 p-4 rounded-lg bg-violet-500/5 border border-violet-500/20"
+                    >
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-violet-500" />
+                        Subscription Expiry
+                      </Label>
+                      <Input
+                        type="date"
+                        value={subscriptionExpiry}
+                        onChange={(e) => setSubscriptionExpiry(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="h-10 bg-background/50"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Select when the subscription should expire
                       </p>
                     </motion.div>
                   )}

@@ -111,8 +111,9 @@ const defaultFAQs = [
 ];
 
 const BuyerSupport = () => {
-  const { buyer, loading: authLoading } = useBuyerAuth();
+  const { buyer, loading: authLoading, panelId: authPanelId } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
+  const resolvedPanelId = authPanelId || panel?.id;
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,13 +168,13 @@ const BuyerSupport = () => {
 
   // Fetch chat sessions
   useEffect(() => {
-    if (!buyer?.id || !panel?.id) return;
+    if (!buyer?.id || !resolvedPanelId) return;
     const fetchChats = async () => {
       setChatLoading(true);
       const { data } = await supabase
         .from('chat_sessions')
         .select('*')
-        .eq('panel_id', panel.id)
+        .eq('panel_id', resolvedPanelId)
         .eq('visitor_id', buyer.id)
         .order('last_message_at', { ascending: false, nullsFirst: false });
       setChatSessions(data || []);
@@ -193,7 +194,7 @@ const BuyerSupport = () => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [buyer?.id, panel?.id]);
+  }, [buyer?.id, resolvedPanelId]);
 
   // Fetch messages for selected chat & subscribe to realtime
   useEffect(() => {
@@ -343,14 +344,14 @@ const BuyerSupport = () => {
 
   // Chat: create new session - returns the session for immediate use
   const handleStartChat = async (): Promise<ChatSession | null> => {
-    if (!buyer?.id || !panel?.id) {
+    if (!buyer?.id || !resolvedPanelId) {
       toast({ variant: "destructive", title: "Please log in to start a chat" });
       return null;
     }
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
         body: {
-          panelId: panel.id,
+          panelId: resolvedPanelId,
           action: 'create-chat-session',
           buyerId: buyer.id,
           buyerName: buyer.full_name || buyer.email,
