@@ -37,6 +37,7 @@ import {
   Globe,
   Check,
   Megaphone,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -571,6 +572,93 @@ const GeneralSettings = () => {
                 <p className="text-xs text-muted-foreground">
                   Without SMTP, password resets show a temporary password on screen. With SMTP, the temp password is emailed directly.
                 </p>
+
+                {/* SMTP Email Templates */}
+                {((settings as any).smtpHost) && (
+                  <div className="space-y-4 pt-4 border-t border-border/50">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <Megaphone className="w-4 h-4" />
+                      Email Templates
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Customize the emails sent to your users. Use variables: <code className="bg-muted px-1 rounded">{'{username}'}</code>, <code className="bg-muted px-1 rounded">{'{panel_name}'}</code>, <code className="bg-muted px-1 rounded">{'{temp_password}'}</code> (reset only), <code className="bg-muted px-1 rounded">{'{verify_link}'}</code> (verify only)
+                    </p>
+
+                    {/* Password Reset Template */}
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Password Reset Email</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSettings({
+                            ...settings,
+                            smtpResetSubject: 'Password Reset - {panel_name}',
+                            smtpResetBody: '<h2>Password Reset</h2><p>Hi {username},</p><p>Your temporary password is: <strong>{temp_password}</strong></p><p>This password expires in 24 hours. Please log in and change it immediately.</p><p>— {panel_name}</p>',
+                          } as any)}
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" /> Reset to default
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Subject</Label>
+                        <Input
+                          value={(settings as any).smtpResetSubject || 'Password Reset - {panel_name}'}
+                          onChange={(e) => setSettings({ ...settings, smtpResetSubject: e.target.value } as any)}
+                          placeholder="Password Reset - {panel_name}"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Body (HTML)</Label>
+                        <Textarea
+                          value={(settings as any).smtpResetBody || '<h2>Password Reset</h2><p>Hi {username},</p><p>Your temporary password is: <strong>{temp_password}</strong></p><p>This password expires in 24 hours. Please log in and change it immediately.</p><p>— {panel_name}</p>'}
+                          onChange={(e) => setSettings({ ...settings, smtpResetBody: e.target.value } as any)}
+                          rows={5}
+                          className="font-mono text-xs"
+                          placeholder="HTML email body..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email Verification Template */}
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium">Email Verification</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSettings({
+                            ...settings,
+                            smtpVerifySubject: 'Verify Your Email - {panel_name}',
+                            smtpVerifyBody: '<h2>Verify Your Email</h2><p>Hi {username},</p><p>Please click the link below to verify your email address:</p><p><a href="{verify_link}">Verify Email</a></p><p>— {panel_name}</p>',
+                          } as any)}
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" /> Reset to default
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Subject</Label>
+                        <Input
+                          value={(settings as any).smtpVerifySubject || 'Verify Your Email - {panel_name}'}
+                          onChange={(e) => setSettings({ ...settings, smtpVerifySubject: e.target.value } as any)}
+                          placeholder="Verify Your Email - {panel_name}"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-xs">Body (HTML)</Label>
+                        <Textarea
+                          value={(settings as any).smtpVerifyBody || '<h2>Verify Your Email</h2><p>Hi {username},</p><p>Please click the link below to verify your email address:</p><p><a href="{verify_link}">Verify Email</a></p><p>— {panel_name}</p>'}
+                          onChange={(e) => setSettings({ ...settings, smtpVerifyBody: e.target.value } as any)}
+                          rows={5}
+                          className="font-mono text-xs"
+                          placeholder="HTML email body..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
