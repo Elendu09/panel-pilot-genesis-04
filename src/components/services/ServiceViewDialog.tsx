@@ -35,6 +35,7 @@ interface ServiceViewDialogProps {
     imageUrl?: string;
     provider?: string;
     providerId?: string;
+    providerServiceId?: string;
     orders?: number;
   } | null;
   open: boolean;
