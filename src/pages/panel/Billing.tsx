@@ -363,7 +363,7 @@ const Billing = () => {
     if (!plan) return;
 
     // Free plan - direct upgrade without payment
-    if (plan.price === 0) {
+    if (getPlanPrice(plan) === 0) {
       try {
         const { error } = await supabase
           .from('panel_subscriptions')
