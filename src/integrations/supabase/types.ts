@@ -154,6 +154,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "analytics_events_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "analytics_events_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
@@ -539,6 +546,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "buyer_cart_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "buyer_cart_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
@@ -596,6 +610,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_favorites_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -668,6 +689,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyer_notifications_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -927,6 +955,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_custom_prices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_custom_prices_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
@@ -1090,6 +1125,13 @@ export type Database = {
             referencedRelation: "client_users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_users_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       currency_rates: {
@@ -1162,6 +1204,13 @@ export type Database = {
             columns: ["client_user_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_provider_connections_client_user_id_fkey"
+            columns: ["client_user_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1441,6 +1490,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -1703,6 +1759,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3497,10 +3560,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "referral_rewards_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "referral_rewards_referrer_id_fkey"
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referral_rewards_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -3542,6 +3619,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_access_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3681,6 +3765,13 @@ export type Database = {
             columns: ["buyer_id"]
             isOneToOne: false
             referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
           {
@@ -4037,6 +4128,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -4127,6 +4225,128 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_users_safe: {
+        Row: {
+          avatar_url: string | null
+          balance: number | null
+          ban_reason: string | null
+          banned_at: string | null
+          created_at: string | null
+          custom_discount: number | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          invoice_company_name: string | null
+          is_active: boolean | null
+          is_banned: boolean | null
+          is_vip: boolean | null
+          last_login_at: string | null
+          last_login_device: string | null
+          last_login_location: string | null
+          low_balance_threshold: number | null
+          oauth_provider: string | null
+          panel_id: string | null
+          preferred_language: string | null
+          referral_code: string | null
+          referral_count: number | null
+          referred_by: string | null
+          timezone: string | null
+          total_spent: number | null
+          updated_at: string | null
+          username: string | null
+          vip_since: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          balance?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          created_at?: string | null
+          custom_discount?: number | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          invoice_company_name?: string | null
+          is_active?: boolean | null
+          is_banned?: boolean | null
+          is_vip?: boolean | null
+          last_login_at?: string | null
+          last_login_device?: string | null
+          last_login_location?: string | null
+          low_balance_threshold?: number | null
+          oauth_provider?: string | null
+          panel_id?: string | null
+          preferred_language?: string | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referred_by?: string | null
+          timezone?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          username?: string | null
+          vip_since?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          balance?: number | null
+          ban_reason?: string | null
+          banned_at?: string | null
+          created_at?: string | null
+          custom_discount?: number | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          invoice_company_name?: string | null
+          is_active?: boolean | null
+          is_banned?: boolean | null
+          is_vip?: boolean | null
+          last_login_at?: string | null
+          last_login_device?: string | null
+          last_login_location?: string | null
+          low_balance_threshold?: number | null
+          oauth_provider?: string | null
+          panel_id?: string | null
+          preferred_language?: string | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referred_by?: string | null
+          timezone?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          username?: string | null
+          vip_since?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_users_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
             referencedColumns: ["id"]
           },
         ]
