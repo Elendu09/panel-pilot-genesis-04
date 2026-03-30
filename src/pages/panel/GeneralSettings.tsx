@@ -66,6 +66,9 @@ const GeneralSettings = () => {
     panelName: "",
     description: "",
     supportEmail: "",
+    supportPhone: "",
+    supportAddress: "",
+    supportWebsite: "",
     maintenanceMode: false,
     maintenanceMessage: "",
     allowRegistration: true,
@@ -175,6 +178,9 @@ const GeneralSettings = () => {
           minOrderAmount: generalSettings.minOrderAmount || "1.00",
           maxOrderAmount: generalSettings.maxOrderAmount || "100000.00",
           supportEmail: contactInfo.email || "",
+          supportPhone: contactInfo.phone || "",
+          supportAddress: contactInfo.address || "",
+          supportWebsite: contactInfo.website || "",
           termsOfService: panelSettings?.terms_of_service || generalSettings.termsOfService || "",
           privacyPolicy: panelSettings?.privacy_policy || generalSettings.privacyPolicy || "",
           seoTitle: panelSettings?.seo_title || seoSettings.title || "",
@@ -290,7 +296,7 @@ const GeneralSettings = () => {
           panel_id: panelId,
           maintenance_mode: settings.maintenanceMode,
           maintenance_message: settings.maintenanceMessage,
-          contact_info: { email: settings.supportEmail },
+          contact_info: { email: settings.supportEmail, phone: settings.supportPhone, address: settings.supportAddress, website: settings.supportWebsite },
           seo_title: settings.seoTitle,
           seo_description: settings.seoDescription,
           seo_keywords: settings.seoKeywords,
@@ -453,7 +459,37 @@ const GeneralSettings = () => {
                     type="email"
                     value={settings.supportEmail}
                     onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
+                    placeholder="support@yourpanel.com"
                     data-testid="input-support-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportPhone">Support Phone</Label>
+                  <Input
+                    id="supportPhone"
+                    type="tel"
+                    value={settings.supportPhone}
+                    onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
+                    placeholder="+1 234 567 8900"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportAddress">Business Address</Label>
+                  <Input
+                    id="supportAddress"
+                    value={settings.supportAddress}
+                    onChange={(e) => setSettings({ ...settings, supportAddress: e.target.value })}
+                    placeholder="123 Main St, City, Country"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportWebsite">Website URL</Label>
+                  <Input
+                    id="supportWebsite"
+                    type="url"
+                    value={settings.supportWebsite}
+                    onChange={(e) => setSettings({ ...settings, supportWebsite: e.target.value })}
+                    placeholder="https://yourpanel.com"
                   />
                 </div>
                 <div className="space-y-2">
