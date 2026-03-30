@@ -563,7 +563,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   facebook: { icon: FacebookIcon, label: "Facebook", color: "#1877F2", bgColor: "bg-blue-600" },
   twitter: { icon: TwitterIcon, label: "Twitter/X", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   youtube: { icon: YouTubeIcon, label: "YouTube", color: "#FF0000", bgColor: "bg-red-600" },
-  tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-black" },
+  tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   telegram: { icon: TelegramIcon, label: "Telegram", color: "#26A5E4", bgColor: "bg-sky-500" },
   linkedin: { icon: LinkedInIcon, label: "LinkedIn", color: "#0A66C2", bgColor: "bg-blue-700" },
   
