@@ -901,7 +901,7 @@ const Billing = () => {
             <AlertDialogDescription className="space-y-2">
               <p>
                 You have <span className="font-semibold text-emerald-500">${panelBalance.toFixed(2)}</span> in your panel balance. 
-                The <span className="font-semibold capitalize">{pendingUpgradePlan?.name}</span> plan costs <span className="font-semibold">${pendingUpgradePlan?.price}/month</span>.
+                The <span className="font-semibold capitalize">{pendingUpgradePlan?.name}</span> plan costs <span className="font-semibold">${pendingUpgradePlan ? getPlanPrice(pendingUpgradePlan) : 0}/{billingCycle}</span>.
               </p>
               <p>Would you like to pay from your balance or use an external payment gateway?</p>
             </AlertDialogDescription>
