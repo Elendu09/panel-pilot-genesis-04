@@ -562,7 +562,7 @@ const UserManagement = () => {
                     <div className="grid grid-cols-3 gap-2 text-sm mb-3">
                       <div>
                         <p className="text-xs text-muted-foreground">Role</p>
-                        <Badge variant="outline" className="text-xs mt-1">{user.role === 'admin' ? 'Admin' : 'Panel Owner'}</Badge>
+                        <Badge variant="outline" className="text-xs mt-1">{user.role === 'admin' ? 'Admin' : 'User'}</Badge>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Balance</p>
