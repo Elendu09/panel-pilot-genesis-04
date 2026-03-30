@@ -1759,9 +1759,20 @@ const ServicesManagement = () => {
         });
       }
 
-      // Step 4: Build update and insert arrays
+      // Step 4: Get current max display_order for stable service IDs
+      const { data: maxData } = await supabase
+        .from('services')
+        .select('display_order')
+        .eq('panel_id', panel.id)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .single();
+      const maxDisplayOrder = maxData?.display_order || 0;
+
+      // Step 5: Build update and insert arrays
       const toUpdate: any[] = [];
       const toInsert: any[] = [];
+      let insertIdx = 0;
 
       servicesToImport.forEach((service, idx) => {
         const markupPercent = markups[service.id] ?? 25;
