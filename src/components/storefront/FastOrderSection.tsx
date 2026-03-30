@@ -204,6 +204,10 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [quantity, setQuantity] = useState(1000);
   const [isOrdering, setIsOrdering] = useState(false);
   
+  // Drip feed state
+  const [dripFeedRuns, setDripFeedRuns] = useState(1);
+  const [dripFeedInterval, setDripFeedInterval] = useState(60);
+  
   // Payment state - use available payment gateways hook for consistent behavior with deposits
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -1302,6 +1306,47 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                         </p>
                       )}
                     </div>
+
+                    {/* Drip Feed Options */}
+                    {selectedService && (selectedService as any).dripfeed_available && (
+                      <div className={cn(
+                        "space-y-3 p-4 rounded-xl border",
+                        themeMode === 'dark' 
+                          ? "bg-teal-500/5 border-teal-500/20" 
+                          : "bg-blue-50 border-blue-200"
+                      )}>
+                        <Label className={cn("font-semibold text-sm flex items-center gap-2", themeMode === 'dark' ? 'text-white' : 'text-gray-900')}>
+                          <Zap className="w-4 h-4 text-blue-500" />
+                          Drip Feed (Gradual Delivery)
+                        </Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className={cn("text-xs", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>Runs</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={100}
+                              value={dripFeedRuns}
+                              onChange={(e) => setDripFeedRuns(parseInt(e.target.value) || 1)}
+                              className={cn("h-10 rounded-lg font-mono", inputBg)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className={cn("text-xs", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-600')}>Interval (min)</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={dripFeedInterval}
+                              onChange={(e) => setDripFeedInterval(parseInt(e.target.value) || 60)}
+                              className={cn("h-10 rounded-lg font-mono", inputBg)}
+                            />
+                          </div>
+                        </div>
+                        <p className={cn("text-xs", themeMode === 'dark' ? 'text-gray-400' : 'text-gray-500')}>
+                          {dripFeedRuns} runs × {quantity.toLocaleString()} qty every {dripFeedInterval} min
+                        </p>
+                      </div>
+                    )}
 
                     {/* Price Preview */}
                     <div className={cn(
