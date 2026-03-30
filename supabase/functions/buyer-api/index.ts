@@ -205,7 +205,7 @@ async function handleServices(supabase: any, panelId: string) {
     max: s.max_quantity,
     refill: s.refill_available || false,
     cancel: s.cancel_available || false,
-    dripfeed: false,
+    dripfeed: s.dripfeed_available || false,
     desc: s.description || '',
     average_time: s.average_time || s.estimated_time || 'N/A'
   }));

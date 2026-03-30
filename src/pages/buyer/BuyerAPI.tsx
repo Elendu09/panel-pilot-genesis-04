@@ -44,12 +44,12 @@ const BuyerAPI = () => {
 
   const platformDomain = getPlatformDomain();
 
-  // Buyer API uses tenant's domain (custom domain or subdomain) + /buyer-api endpoint
+  // Buyer API uses tenant's domain (custom domain or subdomain) + /api/v2 (standard SMM API format)
   const apiBaseUrl = panel?.custom_domain 
-    ? `https://${panel.custom_domain}/api/v2/buyer-api`
+    ? `https://${panel.custom_domain}/api/v2`
     : panel?.subdomain 
-      ? `https://${panel.subdomain}.${platformDomain}/api/v2/buyer-api`
-      : `https://yourpanel.${platformDomain}/api/v2/buyer-api`;
+      ? `https://${panel.subdomain}.${platformDomain}/api/v2`
+      : `https://yourpanel.${platformDomain}/api/v2`;
 
   const copyToClipboard = async (text: string, id: string) => {
     try {

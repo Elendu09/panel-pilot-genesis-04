@@ -181,7 +181,7 @@ const PaymentMethods = () => {
   const [selectedGateway, setSelectedGateway] = useState<typeof paymentGateways.cards[0] | null>(null);
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [formData, setFormData] = useState({ apiKey: "", secretKey: "", testMode: true, minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
+  const [formData, setFormData] = useState({ apiKey: "", secretKey: "", minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
   
   // Manual payments state
   const [manualPayments, setManualPayments] = useState<ManualPaymentMethod[]>([]);
@@ -341,7 +341,7 @@ const PaymentMethods = () => {
     if (existing) {
       setFormData({ ...formData, apiKey: existing.apiKey, secretKey: existing.secretKey });
     } else {
-      setFormData({ apiKey: "", secretKey: "", testMode: true, minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
+      setFormData({ apiKey: "", secretKey: "", minDeposit: "5", maxDeposit: "1000", feePercentage: "0", fixedFee: "0" });
     }
     setConfigDialogOpen(true);
   };
@@ -367,8 +367,7 @@ const PaymentMethods = () => {
           id,
           enabled: true,
           apiKey: config.apiKey,
-          secretKey: config.secretKey, // Required for payment processing
-          testMode: formData.testMode,
+          secretKey: config.secretKey,
           minDeposit: parseFloat(formData.minDeposit) || 5,
           maxDeposit: parseFloat(formData.maxDeposit) || 1000
         }));
@@ -825,27 +824,16 @@ const PaymentMethods = () => {
             <DialogDescription>Enter your API credentials to enable this payment gateway</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
-            {/* Mode Detection */}
-            {formData.apiKey && (
-              <div className={cn(
-                "p-3 rounded-lg border text-sm",
-                formData.apiKey.includes('test') || formData.apiKey.includes('sandbox')
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-500"
-                  : "bg-green-500/10 border-green-500/30 text-green-500"
-              )}>
-                <div className="flex items-center gap-2">
-                  {formData.apiKey.includes('test') || formData.apiKey.includes('sandbox') ? (
-                    <>
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="font-medium">Test/Sandbox Mode Detected</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4" />
-                      <span className="font-medium">Production Mode</span>
-                    </>
-                  )}
-                </div>
+            {/* Setup Instructions */}
+            {selectedGateway && gatewaySetupSteps[selectedGateway.id] && (
+              <div className="p-3 rounded-lg border bg-blue-500/5 border-blue-500/20 space-y-1.5">
+                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                  <ExternalLink className="w-3 h-3" />
+                  How to get your Live API keys:
+                </p>
+                {gatewaySetupSteps[selectedGateway.id].map((step, i) => (
+                  <p key={i} className="text-xs text-muted-foreground">{step}</p>
+                ))}
               </div>
             )}
 
@@ -878,7 +866,7 @@ const PaymentMethods = () => {
             {/* Webhook URL */}
             <div className="space-y-2">
               <Label>Webhook URL (auto-generated)</Label>
-              <Input readOnly value={`${window.location.origin}/api/webhooks/${selectedGateway?.id}`} className="bg-muted/50 font-mono text-xs" />
+              <Input readOnly value={`${panel?.custom_domain ? `https://${panel.custom_domain}` : panel?.subdomain ? `https://${panel.subdomain}.smmpilot.online` : window.location.origin}/api/webhooks/${selectedGateway?.id}`} className="bg-muted/50 font-mono text-xs" />
               <p className="text-xs text-muted-foreground">Configure this URL in your {selectedGateway?.name} dashboard</p>
             </div>
 
@@ -904,13 +892,6 @@ const PaymentMethods = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between glass-card p-3 rounded-lg">
-              <div>
-                <p className="font-medium">Test Mode</p>
-                <p className="text-xs text-muted-foreground">Use sandbox/test credentials</p>
-              </div>
-              <Switch checked={formData.testMode} onCheckedChange={(checked) => setFormData({...formData, testMode: checked})} />
-            </div>
 
             {/* Documentation Link */}
             {selectedGateway?.docsUrl && (
