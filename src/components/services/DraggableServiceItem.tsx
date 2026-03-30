@@ -76,6 +76,8 @@ export interface ServiceItem {
   imageUrl?: string;
   displayOrder: number;
   description?: string;
+  serviceType?: string;
+  dripfeedAvailable?: boolean;
 }
 
 interface DraggableServiceItemProps {
