@@ -65,14 +65,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
+    // Check if user is admin using authoritative user_roles table
+    const { data: isAdmin } = await supabase
+      .rpc('is_any_admin', { _user_id: user.id });
 
-    if (!profile || profile.role !== 'admin') {
+    if (!isAdmin) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -386,7 +383,7 @@ Deno.serve(async (req) => {
   } catch (error: unknown) {
     console.error('Admin operation error:', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message || 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

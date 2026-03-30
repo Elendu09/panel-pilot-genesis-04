@@ -479,11 +479,13 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id, { runs, interval, delay, comments });
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
 
-  // Surface provider errors alongside order number
+  // Log provider errors server-side only; return generic message to client
   if (!providerResult.success) {
+    console.error('[buyer-api] Provider error for order', order.order_number, ':', providerResult.error);
     return jsonResponse({ 
       order: order.order_number, 
-      provider_error: providerResult.error || 'Provider forwarding failed'
+      status: 'pending',
+      message: 'Order created but pending provider processing. Check status later.'
     });
   }
 
