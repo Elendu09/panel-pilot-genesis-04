@@ -106,19 +106,16 @@ const BuyerDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          service:services(name)
-        `)
-        .eq('buyer_id', buyer.id)
-        .order('created_at', { ascending: false })
-        .limit(20);
+      // Use buyer-api edge function to bypass RLS (tenant buyers use custom auth, not Supabase auth)
+      const panelId = buyer.panel_id || localStorage.getItem('current_panel_id') || '';
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-api', {
+        body: { action: 'orders', buyerId: buyer.id, panelId }
+      });
+      
+      if (fnError) throw fnError;
+      const orders = fnData?.orders || fnData || [];
 
-      if (error) throw error;
-
-      const formattedOrders: Order[] = (orders || []).map(o => ({
+      const formattedOrders: Order[] = (orders || []).slice(0, 20).map((o: any) => ({
         id: o.id,
         order_number: o.order_number,
         target_url: o.target_url,
@@ -127,7 +124,7 @@ const BuyerDashboard = () => {
         status: o.status || 'pending',
         progress: o.progress || 0,
         created_at: o.created_at,
-        service: o.service,
+        service: o.service || { name: o.service_name || 'Service' },
       }));
 
       setRecentOrders(formattedOrders);

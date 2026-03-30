@@ -287,10 +287,20 @@ export const DraggableServiceItem = ({
           </div>
           <div className="min-w-0">
             <p className="font-medium text-sm truncate max-w-[200px]">{service.name}</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary" className="text-xs capitalize">
                 {service.category}
               </Badge>
+              {service.serviceType && service.serviceType !== 'Default' && (
+                <Badge variant="outline" className="text-[10px] px-1.5 capitalize">
+                  {service.serviceType}
+                </Badge>
+              )}
+              {service.dripfeedAvailable && (
+                <Badge variant="outline" className="text-[10px] px-1.5 text-blue-500 border-blue-500/30">
+                  Drip
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">{service.provider}</span>
             </div>
           </div>

@@ -776,7 +776,7 @@ const BuyerNewOrder = () => {
 
                 {/* Drip Feed Options */}
                 <AnimatePresence>
-                  {selectedService && (selectedService as any).dripfeed_available && (
+                  {selectedService && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}

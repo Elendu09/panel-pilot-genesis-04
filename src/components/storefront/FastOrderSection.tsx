@@ -353,7 +353,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   }, [selectedCategory, categories, serviceSearch]);
   
   const selectedService = services.find(s => s.id === selectedServiceId);
-  const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
+  const effectivePrice = selectedService ? (selectedService.price || (selectedService as any).rate || 0) : 0;
+  const totalPrice = selectedService ? (effectivePrice * quantity) / 1000 : 0;
 
   // Quantity presets
   const quantityPresets = [100, 500, 1000, 5000, 10000];
@@ -1194,7 +1195,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               )}
                             </div>
                             <Badge variant="secondary" className="text-[7px] font-mono px-0.5 py-0 h-3 mb-0.5">
-                              ID: {service.display_order || service.displayOrder || '—'}
+                              ID: {service.provider_service_id || service.display_order || service.displayOrder || service.id?.slice(0,6)}
                             </Badge>
                             <p className={cn(
                               "text-[10px] sm:text-xs line-clamp-1",
@@ -1318,7 +1319,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
 
                     {/* Drip Feed Options */}
-                    {selectedService && (selectedService as any).dripfeed_available && (
+                    {selectedService && (
                       <div className="space-y-3">
                         <div className={cn(
                           "flex items-center justify-between p-3 rounded-xl border",
