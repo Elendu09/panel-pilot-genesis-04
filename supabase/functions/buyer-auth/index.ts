@@ -477,6 +477,8 @@ serve(async (req) => {
         return await handleCreateChatSession(supabaseAdmin, body);
       case 'send-chat-message':
         return await handleSendChatMessage(supabaseAdmin, body);
+      case 'create-support-ticket':
+        return await handleCreateSupportTicket(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -1482,4 +1484,40 @@ async function handleSendChatMessage(supabaseAdmin: any, body: any) {
     .eq('id', sessionId);
 
   return jsonResponse({ message });
+}
+
+// Handle creating a support ticket for buyer (bypasses RLS)
+async function handleCreateSupportTicket(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId, subject, message, senderName, senderEmail } = body;
+
+  if (!panelId || !subject || !message) {
+    return jsonResponse({ error: 'Missing required fields (panelId, subject, message)' });
+  }
+
+  const { data: ticket, error } = await supabaseAdmin
+    .from('support_tickets')
+    .insert({
+      panel_id: panelId,
+      user_id: buyerId || null,
+      subject,
+      status: 'open',
+      priority: 'medium',
+      ticket_type: 'user_to_panel',
+      messages: [{
+        sender: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+        senderName: senderName || 'Guest',
+        senderEmail: senderEmail || '',
+      }],
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create support ticket:', error);
+    return jsonResponse({ error: 'Failed to create support ticket' });
+  }
+
+  return jsonResponse({ ticket });
 }
