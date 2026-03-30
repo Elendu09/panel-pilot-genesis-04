@@ -1,0 +1,1 @@
+ALTER TABLE public.client_users ADD COLUMN IF NOT EXISTS password_temp_expires_at timestamptz DEFAULT NULL;
