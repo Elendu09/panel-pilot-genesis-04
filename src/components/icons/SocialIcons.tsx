@@ -577,7 +577,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   tumblr: { icon: TumblrIcon, label: "Tumblr", color: "#36465D", bgColor: "bg-slate-700" },
   quora: { icon: QuoraIcon, label: "Quora", color: "#B92B27", bgColor: "bg-red-700" },
   clubhouse: { icon: ClubhouseIcon, label: "Clubhouse", color: "#F1EFE3", bgColor: "bg-amber-100" },
-  bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-black" },
+  bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   vk: { icon: VKIcon, label: "VKontakte", color: "#0077FF", bgColor: "bg-blue-500" },
   weibo: { icon: WeiboIcon, label: "Weibo", color: "#E6162D", bgColor: "bg-red-600" },
   line: { icon: LineIcon, label: "Line", color: "#00C300", bgColor: "bg-green-500" },
