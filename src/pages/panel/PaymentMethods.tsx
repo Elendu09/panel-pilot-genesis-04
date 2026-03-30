@@ -849,24 +849,31 @@ const PaymentMethods = () => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>API Key / Public Key</Label>
-              <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'pk_live_xxxx or pk_test_xxxx' : 'Your public/api key'} className="bg-background/50 font-mono text-sm" />
-              <p className="text-xs text-muted-foreground">
-                {selectedGateway?.id === 'stripe' && 'Starts with pk_live_ (production) or pk_test_ (sandbox)'}
-                {selectedGateway?.id === 'paypal' && 'Your PayPal Client ID from developer dashboard'}
-                {selectedGateway?.id === 'coinbase' && 'Your Coinbase Commerce API Key'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Secret Key</Label>
-              <div className="relative">
-                <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'sk_live_xxxx or sk_test_xxxx' : 'Your secret key'} className="bg-background/50 font-mono text-sm pr-10" />
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowSecretKey(!showSecretKey)}>
-                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+            {(() => {
+              const labels = selectedGateway ? gatewayFieldLabels[selectedGateway.id] : undefined;
+              const f1Label = labels?.field1Label || "API Key / Public Key";
+              const f1Placeholder = labels?.field1Placeholder || "Your public/api key";
+              const f2Label = labels?.field2Label || "Secret Key";
+              const f2Placeholder = labels?.field2Placeholder || "Your secret key";
+              const f2Required = labels?.field2Required !== false;
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label>{f1Label}</Label>
+                    <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder={f1Placeholder} className="bg-background/50 font-mono text-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{f2Label} {!f2Required && <span className="text-muted-foreground text-xs">(optional)</span>}</Label>
+                    <div className="relative">
+                      <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder={f2Placeholder} className="bg-background/50 font-mono text-sm pr-10" />
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowSecretKey(!showSecretKey)}>
+                        {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Webhook URL */}
             <div className="space-y-2">
