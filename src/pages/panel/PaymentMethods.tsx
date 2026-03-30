@@ -12,7 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, GenericPaymentIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import {
+  AdyenIcon, CheckoutComIcon, WorldpayIcon, AuthorizeNetIcon, TwoCheckoutIcon, MollieIcon, DLocalIcon, RapydIcon,
+  MercadoPagoIcon, IyzicoIcon, PaymobIcon, XenditIcon, MidtransIcon, GCashIcon, GrabPayIcon, OpayIcon, MoovIcon, ChipperIcon, PagaIcon, RemitaIcon, InterswitchIcon, MTNMoMoIcon, MPesaIcon,
+  NetellerIcon, WebMoneyIcon, PayoneerIcon, AlipayIcon, WeChatPayIcon, RevolutIcon, VenmoIcon, ZelleIcon,
+  WireTransferIcon, IDealIcon, BancontactIcon, BoletoIcon, PIXIcon,
+  PlisioIcon, CoinPaymentsIcon, TripleAIcon, BitPayIcon, BlockonomicsIcon, OpenNodeIcon, MixPayIcon, CryptocloudIcon, OxapayIcon, SpicePayIcon, CryptomusIcon, HeleketIcon,
+  KlarnaIcon, AfterpayIcon, TabbyIcon, TamaraIcon, SezzleIcon,
+} from "@/components/payment/PaymentIconsExtended";
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
