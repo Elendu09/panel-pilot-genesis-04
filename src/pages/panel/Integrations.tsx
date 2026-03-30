@@ -457,6 +457,7 @@ const Integrations = () => {
   const [panelId, setPanelId] = useState<string | null>(null);
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
   const [panelDomains, setPanelDomains] = useState<string[]>([]);
+  const [smtpHost, setSmtpHost] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   
@@ -560,6 +561,9 @@ const Integrations = () => {
           // Load service integrations
           const integrationsData = (settings as any).integrations || {};
           setIntegrations(integrationsData);
+          if (integrationsData?.smtp?.host) {
+            setSmtpHost(integrationsData.smtp.host);
+          }
         }
       } catch (err) {
         console.error('Error fetching panel settings:', err);
@@ -1001,6 +1005,54 @@ const Integrations = () => {
               );
             })}
           </motion.div>
+        </CardContent>
+      </Card>
+
+      {/* Email / SMTP Integration Card */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-blue-500" />
+            Email / SMTP
+          </CardTitle>
+          <CardDescription>
+            Configure SMTP to send password reset and verification emails to your tenant users
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className={cn(
+            "flex items-center justify-between p-4 rounded-lg border transition-all",
+            smtpHost
+              ? "bg-emerald-500/5 border-emerald-500/30"
+              : "bg-muted/20 border-border"
+          )}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Send className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">SMTP Configuration</p>
+                <p className="text-xs text-muted-foreground">
+                  {smtpHost
+                    ? `Connected: ${smtpHost}`
+                    : "Not configured — temp passwords shown in UI only"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {smtpHost && (
+                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Connected</Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/panel/settings'}
+              >
+                <Settings2 className="w-4 h-4 mr-1" />
+                Configure
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

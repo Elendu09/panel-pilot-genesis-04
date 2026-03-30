@@ -109,9 +109,14 @@ export default function TeamOrdersTab({ canEdit }: Props) {
                       <TableCell className="text-right">{order.quantity}</TableCell>
                       <TableCell className="text-right">${Number(order.price).toFixed(2)}</TableCell>
                       <TableCell>
-                        <Badge className={statusColors[order.status] || 'bg-muted text-muted-foreground'}>
+                      <Badge className={statusColors[order.status] || 'bg-muted text-muted-foreground'}>
                           {(order.status || '').replace('_', ' ')}
                         </Badge>
+                        {order.drip_feed_runs && order.drip_feed_runs >= 2 && (
+                          <Badge variant="outline" className="ml-1 text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">
+                            Drip: {order.drip_feed_runs}×{order.drip_feed_interval || 60}min
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {format(new Date(order.created_at), 'MMM d, HH:mm')}
