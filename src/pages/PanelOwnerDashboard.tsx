@@ -23,7 +23,8 @@ import {
   Zap,
   Loader2,
   Menu,
-  X
+  X,
+  DollarSign
 } from "lucide-react";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { Button } from "@/components/ui/button";
