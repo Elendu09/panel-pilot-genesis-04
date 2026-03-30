@@ -462,7 +462,7 @@ const Billing = () => {
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: defaultGateway,
+          gateway: gatewayToUse,
           amount: getPlanPrice(plan),
           panelId: panel.id,
           buyerId: profile.id,
