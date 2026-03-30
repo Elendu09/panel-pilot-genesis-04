@@ -236,9 +236,25 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       )}
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 text-center relative z-10 pt-24 sm:pt-24 lg:pt-32">
+      <div className={`container mx-auto px-4 relative z-10 pt-24 sm:pt-24 lg:pt-32 ${enableHeroImage ? 'flex flex-col lg:flex-row items-center gap-8 lg:gap-12' : 'text-center'}`}>
+        {/* Hero Image - Left position */}
+        {enableHeroImage && heroImagePosition === 'left' && (
+          <motion.div
+            className="w-full lg:w-2/5 flex-shrink-0 order-first"
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <img 
+              src={customization.heroImageUrl} 
+              alt="Hero" 
+              className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+            />
+          </motion.div>
+        )}
+        
         <motion.div 
-          className="max-w-4xl mx-auto"
+          className={enableHeroImage ? 'flex-1 text-left' : 'max-w-4xl mx-auto'}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
