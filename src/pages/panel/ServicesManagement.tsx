@@ -2534,7 +2534,7 @@ const ServicesManagement = () => {
                   : "glass-card hover:bg-accent/50"
               )}
             >
-              {(() => { const CatIcon = getCategoryIconComponent(cat.id); return <CatIcon className="w-4 h-4" size={16} />; })()}
+              {(() => { const CatIcon = getCategoryIconComponent(cat.id); return <CatIcon className={cn("w-4 h-4", selectedCategory === cat.id ? "text-primary-foreground" : "text-foreground")} size={16} />; })()}
               <span className="flex-1 text-left text-sm font-medium">{cat.name}</span>
               <Badge variant="secondary" className="text-xs">
                 {categoryCounts[cat.id] || 0}

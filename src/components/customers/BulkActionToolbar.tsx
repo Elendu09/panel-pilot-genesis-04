@@ -77,18 +77,18 @@ export const BulkActionToolbar = ({
             
             <div className="w-px h-6 bg-border mx-0.5 sm:mx-1 shrink-0" />
             
-            <Button variant="ghost" size="icon" onClick={onActivate} className="h-8 w-8 text-green-500 hover:text-green-600 shrink-0">
-              <UserCheck className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onActivate} className="h-7 w-7 sm:h-8 sm:w-8 text-green-500 hover:text-green-600 shrink-0">
+              <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={onSuspend} className="h-8 w-8 text-destructive hover:text-destructive shrink-0">
-              <UserX className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onSuspend} className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:text-destructive shrink-0">
+              <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
             
-            <div className="w-px h-6 bg-border mx-0.5 sm:mx-1 shrink-0" />
+            <div className="w-px h-5 sm:h-6 bg-border mx-0.5 sm:mx-1 shrink-0" />
             
-            <Button variant="ghost" size="icon" onClick={onClearSelection} className="h-8 w-8 shrink-0">
-              <X className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onClearSelection} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </motion.div>

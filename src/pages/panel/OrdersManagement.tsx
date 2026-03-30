@@ -662,9 +662,9 @@ const OrdersManagement = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-1.5rem)] max-w-lg"
+            className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg"
           >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-background/95 backdrop-blur-xl rounded-2xl border border-primary/30 shadow-2xl">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-background/95 backdrop-blur-xl rounded-2xl border border-primary/30 shadow-2xl">
               <div className="flex items-center justify-between sm:justify-start gap-2">
                 <div className="flex items-center gap-2 shrink-0">
                   <CheckSquare className="w-4 h-4 text-primary" />
