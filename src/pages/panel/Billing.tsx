@@ -387,7 +387,7 @@ const Billing = () => {
     }
 
     // Check if panel balance covers the plan price — show choice dialog
-    if (panelBalance >= plan.price) {
+    if (panelBalance >= getPlanPrice(plan)) {
       setPendingUpgradePlan(plan);
       setBalanceDialogOpen(true);
       return;
