@@ -86,8 +86,8 @@ serve(async (req) => {
     let panelId: string | null = null;
     let buyerId: string | null = null;
     
-    // Special auth path: buyerId+panelId direct auth (for LiveOrderTracker without API key)
-    if (key === '__buyer_id_auth__' && (params as any).buyerId && (params as any).panelId) {
+    // Special auth path: buyerId+panelId direct auth (for LiveOrderTracker, cart, without API key)
+    if ((key === '__buyer_id_auth__' || !key) && (params as any).buyerId && (params as any).panelId) {
       const directBuyerId = (params as any).buyerId;
       const directPanelId = (params as any).panelId;
       
