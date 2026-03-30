@@ -1796,7 +1796,6 @@ const ServicesManagement = () => {
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,
-          display_order: maxDisplayOrder + idx + 1,
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
@@ -1807,8 +1806,12 @@ const ServicesManagement = () => {
 
         const existingId = existingMap.get(provServiceIdStr);
         if (existingId) {
-          toUpdate.push({ ...serviceData, id: existingId });
+          // Don't change display_order on updates (keep stable service ID)
+          const { display_order, ...updateData } = serviceData;
+          toUpdate.push({ ...updateData, id: existingId });
         } else {
+          insertIdx++;
+          serviceData.display_order = maxDisplayOrder + insertIdx;
           toInsert.push(serviceData);
         }
       });
