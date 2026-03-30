@@ -999,6 +999,21 @@ const Billing = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <GatewaySelectDialog
+        open={gatewayDialogOpen}
+        onOpenChange={setGatewayDialogOpen}
+        gateways={supportedGateways}
+        loading={upgradeLoading !== null}
+        title="Select Payment Gateway"
+        description="Choose how you'd like to pay for your subscription"
+        onSelect={async (gatewayId) => {
+          setGatewayDialogOpen(false);
+          if (pendingGatewayPlan) {
+            await proceedWithGatewayPayment(pendingGatewayPlan, gatewayId);
+            setPendingGatewayPlan(null);
+          }
+        }}
+      />
     </motion.div>
   );
 };
