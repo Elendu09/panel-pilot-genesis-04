@@ -45,7 +45,7 @@ export const BulkActionToolbar = ({
           className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-fit"
         >
           <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 bg-background/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-x-auto scrollbar-hide">
-            <Badge className="bg-primary text-primary-foreground px-2 sm:px-3 py-1 text-xs sm:text-sm shrink-0">
+            <Badge className="bg-primary text-primary-foreground px-1.5 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-sm shrink-0">
               {selectedCount}
             </Badge>
             
