@@ -1,72 +1,55 @@
 
 
-# Plan: Complete Missing Implementations — SMTP in Integrations, Drip Feed Toggle + Panel Visibility, Order Storage
+# Plan: Fix SupportCenter Tab Order, Tenant Chat Panel ID, Ticket Creation, and Bulk Action Mobile Responsiveness
 
-## Audit Summary
+## Issues Identified
 
-### Confirmed Working
-- **Auth password fix**: `password_temp` stored separately, login checks both independently, `normalizedEmail` bug fixed
-- **Live chat panel ID**: Triple fallback implemented (`authPanelId || panel?.id || localStorage`)
-- **Support tickets**: All operations use `resolvedPanelId`
-- **SupportCenter**: Defaults to "livechat" tab, FAQ CRUD implemented
-- **SMTP config UI**: Present in GeneralSettings with all fields
-- **Drip feed forwarding**: `buyer-order` accepts `runs`/`interval`/`delay` and forwards to provider API
-- **Drip feed UI**: Present in both BuyerNewOrder and FastOrderSection
-- **Commission 5%**: Implemented in `buyer-order`
-
-### Gaps Found
-
-1. **SMTP not in Integrations page** — user wants an SMTP card in Integrations that links to General Settings
-2. **Drip feed auto-shows** instead of using a toggle — user expects a Switch toggle that reveals the fields when turned on
-3. **Orders table doesn't store drip feed params** — `runs`, `interval` are forwarded to provider but never saved on the order record, so panel owners can't see which orders are drip feed
-4. **OrdersManagement doesn't show drip feed info** — no badge or column indicating drip feed orders
+1. **SupportCenter tab order wrong**: "Knowledge" is first tab (line 649), but "Live Chat" should be first. The `activeTab` defaults to `"livechat"` (line 70) but the visual order puts Knowledge first.
+2. **Tenant live chat "Missing Panel ID"**: When user sends a message without an existing session, `handleStartChat` checks `resolvedPanelId` (line 348). The triple fallback (`authPanelId || panel?.id || localStorage`) should work, but `authPanelId` comes from the `BuyerAuthProvider` prop which is always set. The real issue is the toast says "Please log in to start a chat" — need to investigate if `buyer` is null at that point or if `resolvedPanelId` is actually null. Will add better error messaging and ensure `localStorage.setItem('current_panel_id', panelId)` is set during auth.
+3. **Tenant ticket creation error**: The edge function `handleCreateSupportTicket` uses `supabaseAdmin` so RLS shouldn't block it. The error likely comes from the function itself failing — possibly `resolvedPanelId` being null when the ticket is submitted. Will add the same panel ID persistence fix.
+4. **BulkActionToolbar not mobile responsive**: At 420px viewport, all icon buttons overflow horizontally since there are 9+ buttons in a single row with `max-w-fit`. Need to wrap into a compact grid or scrollable row on mobile.
+5. **OrdersManagement bulk bar**: Already has better layout (`flex-col sm:flex-row`) but the outer container at 420px viewport may still overflow. Already uses `max-w-lg` which helps.
 
 ---
 
-## 1. Add SMTP Card to Integrations Page
+## 1. Fix SupportCenter Tab Order — Live Chat First
 
-**File**: `src/pages/panel/Integrations.tsx`
+**File**: `src/pages/panel/SupportCenter.tsx` (lines 648-665)
 
-Add an "Email / SMTP" card in the integrations list that:
-- Shows an email icon with description "Configure SMTP for sending tenant emails"
-- Has a "Configure" button that navigates to `/panel/settings` (General Settings)
-- Shows a "Connected" badge if SMTP host is already configured
-
----
-
-## 2. Drip Feed Toggle in New Order & Fast Order
-
-**Files**: `src/pages/buyer/BuyerNewOrder.tsx`, `src/components/storefront/FastOrderSection.tsx`
-
-Currently drip feed fields auto-show when `dripfeed_available` is true. Change to:
-- Add a `dripFeedEnabled` boolean state (default `false`)
-- When `dripfeed_available` is true, show a Switch toggle labeled "Enable Drip Feed"
-- Only show runs/interval inputs when toggle is ON
-- When toggle is OFF, don't send `runs`/`interval` params (current behavior when `dripFeedRuns <= 1`)
-- Reset toggle to OFF when service changes
+Reorder the `TabsTrigger` elements so Live Chat comes first:
+1. Move "Live Chat" trigger before "Knowledge"
+2. Keep the tab content order matching
 
 ---
 
-## 3. Store Drip Feed Params on Orders
+## 2. Fix Tenant Chat & Ticket "Missing Panel ID"
 
-**Database migration**: Add `drip_feed_runs` (integer, nullable) and `drip_feed_interval` (integer, nullable) columns to `orders` table.
+**File**: `src/contexts/BuyerAuthContext.tsx`
+- After successful login, persist `panelId` to `localStorage.setItem('current_panel_id', panelId)` so the triple fallback in BuyerSupport works reliably.
 
-**File**: `supabase/functions/buyer-order/index.ts`
-- Save `runs` and `interval` to the order record in the insert payload as `drip_feed_runs` and `drip_feed_interval`
-
-**File**: `supabase/functions/buyer-api/index.ts`
-- Same: save drip feed params to order record
+**File**: `src/pages/buyer/BuyerSupport.tsx`
+- In `handleStartChat` (line 348): if `resolvedPanelId` is still null, show a more specific error ("Unable to connect — please refresh the page") instead of "Please log in to start a chat"
+- Disable the "New" chat button and send button while `!resolvedPanelId` (loading state)
+- Same guard for `handleCreateTicket` — it already checks `resolvedPanelId` (line 261) but the error message could be clearer
 
 ---
 
-## 4. Show Drip Feed Info in Panel Owner Orders
+## 3. Fix BulkActionToolbar Mobile Responsiveness
 
-**File**: `src/pages/panel/OrdersManagement.tsx`
-- Add a "Drip Feed" badge on orders where `drip_feed_runs > 1`
-- Show tooltip or detail: "X runs every Y min"
+**File**: `src/components/customers/BulkActionToolbar.tsx`
 
-**File**: `src/components/team/TeamOrdersTab.tsx`
-- Same drip feed badge display
+The toolbar shows ~9 icon buttons horizontally which overflows on 420px screens. Fix:
+- Add `overflow-x-auto` to the inner flex container so buttons scroll horizontally on mobile
+- Or restructure to use a compact dropdown/popover for actions on mobile
+- Best approach: make the container horizontally scrollable with `overflow-x-auto` and `scrollbar-hide`, keeping the fixed positioning
+
+---
+
+## 4. Verify OrdersManagement Bulk Bar
+
+**File**: `src/pages/panel/OrdersManagement.tsx` (lines 658-706)
+
+The orders bulk bar already uses `flex-col sm:flex-row` which is better. Verify the `max-w-lg` container doesn't cause issues at 420px. The `w-[calc(100vw-1.5rem)]` ensures it fits — this should already work. Minor tweak: ensure the select + button row doesn't overflow.
 
 ---
 
@@ -74,12 +57,9 @@ Currently drip feed fields auto-show when `dripfeed_available` is true. Change t
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/Integrations.tsx` | Add SMTP integration card linking to General Settings |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Add drip feed toggle Switch instead of auto-show |
-| `src/components/storefront/FastOrderSection.tsx` | Add drip feed toggle Switch instead of auto-show |
-| `supabase/functions/buyer-order/index.ts` | Store `drip_feed_runs`, `drip_feed_interval` on order |
-| `supabase/functions/buyer-api/index.ts` | Store drip feed params on order |
-| `src/pages/panel/OrdersManagement.tsx` | Show drip feed badge on orders |
-| `src/components/team/TeamOrdersTab.tsx` | Show drip feed badge on orders |
-| Database migration | Add `drip_feed_runs`, `drip_feed_interval` columns to `orders` |
+| `src/pages/panel/SupportCenter.tsx` | Reorder tabs: Live Chat first, then Knowledge, Customers, Platform |
+| `src/pages/buyer/BuyerSupport.tsx` | Better error messages for null panelId; disable chat/ticket when panelId not ready |
+| `src/contexts/BuyerAuthContext.tsx` | Persist panelId to localStorage on login |
+| `src/components/customers/BulkActionToolbar.tsx` | Add horizontal scroll or compact layout for mobile |
+| `src/pages/panel/OrdersManagement.tsx` | Minor mobile overflow fix if needed |
 
