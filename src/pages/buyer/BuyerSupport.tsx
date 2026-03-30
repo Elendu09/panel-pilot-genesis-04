@@ -263,12 +263,19 @@ const BuyerSupport = () => {
     setSubmitting(true);
     try {
       const initialMessage = { sender: 'buyer' as const, content: newTicket.message, timestamp: new Date().toISOString() };
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert([{ panel_id: panel.id, user_id: buyer.id, subject: newTicket.subject, priority: newTicket.priority, ticket_type: 'user_to_panel', status: 'open', messages: [initialMessage] as unknown as any }])
-        .select()
-        .single();
-      if (error) throw new Error(error.message || 'Failed to create ticket');
+      // Route through edge function to bypass RLS
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'create-support-ticket',
+          panelId: panel.id,
+          buyerId: buyer.id,
+          subject: newTicket.subject,
+          message: newTicket.message,
+          senderName: buyer.full_name || buyer.email,
+          senderEmail: buyer.email,
+        }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || 'Failed to create ticket');
 
       // Notify panel owner
       try {
@@ -446,7 +453,9 @@ const BuyerSupport = () => {
             <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Support Center</h1>
             <p className="text-muted-foreground">Get help with your orders and account</p>
           </div>
-          <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+          <div className="hidden md:block">
+            <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+          </div>
         </motion.div>
 
         {/* Tabs: Tickets | Live Chat | FAQ */}
