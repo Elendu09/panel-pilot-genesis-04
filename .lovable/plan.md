@@ -1,46 +1,75 @@
 
 
-# Plan: Payment Gateway Validation, SMTP Email Templates, Design Theme Mode Fix, and Hero Section Image Upload
+# Plan: Update Basic Plan to 3 Panels, Add Billing to Sidebar, Fix Admin Payment Gateway Errors
 
-## Issues Identified
+## Summary of Issues
 
-### 1. Utrust → xPortal Rebranding
-**Problem**: "Utrust" rebranded to "xPortal" (MultiversX ecosystem). The gateway entry still shows old name `utrust` with old docs URL `https://docs.utrust.com` (likely dead). Icon uses generic "UT" letters.
-**Fix**: Rename to "xPortal" (id remains `utrust` for backward compat), update `docsUrl` to `https://xportal.com`, update icon text from "UT" to "XP" with xPortal green (#23F7DD), update display name in `gatewayFieldLabels` and `gatewaySetupSteps`.
+1. **Basic plan says "2 Panels"** — needs to be "3 Panels" in `HomePricingSection.tsx` and `Pricing.tsx` (and the memory doc says 2 for Basic)
+2. **No "Billing" in panel owner sidebar** — The sidebar in `PanelOwnerDashboard.tsx` has `settingsNavigation` array but no Billing entry. The route exists (`/panel/billing`) but isn't in the navigation menu
+3. **Team invite enhancement** — Currently team members log in via a separate team login flow. User wants team members to access the panel directly with role-locked pages
+4. **Admin payment gateway errors for panel owners** — When panel owners try to upgrade/deposit via `process-payment`, errors occur. The `defaultGateway` picks the first admin gateway alphabetically. The edge function's gateway `switch` only handles ~20 gateways. If admin enables a gateway not in the switch (e.g., `mollie`, `mercadopago`), the flow falls through to `default` case which treats it as manual transfer — causing unexpected behavior instead of an error redirect
 
-### 2. Payment Gateway Configuration Completeness
-**Problem**: Many gateways have field labels and setup steps but the `process-payment` edge function only handles ~10 gateways (Stripe, PayPal, Paystack, Flutterwave, Razorpay, Korapay, Coinbase, Cryptomus, Heleket). The remaining 190+ gateways have config UI but no actual payment URL redirect logic — when a panel owner sets them up and a tenant tries to pay, nothing happens.
-**Fix**: This is a known architectural limitation — most gateways need individual API integration in the edge function. For this plan: add a "redirect-based" generic handler for gateways that support simple hosted checkout (like Paddle, Mollie, PayU, etc.) where the API pattern is: POST to create a payment → get redirect URL → return to client. Add documentation notes on each gateway card showing "Fully integrated" vs "Configuration only — webhook listener required" status.
+## Root Cause of Payment Errors
 
-### 3. OAuth Tokens Security Check
-**Finding**: The `panel_settings_public` view (migration `20260212`) correctly uses `security_barrier=true` and only exposes `client_id` columns (not `client_secret`). OAuth secrets are NOT exposed to anonymous users. **No fix needed.**
+The `process-payment` edge function (line 530-1668) has a `switch(gateway)` with explicit cases for: `stripe`, `paypal`, `coinbase`, `flutterwave`, `paystack`, `korapay`, `heleket`, `razorpay`, `monnify`, `nowpayments`, `coingate`, `binancepay`, `cryptomus`, `skrill`, `perfectmoney`, `square`, `braintree`, `ach`, `sepa`, `btcpay`, `wise`, and `manual_transfer`.
 
-### 4. SMTP Email Templates for Reset & Verify
-**Problem**: The SMTP config section in `GeneralSettings.tsx` (lines 508-574) only collects host/port/credentials/from fields. There is NO template editor for password reset or email verification emails. When SMTP sends emails, it uses a hardcoded plain text format in the edge function. Panel owners should be able to customize the email subject and body template.
-**Fix**: Add two template editors below the SMTP config section:
-- "Password Reset Email" template (subject + HTML body with `{temp_password}`, `{username}`, `{panel_name}` variables)
-- "Email Verification" template (subject + HTML body with `{verify_link}`, `{username}`, `{panel_name}` variables)
-- Include default templates and a "Reset to default" button
-- Store templates in `panel_settings` as `smtp_reset_template` and `smtp_verify_template` JSON fields
+Any gateway NOT in this list (e.g., `mollie`, `mercadopago`, `checkout_com`, etc.) falls to the `default` case which checks if it starts with `manual_` — if not, it returns `"Unsupported gateway"` error. This is actually correct behavior for unsupported gateways.
 
-### 5. Design Customization Theme Mode Bug
-**Problem**: The design customization page's `themeMode` toggle (line 1714-1716) updates `customization.themeMode` which gets saved to `custom_branding.themeMode` in the database. This `themeMode` value is the **panel owner's intended default theme** for the tenant storefront. However, the issue is that the panel owner's own admin dashboard runs inside a `ThemeProvider` that dispatches `theme-change` CustomEvents. The `BuyerThemeContext` (line 82-91) listens for these events and syncs — meaning when the admin toggles their own dashboard to light mode, it can leak into the saved buyer theme context via localStorage.
+The real issue is likely:
+- Admin enabled a gateway (e.g., Flutterwave) but the config keys don't match what the edge function expects
+- The `gatewayConfig` object maps admin provider config fields to `secretKey`, `apiKey`, `publicKey` etc. (lines 410-422) but the admin may have stored credentials under different field names
+- Flutterwave specifically needs `secretKey` (line 760) which maps from `config.secret_key || config.secretKey` in the admin gateway resolution (line 414)
 
-The core bug: `BuyerThemeContext` listens to `theme-change` events globally (line 82-91). When the panel owner toggles their own dashboard theme (via `ThemeToggle`), this event fires, and if any `BuyerThemeProvider` instance exists in memory, it picks it up and saves to `buyer-theme-{panelId}` localStorage. Later when a tenant visits, their localStorage override takes precedence over the DB-saved `themeMode`.
+## Implementation Details
 
-**Fix**: 
-- In `BuyerThemeContext`, filter `theme-change` events by checking `source` — only sync when `source === 'buyer'`, not when the admin panel theme changes
-- Ensure `DesignCustomization.tsx` does NOT dispatch `theme-change` events to the global window when toggling the preview theme (it currently doesn't, but the admin ThemeToggle does)
-- The `themeMode` saved in `custom_branding` should be the single source of truth for tenant default; buyer localStorage should only override when the tenant buyer explicitly toggles
+### 1. Update Basic Plan: 2 → 3 Panels
 
-### 6. Hero Section Image Upload
-**Problem**: No hero image upload exists in design customization. The user wants panel owners to upload an image that appears beside hero text on desktop (and optionally mobile).
-**Fix**: 
-- Add `heroImageUrl` and `enableHeroImage` fields to `defaultCustomization`
-- Add an "Hero Image" section in the Hero design panel with: enable toggle, `ImageUpload` component, and a position selector (left/right of text)
-- Update all theme components (`ThemeOne` through `ThemeFive` and premium themes) to render the hero image in a 2-column layout on desktop when enabled: text on one side, image on the other
-- On mobile: stack image below or above the text, scaled to fit
-- The image should be contained (not cropped) with `object-contain` and max-height constraints
+**`src/components/sections/HomePricingSection.tsx`** (line 26):
+- Change `"2 Panels"` → `"3 Panels"` in Basic plan features
+
+**`src/pages/Pricing.tsx`**: The Pricing page doesn't list panel counts in features. No change needed unless we want to add it.
+
+### 2. Add Billing to Panel Owner Sidebar
+
+**`src/pages/PanelOwnerDashboard.tsx`** (lines 155-166):
+- Add `{ name: 'Billing', href: '/panel/billing', icon: DollarSign, tourId: 'billing' }` to `settingsNavigation` array (import `DollarSign` is already imported but as `Wallet` — need to check)
+- Actually `CreditCard` is already imported and used for Transactions. Use `Wallet` (already imported via `import`) or add `DollarSign`
+- Add it between "Payments" and "Integrations" or as a separate item in `mainNavigation`
+
+### 3. Team Invite Enhancement
+
+Current state: Team management has 3 roles (panel_admin, manager, agent) with email-based invites. Team members log in via `/team-login` with a separate JWT system.
+
+The user wants team members to be "on the panel" with locked pages per role. This requires:
+- When a team member logs in, they see the same panel dashboard but with restricted navigation based on their role
+- Agent: Can only see Orders (view-only), Services (view-only), Support
+- Manager: Orders, Services (edit), Support, Customers
+- Admin: Full access
+
+This is a significant feature. For now, add a visual indicator showing which pages each role can access and improve the team invite dialog with clearer permission descriptions. The actual page-locking requires routing guards.
+
+### 4. Fix Admin Payment Gateway Errors
+
+**`supabase/functions/process-payment/index.ts`**:
+
+The key issue is the admin gateway config mapping (lines 410-422). When admin stores credentials via `platform_payment_providers`, the `config` JSON may use different field names than what each gateway case expects.
+
+Add better error logging and a more resilient config resolution:
+- Before the switch statement, log the resolved gateway config keys (without values) for debugging
+- For Flutterwave specifically: ensure `secretKey` resolution works — the admin config might store it as `secret_key` and the mapping on line 414 already handles this
+- Add a catch-all for gateways that have config but no switch case — instead of returning "Unsupported gateway", return a descriptive error saying "This gateway is configured but payment processing is not yet implemented. Please use Stripe, Flutterwave, Paystack, or another supported gateway."
+- Ensure the `buyerEmail` is always populated for Flutterwave (it requires customer.email) — if profile lookup returns null, use a fallback
+
+**`src/pages/panel/Billing.tsx`**:
+- The `defaultGateway` picks `availableGateways[0]?.id` alphabetically. If the first gateway alphabetically isn't supported by the edge function, payments fail
+- Fix: Filter `availableGateways` to only show gateways that have backend support, OR let the user choose which gateway to use for subscription payments (like QuickDeposit does for deposits)
+- Better approach: Show a gateway selector when upgrading instead of using the first available one automatically
+
+### 5. Subscription Payment Flow Fix
+
+When `proceedWithGatewayPayment` is called (line 430), it uses `defaultGateway` which is the first admin gateway. If admin configured multiple gateways, the user gets no choice. 
+
+Fix: Add a gateway selection dialog before payment, similar to how QuickDeposit lets users choose.
 
 ---
 
@@ -48,16 +77,9 @@ The core bug: `BuyerThemeContext` listens to `theme-change` events globally (lin
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/PaymentMethods.tsx` | Rename Utrust → xPortal; update docsUrl, field labels, setup steps |
-| `src/components/payment/PaymentIconsExtended.tsx` | Update UtrustIcon to "XP" with xPortal brand color |
-| `src/pages/panel/GeneralSettings.tsx` | Add SMTP email template editors (reset + verify) with variable placeholders |
-| `src/contexts/BuyerThemeContext.tsx` | Filter `theme-change` events to only sync when `source === 'buyer'`, ignore admin dashboard theme changes |
-| `src/pages/panel/DesignCustomization.tsx` | Add `heroImageUrl`, `enableHeroImage`, `heroImagePosition` to defaultCustomization; add Hero Image upload section in Hero settings |
-| `src/components/themes/ThemeOne.tsx` | Render hero image in 2-column layout when `enableHeroImage` is true |
-| `src/components/themes/ThemeTwo.tsx` | Same hero image rendering |
-| `src/components/themes/ThemeThree.tsx` | Same hero image rendering |
-| `src/components/themes/ThemeFour.tsx` | Same hero image rendering |
-| `src/components/themes/ThemeFive.tsx` | Same hero image rendering |
-| Premium buyer themes (TGRef, AliPanel, FlySMM, SMMStay, SMMVisit) | Same hero image rendering |
-| Database migration | Add `smtp_reset_template`, `smtp_verify_template` JSONB columns to `panel_settings` |
+| `src/components/sections/HomePricingSection.tsx` | Change "2 Panels" → "3 Panels" in Basic plan features |
+| `src/pages/PanelOwnerDashboard.tsx` | Add Billing to `settingsNavigation` array with Wallet icon |
+| `src/pages/panel/Billing.tsx` | Add gateway selection dialog for subscription upgrades instead of auto-picking first gateway |
+| `supabase/functions/process-payment/index.ts` | Improve error messages for unsupported gateways; add debug logging for config resolution; ensure buyerEmail fallback |
+| `src/pages/panel/TeamManagement.tsx` | Enhance role descriptions with page-level access details |
 
