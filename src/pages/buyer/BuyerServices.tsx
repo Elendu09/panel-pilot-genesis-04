@@ -491,10 +491,7 @@ const BuyerServices = () => {
                       "p-1 rounded-md",
                       isActive ? "bg-white/20" : bgColor
                     )}>
-                      <PlatformIcon className={cn(
-                        "w-4 h-4",
-                        isActive ? "text-current" : "text-white"
-                      )} />
+                      <PlatformIcon className="w-4 h-4 text-white" />
                     </div>
                     <span className="text-sm font-medium">{platform.name}</span>
                     {count > 0 && platform.id !== 'all' && (
