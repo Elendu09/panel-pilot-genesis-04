@@ -644,7 +644,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   bigo: { icon: CameraWrapper, label: "Bigo Live", color: "#EC4899", bgColor: "bg-pink-500" },
   
   // Asian Platforms
-  douyin: { icon: TikTokIcon, label: "Douyin", color: "#000000", bgColor: "bg-black" },
+  douyin: { icon: TikTokIcon, label: "Douyin", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   xiaohongshu: { icon: BookmarkWrapper, label: "Xiaohongshu", color: "#FE2C55", bgColor: "bg-red-500" },
   qq: { icon: MessageSquareWrapper, label: "QQ", color: "#12B7F5", bgColor: "bg-sky-500" },
   wechat: { icon: MessageSquareWrapper, label: "WeChat", color: "#07C160", bgColor: "bg-green-500" },
