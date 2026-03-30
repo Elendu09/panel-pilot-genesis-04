@@ -74,7 +74,10 @@ serve(async (req) => {
 
     const { key, action } = params;
 
-    if (!key) return errorResponse("Invalid API key");
+    // Cart operations use buyerId+panelId auth without API key
+    const isCartAction = action && ['cart-list','cart-add','cart-update','cart-remove','cart-clear'].includes(action.toLowerCase());
+    
+    if (!key && !isCartAction) return errorResponse("Invalid API key");
     if (!action) return errorResponse("Action is required");
 
     console.log(`[buyer-api] action=${action}`);
