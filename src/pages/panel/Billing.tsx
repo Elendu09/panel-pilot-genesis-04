@@ -840,11 +840,18 @@ const Billing = () => {
                       className={cn(
                         "w-full gap-2",
                         isRenewable && "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                        (isCurrent && !isRenewable || (isDisabled && !isRenewable)) && "bg-muted text-muted-foreground hover:bg-muted"
+                        (isCurrent && !isRenewable || (isDisabled && !isRenewable && !(isLowerTier && isActivePaid))) && "bg-muted text-muted-foreground hover:bg-muted"
                       )}
-                      variant={isRenewable ? 'default' : plan.popular && !isDisabled ? 'default' : 'outline'}
-                      onClick={() => (isRenewable || !isDisabled) && handleUpgrade(plan.name)}
-                      disabled={isDisabled && !isRenewable}
+                      variant={isRenewable ? 'default' : isLowerTier && isActivePaid ? 'outline' : plan.popular && !isDisabled ? 'default' : 'outline'}
+                      onClick={() => {
+                        if (isLowerTier && isActivePaid) {
+                          setPendingDowngradePlan(plan.name.toLowerCase());
+                          setDowngradeDialogOpen(true);
+                        } else if (isRenewable || !isDisabled) {
+                          handleUpgrade(plan.name);
+                        }
+                      }}
+                      disabled={isCurrent && !isRenewable}
                     >
                       {isLoading ? (
                         <>
@@ -859,7 +866,16 @@ const Billing = () => {
                       ) : isCurrent ? (
                         'Current Plan'
                       ) : isLowerTier && isActivePaid ? (
-                        'Downgrade N/A'
+                        <>
+                          <ArrowDownRight className="w-4 h-4" />
+                          Downgrade
+                        </>
+                      ) : (
+                        <>
+                          Upgrade <ArrowUpRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </Button>
                       ) : (
                         <>
                           Upgrade <ArrowUpRight className="w-4 h-4" />
