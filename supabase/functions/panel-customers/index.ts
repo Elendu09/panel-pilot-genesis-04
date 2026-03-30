@@ -165,9 +165,12 @@ async function createCustomer(supabaseAdmin: any, panelId: string, customer: any
     }
   }
 
-  // Hash password if provided
+  // Hash password if provided - store in password_temp with expiry (main password_hash stays null)
   let passwordHash = null;
+  let passwordTemp = null;
+  let passwordTempExpiresAt = null;
   if (password && password.length >= 6) {
+    // If this is a new customer creation, set as main password_hash
     passwordHash = await hashPassword(password);
   }
 

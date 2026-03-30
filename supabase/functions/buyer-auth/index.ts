@@ -600,30 +600,27 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
     return jsonResponse({ error: 'Your account has been suspended. Please contact support.' });
   }
 
-  // Verify password - support PBKDF2, legacy bcrypt (with migration prompt), and plaintext
+  // Verify password - check password_hash first, then password_temp independently
   let passwordMatch = false;
-  const storedHash = user.password_hash || user.password_temp;
   
-  if (storedHash) {
-    if (isPbkdf2Hash(storedHash)) {
-      // Modern PBKDF2 verification
-      passwordMatch = await verifyPassword(password, storedHash);
-      
+  // Step 1: Check main password_hash
+  if (user.password_hash) {
+    if (isPbkdf2Hash(user.password_hash)) {
+      passwordMatch = await verifyPassword(password, user.password_hash);
       // Re-hash legacy base64 format to hex for future consistency
-      if (passwordMatch && storedHash.startsWith('$pbkdf2$')) {
+      if (passwordMatch && user.password_hash.startsWith('$pbkdf2$')) {
         try {
           console.log('Migrating legacy base64 PBKDF2 to hex format for user:', user.id);
           const newHash = await hashPassword(password);
           await supabaseAdmin
             .from('client_users')
-            .update({ password_hash: newHash, password_temp: null })
+            .update({ password_hash: newHash })
             .eq('id', user.id);
         } catch (rehashErr) {
           console.error('Re-hash migration error (non-fatal):', rehashErr);
         }
       }
-    } else if (isBcryptHash(storedHash)) {
-      // Bcrypt - cannot verify without workers, prompt for password reset
+    } else if (isBcryptHash(user.password_hash)) {
       console.log('Bcrypt hash detected, user needs password reset:', user.id);
       return jsonResponse({ 
         error: 'Please reset your password to continue. Use the "Forgot Password" option.',
@@ -631,19 +628,39 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
       });
     } else {
       // Legacy plaintext comparison - migrate to PBKDF2
-      passwordMatch = storedHash === password;
-      
+      passwordMatch = user.password_hash === password;
       if (passwordMatch) {
         console.log('Migrating legacy plaintext password to PBKDF2 for user:', user.id);
         const newHash = await hashPassword(password);
         await supabaseAdmin
           .from('client_users')
-          .update({ 
-            password_hash: newHash, 
-            password_temp: null 
-          })
+          .update({ password_hash: newHash, password_temp: null })
           .eq('id', user.id);
       }
+    }
+  }
+  
+  // Step 2: If main password didn't match, check password_temp (if set and not expired)
+  if (!passwordMatch && user.password_temp) {
+    // Check expiry
+    const tempExpired = user.password_temp_expires_at && new Date(user.password_temp_expires_at) < new Date();
+    if (!tempExpired) {
+      if (isPbkdf2Hash(user.password_temp)) {
+        passwordMatch = await verifyPassword(password, user.password_temp);
+      } else {
+        // Plaintext temp password
+        passwordMatch = user.password_temp === password;
+      }
+      if (passwordMatch) {
+        console.log('Login via temp password for user:', user.id);
+      }
+    } else {
+      console.log('Temp password expired for user:', user.id);
+      // Clear expired temp password
+      await supabaseAdmin
+        .from('client_users')
+        .update({ password_temp: null, password_temp_expires_at: null })
+        .eq('id', user.id);
     }
   }
   
@@ -1102,7 +1119,7 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
 
   // Always return success to not reveal if email exists (security)
   if (!user) {
-    console.log('No user found with email:', normalizedEmail);
+    console.log('No user found with identifier:', trimmedIdentifier);
     recordFailedAttempt(rateLimitKey);
     return jsonResponse({ 
       success: true, 
@@ -1114,30 +1131,34 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
   const newPassword = generateTempPassword();
   
   // Hash the new password using PBKDF2
-  const hashedPassword = await hashPassword(newPassword);
+  const hashedTempPassword = await hashPassword(newPassword);
 
-  // Update user with new hashed password
+  // Store temp password WITHOUT overwriting main password_hash
+  // Temp password expires in 24 hours by default
+  const tempExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const { error: updateError } = await supabaseAdmin
     .from('client_users')
     .update({ 
-      password_hash: hashedPassword,
-      password_temp: null,
+      password_temp: hashedTempPassword,
+      password_temp_expires_at: tempExpiresAt,
       updated_at: new Date().toISOString()
     })
     .eq('id', user.id);
 
   if (updateError) {
-    console.error('Error updating password:', updateError);
+    console.error('Error updating temp password:', updateError);
     return jsonResponse({ error: 'Failed to reset password' });
   }
 
-  console.log('Password reset for user:', user.id);
+  console.log('Temp password set for user:', user.id, 'expires at:', tempExpiresAt);
 
-  // Return the temp password to show in the UI
+  // TODO: If panel has SMTP configured, send email with temp password
+  // For now, return the temp password to show in the UI
   return jsonResponse({ 
     success: true, 
     tempPassword: newPassword,
-    message: 'Your password has been reset. Please save your new temporary password and change it after logging in.'
+    message: 'Your temporary password has been generated. Your original password still works. The temporary password expires in 24 hours.'
   });
 }
 

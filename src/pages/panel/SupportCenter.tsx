@@ -24,7 +24,11 @@ import {
   Inbox,
   Book,
   MessagesSquare,
-  ArrowLeft
+  ArrowLeft,
+  Trash2,
+  Edit,
+  GripVertical,
+  HelpCircle
 } from "lucide-react";
 import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +67,7 @@ const SupportCenter = () => {
   const { panel } = useTenant();
   const isMobile = useIsMobile();
   
-  const [activeTab, setActiveTab] = useState("knowledge");
+  const [activeTab, setActiveTab] = useState("livechat");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -86,14 +90,94 @@ const SupportCenter = () => {
   const [newTicketMessage, setNewTicketMessage] = useState("");
   const [submittingTicket, setSubmittingTicket] = useState(false);
 
+  // FAQ Management state
+  const [panelFaqs, setPanelFaqs] = useState<{ question: string; answer: string }[]>([]);
+  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
+  const [editingFaqIndex, setEditingFaqIndex] = useState<number | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
+  const [savingFaqs, setSavingFaqs] = useState(false);
+
   useEffect(() => {
     if (panel?.id) {
       fetchCustomerTickets();
+      fetchPanelFaqs();
     }
     if (profile?.id) {
       fetchPlatformTickets();
     }
   }, [panel?.id, profile?.id]);
+
+  const fetchPanelFaqs = async () => {
+    if (!panel?.id) return;
+    const { data } = await supabase
+      .from('panels')
+      .select('custom_branding')
+      .eq('id', panel.id)
+      .single();
+    const branding = (data?.custom_branding as any) || {};
+    setPanelFaqs(branding.faqs || []);
+  };
+
+  const savePanelFaqs = async (faqs: { question: string; answer: string }[]) => {
+    if (!panel?.id) return;
+    setSavingFaqs(true);
+    try {
+      const { data: existing } = await supabase
+        .from('panels')
+        .select('custom_branding')
+        .eq('id', panel.id)
+        .single();
+      const existingBranding = (existing?.custom_branding as any) || {};
+      
+      const { error } = await supabase
+        .from('panels')
+        .update({
+          custom_branding: { ...existingBranding, faqs }
+        })
+        .eq('id', panel.id);
+      
+      if (error) throw error;
+      setPanelFaqs(faqs);
+      toast({ title: "FAQs updated", description: "Your tenant users will see these FAQs immediately." });
+    } catch (err) {
+      console.error('Error saving FAQs:', err);
+      toast({ variant: "destructive", title: "Failed to save FAQs" });
+    } finally {
+      setSavingFaqs(false);
+    }
+  };
+
+  const handleAddFaq = () => {
+    setEditingFaqIndex(null);
+    setFaqQuestion("");
+    setFaqAnswer("");
+    setFaqDialogOpen(true);
+  };
+
+  const handleEditFaq = (index: number) => {
+    setEditingFaqIndex(index);
+    setFaqQuestion(panelFaqs[index].question);
+    setFaqAnswer(panelFaqs[index].answer);
+    setFaqDialogOpen(true);
+  };
+
+  const handleSaveFaq = () => {
+    if (!faqQuestion.trim() || !faqAnswer.trim()) return;
+    const updated = [...panelFaqs];
+    if (editingFaqIndex !== null) {
+      updated[editingFaqIndex] = { question: faqQuestion.trim(), answer: faqAnswer.trim() };
+    } else {
+      updated.push({ question: faqQuestion.trim(), answer: faqAnswer.trim() });
+    }
+    savePanelFaqs(updated);
+    setFaqDialogOpen(false);
+  };
+
+  const handleDeleteFaq = (index: number) => {
+    const updated = panelFaqs.filter((_, i) => i !== index);
+    savePanelFaqs(updated);
+  };
 
   const fetchCustomerTickets = async () => {
     if (!panel?.id) return;
@@ -581,7 +665,54 @@ const SupportCenter = () => {
           </TabsList>
         </div>
 
-        <TabsContent value="knowledge" className="mt-4 sm:mt-6">
+        <TabsContent value="knowledge" className="mt-4 sm:mt-6 space-y-6">
+          {/* FAQ Management for tenant users */}
+          <Card className="bg-gradient-card border-border shadow-card">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  Tenant FAQs
+                </div>
+                <Button size="sm" onClick={handleAddFaq} className="gap-1">
+                  <Plus className="w-4 h-4" />
+                  Add FAQ
+                </Button>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage FAQs shown to your tenant users on their Support page.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {panelFaqs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <HelpCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p>No FAQs added yet. Default FAQs will be shown to your users.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {panelFaqs.map((faq, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-background">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{faq.question}</p>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{faq.answer}</p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditFaq(idx)}>
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFaq(idx)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Panel owner knowledge base */}
           <KnowledgeBase />
         </TabsContent>
 
@@ -734,6 +865,46 @@ const SupportCenter = () => {
               className="w-full sm:w-auto"
             >
               {submittingTicket ? "Submitting..." : "Submit Ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* FAQ Add/Edit Dialog */}
+      <Dialog open={faqDialogOpen} onOpenChange={setFaqDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingFaqIndex !== null ? 'Edit FAQ' : 'Add FAQ'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Question</Label>
+              <Input
+                value={faqQuestion}
+                onChange={(e) => setFaqQuestion(e.target.value)}
+                placeholder="e.g. How long does delivery take?"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Answer</Label>
+              <Textarea
+                value={faqAnswer}
+                onChange={(e) => setFaqAnswer(e.target.value)}
+                placeholder="Provide a clear, helpful answer..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setFaqDialogOpen(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveFaq}
+              disabled={savingFaqs || !faqQuestion.trim() || !faqAnswer.trim()}
+              className="w-full sm:w-auto"
+            >
+              {savingFaqs ? "Saving..." : editingFaqIndex !== null ? "Update" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -113,7 +113,8 @@ const defaultFAQs = [
 const BuyerSupport = () => {
   const { buyer, loading: authLoading, panelId: authPanelId } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
-  const resolvedPanelId = authPanelId || panel?.id;
+  // Triple fallback for panel ID: auth context -> tenant hook -> localStorage
+  const resolvedPanelId = authPanelId || panel?.id || (typeof window !== 'undefined' ? localStorage.getItem('current_panel_id') : null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,7 +165,7 @@ const BuyerSupport = () => {
 
   useEffect(() => {
     fetchTickets();
-  }, [buyer?.id, panel?.id]);
+  }, [buyer?.id, resolvedPanelId]);
 
   // Fetch chat sessions
   useEffect(() => {
@@ -228,14 +229,14 @@ const BuyerSupport = () => {
   }, [selectedChat?.id]);
 
   const fetchTickets = async () => {
-    if (!buyer?.id || !panel?.id) return;
+    if (!buyer?.id || !resolvedPanelId) return;
     setLoading(true);
     setError(null);
     try {
       const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
-        .eq('panel_id', panel.id)
+        .eq('panel_id', resolvedPanelId)
         .eq('user_id', buyer.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -257,7 +258,7 @@ const BuyerSupport = () => {
       toast({ variant: "destructive", title: "Please fill in all fields" });
       return;
     }
-    if (!buyer?.id || !panel?.id) {
+    if (!buyer?.id || !resolvedPanelId) {
       toast({ variant: "destructive", title: "Error", description: "Session expired. Please refresh and try again." });
       return;
     }
@@ -268,7 +269,7 @@ const BuyerSupport = () => {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
         body: {
           action: 'create-support-ticket',
-          panelId: panel.id,
+          panelId: resolvedPanelId,
           buyerId: buyer.id,
           subject: newTicket.subject,
           message: newTicket.message,
@@ -280,7 +281,7 @@ const BuyerSupport = () => {
 
       // Notify panel owner
       try {
-        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', panel.id).single();
+        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', resolvedPanelId).single();
         if (panelData?.owner_id) {
           await supabase.from('panel_notifications').insert({ user_id: panelData.owner_id, title: 'New Support Ticket', message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`, type: 'system', is_read: false });
         }

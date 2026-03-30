@@ -1033,6 +1033,7 @@ export type Database = {
           panel_id: string | null
           password_hash: string | null
           password_temp: string | null
+          password_temp_expires_at: string | null
           preferred_language: string | null
           referral_code: string | null
           referral_count: number | null
@@ -1070,6 +1071,7 @@ export type Database = {
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          password_temp_expires_at?: string | null
           preferred_language?: string | null
           referral_code?: string | null
           referral_count?: number | null
@@ -1107,6 +1109,7 @@ export type Database = {
           panel_id?: string | null
           password_hash?: string | null
           password_temp?: string | null
+          password_temp_expires_at?: string | null
           preferred_language?: string | null
           referral_code?: string | null
           referral_count?: number | null
