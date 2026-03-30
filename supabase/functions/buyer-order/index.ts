@@ -201,7 +201,41 @@ serve(async (req) => {
     }
 
     // Server-side price verification — prevent client price manipulation
-    const serverPrice = (service.price * quantity) / 1000;
+    let serverPrice = (service.price * quantity) / 1000;
+
+    // Server-side promo code validation
+    let promoDiscount = 0;
+    if (promoCode) {
+      const { data: promo } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', promoCode.toUpperCase())
+        .eq('panel_id', panelId)
+        .eq('is_active', true)
+        .single();
+
+      if (promo) {
+        const now = new Date();
+        const isValid = (!promo.expires_at || new Date(promo.expires_at) > now) &&
+                        (!promo.max_uses || (promo.usage_count || 0) < promo.max_uses);
+        if (isValid) {
+          if (promo.discount_type === 'percentage') {
+            promoDiscount = serverPrice * (promo.discount_value / 100);
+          } else {
+            promoDiscount = Math.min(promo.discount_value, serverPrice);
+          }
+          serverPrice = serverPrice - promoDiscount;
+          console.log(`[buyer-order] Promo ${promoCode} applied: discount=${promoDiscount}, adjusted serverPrice=${serverPrice}`);
+
+          // Increment usage
+          await supabase
+            .from('promo_codes')
+            .update({ usage_count: (promo.usage_count || 0) + 1 })
+            .eq('id', promo.id);
+        }
+      }
+    }
+
     if (price < serverPrice * 0.99 && Math.abs(serverPrice - price) > 0.01) {
       console.log(`[buyer-order] Price mismatch: client=${price}, server=${serverPrice}`);
       return new Response(

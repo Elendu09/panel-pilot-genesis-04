@@ -1,27 +1,11 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2, Package, Link as LinkIcon, Hash } from "lucide-react";
-import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
-import { motion, AnimatePresence } from "framer-motion";
+import { Label } from "@/components/ui/label";
+import { Package, AlertTriangle, CheckCircle, Info, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SpeedGauge } from "@/components/buyer/SpeedGauge";
-
-interface BulkOrderRow {
-  id: string;
-  serviceId: string;
-  quantity: number;
-  targetUrl: string;
-}
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BulkAddFormProps {
   services: any[];
@@ -31,6 +15,17 @@ interface BulkAddFormProps {
   disabled?: boolean;
 }
 
+interface ParsedLine {
+  lineNum: number;
+  raw: string;
+  serviceId: string;
+  quantity: number;
+  link: string;
+  service: any | null;
+  error: string | null;
+  total: number;
+}
+
 export const BulkAddForm = ({
   services,
   getEffectivePrice,
@@ -38,72 +33,147 @@ export const BulkAddForm = ({
   onAddToCart,
   disabled = false,
 }: BulkAddFormProps) => {
-  const [rows, setRows] = useState<BulkOrderRow[]>([
-    { id: crypto.randomUUID(), serviceId: "", quantity: 1000, targetUrl: "" },
-  ]);
+  const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
 
-  // Group services by category for easier selection
-  const groupedServices = useMemo(() => {
-    const groups: Record<string, any[]> = {};
+  // Build lookup by display_order (the tenant-facing ID)
+  const serviceByDisplayOrder = useMemo(() => {
+    const map = new Map<string, any>();
     services.forEach((s) => {
-      const cat = s.category || "other";
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(s);
+      if (s.display_order != null) {
+        map.set(String(s.display_order), s);
+      }
     });
-    return groups;
+    return map;
   }, [services]);
 
-  const addRow = () => {
-    setRows((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), serviceId: "", quantity: 1000, targetUrl: "" },
-    ]);
-  };
+  // Parse each line
+  const parsed: ParsedLine[] = useMemo(() => {
+    if (!input.trim()) return [];
 
-  const removeRow = (id: string) => {
-    if (rows.length <= 1) return;
-    setRows((prev) => prev.filter((r) => r.id !== id));
-  };
+    return input
+      .split("\n")
+      .map((raw, idx) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
 
-  const updateRow = (id: string, updates: Partial<BulkOrderRow>) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
-    );
-  };
+        const parts = trimmed.split("|").map((p) => p.trim());
+        if (parts.length < 3) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: "",
+            quantity: 0,
+            link: "",
+            service: null,
+            error: "Invalid format. Use: service_id|quantity|link",
+            total: 0,
+          };
+        }
 
-  const getRowTotal = (row: BulkOrderRow) => {
-    const service = services.find((s) => s.id === row.serviceId);
-    if (!service) return 0;
-    return (getEffectivePrice(service) * row.quantity) / 1000;
-  };
+        const [serviceIdStr, quantityStr, link] = parts;
+        const service = serviceByDisplayOrder.get(serviceIdStr);
+        const quantity = parseInt(quantityStr, 10);
 
-  const totalAmount = rows.reduce((sum, row) => sum + getRowTotal(row), 0);
-  const validRows = rows.filter(
-    (r) => r.serviceId && r.targetUrl.trim() && r.quantity > 0
-  );
+        if (!service) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: serviceIdStr,
+            quantity,
+            link,
+            service: null,
+            error: `Service ID "${serviceIdStr}" not found`,
+            total: 0,
+          };
+        }
 
-  const handleAddAll = async () => {
-    if (validRows.length === 0) return;
+        if (isNaN(quantity) || quantity <= 0) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: serviceIdStr,
+            quantity: 0,
+            link,
+            service,
+            error: "Invalid quantity",
+            total: 0,
+          };
+        }
 
+        const minQty = service.min_quantity || 1;
+        const maxQty = service.max_quantity || 1000000;
+        if (quantity < minQty) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: serviceIdStr,
+            quantity,
+            link,
+            service,
+            error: `Min quantity: ${minQty}`,
+            total: 0,
+          };
+        }
+        if (quantity > maxQty) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: serviceIdStr,
+            quantity,
+            link,
+            service,
+            error: `Max quantity: ${maxQty}`,
+            total: 0,
+          };
+        }
+
+        if (!link || (!link.startsWith("http://") && !link.startsWith("https://"))) {
+          return {
+            lineNum: idx + 1,
+            raw: trimmed,
+            serviceId: serviceIdStr,
+            quantity,
+            link,
+            service,
+            error: "Invalid URL (must start with http:// or https://)",
+            total: 0,
+          };
+        }
+
+        const price = getEffectivePrice(service);
+        const total = (price * quantity) / 1000;
+
+        return {
+          lineNum: idx + 1,
+          raw: trimmed,
+          serviceId: serviceIdStr,
+          quantity,
+          link,
+          service,
+          error: null,
+          total,
+        };
+      })
+      .filter(Boolean) as ParsedLine[];
+  }, [input, serviceByDisplayOrder, getEffectivePrice]);
+
+  const validLines = parsed.filter((p) => !p.error);
+  const errorLines = parsed.filter((p) => p.error);
+  const grandTotal = validLines.reduce((sum, p) => sum + p.total, 0);
+
+  const handleSubmit = async () => {
+    if (validLines.length === 0) return;
     setAdding(true);
     try {
-      const items = validRows.map((row) => {
-        const service = services.find((s) => s.id === row.serviceId)!;
-        return {
-          service,
-          quantity: row.quantity,
-          targetUrl: row.targetUrl,
-          effectivePrice: getEffectivePrice(service),
-        };
-      });
-
+      const items = validLines.map((p) => ({
+        service: p.service,
+        quantity: p.quantity,
+        targetUrl: p.link,
+        effectivePrice: getEffectivePrice(p.service),
+      }));
       await onAddToCart(items);
-
-      // Reset form
-      setRows([
-        { id: crypto.randomUUID(), serviceId: "", quantity: 1000, targetUrl: "" },
-      ]);
+      setInput("");
     } finally {
       setAdding(false);
     }
@@ -111,184 +181,111 @@ export const BulkAddForm = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Package className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">Bulk Add Services</span>
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Package className="w-4 h-4 text-primary" />
+        <span className="font-semibold text-sm">Mass Order</span>
+      </div>
+
+      {/* Format guide */}
+      <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+          <Info className="w-3.5 h-3.5 text-primary" />
+          Format: <code className="bg-primary/10 text-primary px-1.5 py-0.5 rounded text-[11px] font-mono">service_id|quantity|link</code>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={addRow}
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          One order per line. Service ID is the number shown next to each service (e.g., #113).
+        </p>
+        <div className="text-[11px] text-muted-foreground font-mono bg-background/80 rounded p-2 border border-border/40 space-y-0.5">
+          <div>113|1000|https://instagram.com/example</div>
+          <div>205|5000|https://youtube.com/watch?v=xxx</div>
+          <div>89|2000|https://tiktok.com/@user/video/123</div>
+        </div>
+      </div>
+
+      {/* Textarea */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">Enter your orders below</Label>
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={"113|1000|https://instagram.com/example\n205|5000|https://youtube.com/watch?v=xxx"}
+          className="min-h-[140px] font-mono text-sm resize-y"
           disabled={disabled || adding}
-          className="gap-1 h-8"
-        >
-          <Plus className="w-3 h-3" />
-          Add Row
-        </Button>
+        />
       </div>
 
-      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
-        <AnimatePresence mode="popLayout">
-          {rows.map((row, index) => {
-            const selectedService = services.find((s) => s.id === row.serviceId);
-            const categoryData = selectedService
-              ? SOCIAL_ICONS_MAP[selectedService.category] || SOCIAL_ICONS_MAP.other
-              : null;
-
-            return (
-              <motion.div
-                key={row.id}
-                layout
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-3 rounded-lg border bg-card/50 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="text-xs">
-                    #{index + 1}
-                  </Badge>
-                  {rows.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeRow(row.id)}
-                      disabled={disabled || adding}
-                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-
-                {/* Service Select */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs flex items-center gap-1">
-                    <Package className="w-3 h-3" />
-                    Service
-                  </Label>
-                  <Select
-                    value={row.serviceId}
-                    onValueChange={(val) => {
-                      const svc = services.find((s) => s.id === val);
-                      updateRow(row.id, {
-                        serviceId: val,
-                        quantity: svc?.min_quantity || 1000,
-                      });
-                    }}
-                    disabled={disabled || adding}
-                  >
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Select service..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {Object.entries(groupedServices).map(([cat, svcs]) => {
-                        const catData = SOCIAL_ICONS_MAP[cat] || SOCIAL_ICONS_MAP.other;
-                        const CatIcon = catData.icon;
-                        return (
-                          <div key={cat}>
-                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                              <div className={cn("p-1 rounded", catData.bgColor)}>
-                                <CatIcon className="w-2.5 h-2.5 text-white" />
-                              </div>
-                              {catData.label || cat}
-                            </div>
-                            {svcs.map((svc) => (
-                              <SelectItem
-                                key={svc.id}
-                                value={svc.id}
-                                className="text-sm"
-                              >
-                                <div className="flex items-center justify-between w-full gap-2">
-                                  <span className="truncate max-w-[180px]">
-                                    {svc.name}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground">
-                                    {formatPrice(getEffectivePrice(svc))}/1k
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Quantity */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs flex items-center gap-1">
-                      <Hash className="w-3 h-3" />
-                      Quantity
-                    </Label>
-                    <Input
-                      type="number"
-                      value={row.quantity}
-                      onChange={(e) =>
-                        updateRow(row.id, {
-                          quantity: Math.max(
-                            selectedService?.min_quantity || 1,
-                            parseInt(e.target.value) || 0
-                          ),
-                        })
-                      }
-                      min={selectedService?.min_quantity || 1}
-                      className="h-9 text-sm"
-                      disabled={disabled || adding || !row.serviceId}
-                    />
+      {/* Validation Results */}
+      {parsed.length > 0 && (
+        <div className="space-y-2">
+          {/* Valid orders */}
+          {validLines.length > 0 && (
+            <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                <CheckCircle className="w-3.5 h-3.5" />
+                {validLines.length} valid order{validLines.length !== 1 ? "s" : ""}
+              </div>
+              <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                {validLines.map((p) => (
+                  <div key={p.lineNum} className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground font-mono truncate max-w-[60%]">
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 mr-1.5 h-4">
+                        #{p.serviceId}
+                      </Badge>
+                      {p.service?.name?.slice(0, 40)}
+                    </span>
+                    <span className="flex items-center gap-2 text-foreground/80">
+                      <span>{p.quantity.toLocaleString()}</span>
+                      <span className="font-medium">{formatPrice(p.total)}</span>
+                    </span>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  {/* Line Total */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Total</Label>
-                    <div className="h-9 px-3 flex items-center rounded-md border bg-muted/50 text-sm font-medium">
-                      {formatPrice(getRowTotal(row))}
-                    </div>
+          {/* Errors */}
+          {errorLines.length > 0 && (
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {errorLines.length} error{errorLines.length !== 1 ? "s" : ""}
+              </div>
+              <div className="space-y-1 max-h-[80px] overflow-y-auto">
+                {errorLines.map((p) => (
+                  <div key={p.lineNum} className="text-[11px] text-destructive/80">
+                    Line {p.lineNum}: {p.error}
                   </div>
-                </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-                {/* Target URL */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs flex items-center gap-1">
-                    <LinkIcon className="w-3 h-3" />
-                    Target URL
-                  </Label>
-                  <Input
-                    placeholder="https://..."
-                    value={row.targetUrl}
-                    onChange={(e) =>
-                      updateRow(row.id, { targetUrl: e.target.value })
-                    }
-                    className="h-9 text-sm"
-                    disabled={disabled || adding || !row.serviceId}
-                  />
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-
-      {/* Summary */}
-      <div className="flex items-center justify-between pt-2 border-t">
-        <div>
-          <span className="text-sm text-muted-foreground">
-            {validRows.length} of {rows.length} rows ready
-          </span>
+      {/* Summary & Submit */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+        <div className="text-sm text-muted-foreground">
+          {parsed.length > 0
+            ? `${validLines.length} of ${parsed.length} lines ready`
+            : "Enter orders above"}
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-bold">{formatPrice(totalAmount)}</span>
+          {grandTotal > 0 && (
+            <span className="font-bold text-sm">{formatPrice(grandTotal)}</span>
+          )}
           <Button
-            onClick={handleAddAll}
-            disabled={disabled || adding || validRows.length === 0}
+            onClick={handleSubmit}
+            disabled={disabled || adding || validLines.length === 0}
             size="sm"
-            className="gap-1"
+            className="gap-1.5"
           >
-            <Plus className="w-3 h-3" />
-            Add All to Cart
+            {adding ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            Add {validLines.length} Order{validLines.length !== 1 ? "s" : ""} to Cart
           </Button>
         </div>
       </div>

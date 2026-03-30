@@ -561,9 +561,9 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   // Major Platforms
   instagram: { icon: InstagramIcon, label: "Instagram", color: "#E4405F", bgColor: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400" },
   facebook: { icon: FacebookIcon, label: "Facebook", color: "#1877F2", bgColor: "bg-blue-600" },
-  twitter: { icon: TwitterIcon, label: "Twitter/X", color: "#000000", bgColor: "bg-black" },
+  twitter: { icon: TwitterIcon, label: "Twitter/X", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   youtube: { icon: YouTubeIcon, label: "YouTube", color: "#FF0000", bgColor: "bg-red-600" },
-  tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-black" },
+  tiktok: { icon: TikTokIcon, label: "TikTok", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   telegram: { icon: TelegramIcon, label: "Telegram", color: "#26A5E4", bgColor: "bg-sky-500" },
   linkedin: { icon: LinkedInIcon, label: "LinkedIn", color: "#0A66C2", bgColor: "bg-blue-700" },
   
@@ -571,13 +571,13 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   discord: { icon: DiscordIcon, label: "Discord", color: "#5865F2", bgColor: "bg-indigo-500" },
   whatsapp: { icon: WhatsAppIcon, label: "WhatsApp", color: "#25D366", bgColor: "bg-green-500" },
   snapchat: { icon: SnapchatIcon, label: "Snapchat", color: "#FFFC00", bgColor: "bg-yellow-400" },
-  threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-black" },
+  threads: { icon: ThreadsIcon, label: "Threads", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   reddit: { icon: RedditIcon, label: "Reddit", color: "#FF4500", bgColor: "bg-orange-600" },
   pinterest: { icon: PinterestIcon, label: "Pinterest", color: "#BD081C", bgColor: "bg-red-700" },
   tumblr: { icon: TumblrIcon, label: "Tumblr", color: "#36465D", bgColor: "bg-slate-700" },
   quora: { icon: QuoraIcon, label: "Quora", color: "#B92B27", bgColor: "bg-red-700" },
   clubhouse: { icon: ClubhouseIcon, label: "Clubhouse", color: "#F1EFE3", bgColor: "bg-amber-100" },
-  bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-black" },
+  bereal: { icon: BeRealIcon, label: "BeReal", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   vk: { icon: VKIcon, label: "VKontakte", color: "#0077FF", bgColor: "bg-blue-500" },
   weibo: { icon: WeiboIcon, label: "Weibo", color: "#E6162D", bgColor: "bg-red-600" },
   line: { icon: LineIcon, label: "Line", color: "#00C300", bgColor: "bg-green-500" },
@@ -601,7 +601,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   // Music Platforms
   audiomack: { icon: HeadphonesWrapper, label: "Audiomack", color: "#FFA200", bgColor: "bg-orange-400" },
   deezer: { icon: MusicWrapper, label: "Deezer", color: "#00C7F2", bgColor: "bg-cyan-500" },
-  tidal: { icon: RadioWrapper, label: "Tidal", color: "#000000", bgColor: "bg-black" },
+  tidal: { icon: RadioWrapper, label: "Tidal", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   napster: { icon: MusicWrapper, label: "Napster", color: "#000000", bgColor: "bg-gray-900" },
   shazam: { icon: MusicWrapper, label: "Shazam", color: "#0088FF", bgColor: "bg-blue-500" },
   reverbnation: { icon: MusicWrapper, label: "ReverbNation", color: "#E43526", bgColor: "bg-red-600" },
@@ -612,7 +612,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   
   // Creator & Blog Platforms
   patreon: { icon: PatreonIcon, label: "Patreon", color: "#FF424D", bgColor: "bg-orange-500" },
-  medium: { icon: MediumIcon, label: "Medium", color: "#000000", bgColor: "bg-black" },
+  medium: { icon: MediumIcon, label: "Medium", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   
   // Gaming Platforms
   roblox: { icon: RobloxIcon, label: "Roblox", color: "#E2231A", bgColor: "bg-red-500" },
@@ -644,7 +644,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   bigo: { icon: CameraWrapper, label: "Bigo Live", color: "#EC4899", bgColor: "bg-pink-500" },
   
   // Asian Platforms
-  douyin: { icon: TikTokIcon, label: "Douyin", color: "#000000", bgColor: "bg-black" },
+  douyin: { icon: TikTokIcon, label: "Douyin", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   xiaohongshu: { icon: BookmarkWrapper, label: "Xiaohongshu", color: "#FE2C55", bgColor: "bg-red-500" },
   qq: { icon: MessageSquareWrapper, label: "QQ", color: "#12B7F5", bgColor: "bg-sky-500" },
   wechat: { icon: MessageSquareWrapper, label: "WeChat", color: "#07C160", bgColor: "bg-green-500" },
@@ -662,7 +662,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   deviantart: { icon: GlobeWrapper, label: "DeviantArt", color: "#05CC47", bgColor: "bg-green-600" },
   flickr: { icon: CameraWrapper, label: "Flickr", color: "#FF0084", bgColor: "bg-pink-600" },
   "500px": { icon: CameraWrapper, label: "500px", color: "#0099E5", bgColor: "bg-blue-500" },
-  vero: { icon: GlobeWrapper, label: "Vero", color: "#000000", bgColor: "bg-black" },
+  vero: { icon: GlobeWrapper, label: "Vero", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   
   // Podcasts
   podcast: { icon: RadioWrapper, label: "Podcast", color: "#8B5CF6", bgColor: "bg-purple-600" },

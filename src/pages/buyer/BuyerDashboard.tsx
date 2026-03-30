@@ -107,7 +107,7 @@ const BuyerDashboard = () => {
     setError(null);
     try {
       // Use buyer-api edge function to bypass RLS (tenant buyers use custom auth, not Supabase auth)
-      const panelId = buyer.panel_id || localStorage.getItem('current_panel_id') || '';
+      const panelId = panel?.id || buyer.panel_id || localStorage.getItem('current_panel_id') || '';
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-api', {
         body: { action: 'orders', buyerId: buyer.id, panelId }
       });
@@ -129,11 +129,13 @@ const BuyerDashboard = () => {
 
       setRecentOrders(formattedOrders);
 
-      const totalOrders = formattedOrders.length;
-      const pendingOrders = formattedOrders.filter(o => o.status === 'pending').length;
-      const inProgressOrders = formattedOrders.filter(o => o.status === 'in_progress').length;
-      const completedOrders = formattedOrders.filter(o => o.status === 'completed').length;
-      const totalSpent = buyer.total_spent || 0;
+      // Use full orders array for stats (not the sliced recent orders)
+      const allOrders = orders || [];
+      const totalOrders = allOrders.length;
+      const pendingOrders = allOrders.filter((o: any) => o.status === 'pending').length;
+      const inProgressOrders = allOrders.filter((o: any) => o.status === 'in_progress').length;
+      const completedOrders = allOrders.filter((o: any) => o.status === 'completed').length;
+      const totalSpent = buyer.total_spent || allOrders.reduce((sum: number, o: any) => sum + (o.price || 0), 0);
 
       setStats({
         totalOrders,

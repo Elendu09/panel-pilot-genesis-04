@@ -74,7 +74,10 @@ serve(async (req) => {
 
     const { key, action } = params;
 
-    if (!key) return errorResponse("Invalid API key");
+    // Cart operations use buyerId+panelId auth without API key
+    const isCartAction = action && ['cart-list','cart-add','cart-update','cart-remove','cart-clear','orders','get-orders','balance'].includes(action.toLowerCase());
+    
+    if (!key && !isCartAction) return errorResponse("Invalid API key");
     if (!action) return errorResponse("Action is required");
 
     console.log(`[buyer-api] action=${action}`);
@@ -83,8 +86,8 @@ serve(async (req) => {
     let panelId: string | null = null;
     let buyerId: string | null = null;
     
-    // Special auth path: buyerId+panelId direct auth (for LiveOrderTracker without API key)
-    if (key === '__buyer_id_auth__' && (params as any).buyerId && (params as any).panelId) {
+    // Special auth path: buyerId+panelId direct auth (for LiveOrderTracker, cart, without API key)
+    if ((key === '__buyer_id_auth__' || !key) && (params as any).buyerId && (params as any).panelId) {
       const directBuyerId = (params as any).buyerId;
       const directPanelId = (params as any).panelId;
       
@@ -153,10 +156,27 @@ serve(async (req) => {
         response = await handleCancel(supabase, panelId, params);
         break;
       case 'get-orders':
+      case 'orders':
         response = await handleGetOrders(supabase, panelId, buyerId);
         break;
       case 'get-order':
         response = await handleGetOrder(supabase, panelId, buyerId, params);
+        break;
+      // Cart operations
+      case 'cart-list':
+        response = await handleCartList(supabase, panelId, buyerId);
+        break;
+      case 'cart-add':
+        response = await handleCartAdd(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-update':
+        response = await handleCartUpdate(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-remove':
+        response = await handleCartRemove(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-clear':
+        response = await handleCartClear(supabase, panelId, buyerId);
         break;
       default:
         response = errorResponse(`Unknown action: ${action}`);
@@ -787,4 +807,79 @@ function formatStatus(status: string): string {
     canceled: 'Canceled', refunded: 'Refunded', failed: 'Failed'
   };
   return statusMap[status?.toLowerCase()] || status || 'Pending';
+}
+
+// ========= CART HANDLERS =========
+
+async function handleCartList(supabase: any, panelId: string, buyerId: string | null) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { data, error } = await supabase
+    .from('buyer_cart')
+    .select('*')
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to fetch cart');
+  return jsonResponse({ items: data || [] });
+}
+
+async function handleCartAdd(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { serviceId, quantity, targetUrl } = params;
+  if (!serviceId || !quantity || !targetUrl) return errorResponse('Missing serviceId, quantity, or targetUrl');
+  
+  const { data, error } = await supabase
+    .from('buyer_cart')
+    .insert({ buyer_id: buyerId, panel_id: panelId, service_id: serviceId, quantity, target_url: targetUrl })
+    .select()
+    .single();
+  if (error) {
+    console.error('[buyer-api] cart-add error:', error);
+    return errorResponse('Failed to add to cart');
+  }
+  return jsonResponse({ id: data.id, item: data });
+}
+
+async function handleCartUpdate(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { itemId, quantity, targetUrl } = params;
+  if (!itemId) return errorResponse('Missing itemId');
+
+  const updateData: any = {};
+  if (quantity !== undefined) updateData.quantity = quantity;
+  if (targetUrl !== undefined) updateData.target_url = targetUrl;
+
+  const { error } = await supabase
+    .from('buyer_cart')
+    .update(updateData)
+    .eq('id', itemId)
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to update cart item');
+  return jsonResponse({ success: true });
+}
+
+async function handleCartRemove(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { itemId } = params;
+  if (!itemId) return errorResponse('Missing itemId');
+
+  const { error } = await supabase
+    .from('buyer_cart')
+    .delete()
+    .eq('id', itemId)
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to remove cart item');
+  return jsonResponse({ success: true });
+}
+
+async function handleCartClear(supabase: any, panelId: string, buyerId: string | null) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { error } = await supabase
+    .from('buyer_cart')
+    .delete()
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to clear cart');
+  return jsonResponse({ success: true });
 }
