@@ -103,11 +103,12 @@ const AdminOverview = () => {
       }
 
       // Fetch all data directly from Supabase tables
-      const [panelsRes, profilesRes, txRes, auditRes] = await Promise.all([
+      const [panelsRes, profilesRes, txRes, auditRes, subsRes] = await Promise.all([
         supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name)').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id, created_at', { count: 'exact', head: false }),
+        supabase.from('profiles').select('id, email, full_name, created_at', { count: 'exact', head: false }).order('created_at', { ascending: false }),
         supabase.from('transactions').select('id, amount, payment_method, created_at, status, panel_id').eq('type', 'deposit').order('created_at', { ascending: false }).limit(10),
         supabase.from('audit_logs').select('id, action, resource_type, created_at, details').order('created_at', { ascending: false }).limit(10),
+        supabase.from('panel_subscriptions').select('plan_type'),
       ]);
 
       const allPanels = (panelsRes.data || []) as Panel[];
@@ -116,6 +117,19 @@ const AdminOverview = () => {
       const pendingPanels = allPanels.filter(p => p.status === 'pending').length;
       const suspendedPanels = allPanels.filter(p => p.status === 'suspended').length;
       const platformRevenue = (txRes.data || []).filter((t: any) => t.status === 'completed').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+      // Plan distribution
+      const subs = subsRes.data || [];
+      setPlanDistribution({
+        free: subs.filter((s: any) => s.plan_type === 'free').length,
+        basic: subs.filter((s: any) => s.plan_type === 'basic').length,
+        pro: subs.filter((s: any) => s.plan_type === 'pro').length,
+      });
+
+      // Recent signups (last 5)
+      setRecentSignups((profilesRes.data || []).slice(0, 5).map((p: any) => ({
+        id: p.id, email: p.email || '', full_name: p.full_name || '', created_at: p.created_at
+      })));
 
       setStats({
         totalPanels,
