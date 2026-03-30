@@ -82,6 +82,7 @@ const BuyerProfile = () => {
   const [resendingVerification, setResendingVerification] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [generatingKey, setGeneratingKey] = useState(false);
   const [profileData, setProfileData] = useState({
