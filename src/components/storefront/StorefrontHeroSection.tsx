@@ -126,6 +126,8 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
   const badgeText = customization.badgeText || customization.heroBadgeText || t('storefront.hero.defaultBadge');
   const enableFastOrder = customization.enableFastOrder ?? true;
   const themeMode = customization.themeMode || 'dark';
+  const enableHeroImage = customization.enableHeroImage && customization.heroImageUrl;
+  const heroImagePosition = customization.heroImagePosition || 'right';
   const textColor = customization.textColor || (themeMode === 'dark' ? '#FFFFFF' : '#1F2937');
   const textMuted = customization.textMuted || (themeMode === 'dark' ? '#A1A1AA' : '#4B5563');
   const cardBg = themeMode === 'dark' ? 'bg-slate-900/80' : 'bg-white shadow-md';
