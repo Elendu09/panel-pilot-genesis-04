@@ -90,14 +90,94 @@ const SupportCenter = () => {
   const [newTicketMessage, setNewTicketMessage] = useState("");
   const [submittingTicket, setSubmittingTicket] = useState(false);
 
+  // FAQ Management state
+  const [panelFaqs, setPanelFaqs] = useState<{ question: string; answer: string }[]>([]);
+  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
+  const [editingFaqIndex, setEditingFaqIndex] = useState<number | null>(null);
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
+  const [savingFaqs, setSavingFaqs] = useState(false);
+
   useEffect(() => {
     if (panel?.id) {
       fetchCustomerTickets();
+      fetchPanelFaqs();
     }
     if (profile?.id) {
       fetchPlatformTickets();
     }
   }, [panel?.id, profile?.id]);
+
+  const fetchPanelFaqs = async () => {
+    if (!panel?.id) return;
+    const { data } = await supabase
+      .from('panels')
+      .select('custom_branding')
+      .eq('id', panel.id)
+      .single();
+    const branding = (data?.custom_branding as any) || {};
+    setPanelFaqs(branding.faqs || []);
+  };
+
+  const savePanelFaqs = async (faqs: { question: string; answer: string }[]) => {
+    if (!panel?.id) return;
+    setSavingFaqs(true);
+    try {
+      const { data: existing } = await supabase
+        .from('panels')
+        .select('custom_branding')
+        .eq('id', panel.id)
+        .single();
+      const existingBranding = (existing?.custom_branding as any) || {};
+      
+      const { error } = await supabase
+        .from('panels')
+        .update({
+          custom_branding: { ...existingBranding, faqs }
+        })
+        .eq('id', panel.id);
+      
+      if (error) throw error;
+      setPanelFaqs(faqs);
+      toast({ title: "FAQs updated", description: "Your tenant users will see these FAQs immediately." });
+    } catch (err) {
+      console.error('Error saving FAQs:', err);
+      toast({ variant: "destructive", title: "Failed to save FAQs" });
+    } finally {
+      setSavingFaqs(false);
+    }
+  };
+
+  const handleAddFaq = () => {
+    setEditingFaqIndex(null);
+    setFaqQuestion("");
+    setFaqAnswer("");
+    setFaqDialogOpen(true);
+  };
+
+  const handleEditFaq = (index: number) => {
+    setEditingFaqIndex(index);
+    setFaqQuestion(panelFaqs[index].question);
+    setFaqAnswer(panelFaqs[index].answer);
+    setFaqDialogOpen(true);
+  };
+
+  const handleSaveFaq = () => {
+    if (!faqQuestion.trim() || !faqAnswer.trim()) return;
+    const updated = [...panelFaqs];
+    if (editingFaqIndex !== null) {
+      updated[editingFaqIndex] = { question: faqQuestion.trim(), answer: faqAnswer.trim() };
+    } else {
+      updated.push({ question: faqQuestion.trim(), answer: faqAnswer.trim() });
+    }
+    savePanelFaqs(updated);
+    setFaqDialogOpen(false);
+  };
+
+  const handleDeleteFaq = (index: number) => {
+    const updated = panelFaqs.filter((_, i) => i !== index);
+    savePanelFaqs(updated);
+  };
 
   const fetchCustomerTickets = async () => {
     if (!panel?.id) return;
