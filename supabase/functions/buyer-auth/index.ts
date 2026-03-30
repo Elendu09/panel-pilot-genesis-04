@@ -1119,7 +1119,7 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
 
   // Always return success to not reveal if email exists (security)
   if (!user) {
-    console.log('No user found with email:', normalizedEmail);
+    console.log('No user found with identifier:', trimmedIdentifier);
     recordFailedAttempt(rateLimitKey);
     return jsonResponse({ 
       success: true, 
@@ -1131,30 +1131,34 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
   const newPassword = generateTempPassword();
   
   // Hash the new password using PBKDF2
-  const hashedPassword = await hashPassword(newPassword);
+  const hashedTempPassword = await hashPassword(newPassword);
 
-  // Update user with new hashed password
+  // Store temp password WITHOUT overwriting main password_hash
+  // Temp password expires in 24 hours by default
+  const tempExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const { error: updateError } = await supabaseAdmin
     .from('client_users')
     .update({ 
-      password_hash: hashedPassword,
-      password_temp: null,
+      password_temp: hashedTempPassword,
+      password_temp_expires_at: tempExpiresAt,
       updated_at: new Date().toISOString()
     })
     .eq('id', user.id);
 
   if (updateError) {
-    console.error('Error updating password:', updateError);
+    console.error('Error updating temp password:', updateError);
     return jsonResponse({ error: 'Failed to reset password' });
   }
 
-  console.log('Password reset for user:', user.id);
+  console.log('Temp password set for user:', user.id, 'expires at:', tempExpiresAt);
 
-  // Return the temp password to show in the UI
+  // TODO: If panel has SMTP configured, send email with temp password
+  // For now, return the temp password to show in the UI
   return jsonResponse({ 
     success: true, 
     tempPassword: newPassword,
-    message: 'Your password has been reset. Please save your new temporary password and change it after logging in.'
+    message: 'Your temporary password has been generated. Your original password still works. The temporary password expires in 24 hours.'
   });
 }
 
