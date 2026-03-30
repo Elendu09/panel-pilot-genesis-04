@@ -461,7 +461,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
   triplea: ["1. Go to triple-a.io → Dashboard → API Keys", "2. Copy API Key and Secret"],
   bitpay: ["1. Go to bitpay.com → Dashboard → Payment Tools → API Tokens", "2. Generate new token", "3. Copy API Token"],
   klarna: ["1. Go to portal.klarna.com → Settings → API Credentials", "2. Copy API Username and Password"],
-  afterpay: ["1. Go to portal.afterpay.com → Developer", "2. Copy Merchant ID and Secret Key"],
+  
   tabby: ["1. Go to merchant.tabby.ai → Settings → API", "2. Copy Public Key and Secret Key"],
   tamara: ["1. Go to partner.tamara.co → Settings → API", "2. Copy API Token"],
   sezzle: ["1. Go to dashboard.sezzle.com → Settings → API Keys", "2. Copy Public Key and Private Key"],
