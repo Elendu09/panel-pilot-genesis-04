@@ -818,7 +818,6 @@ const Billing = () => {
                         </div>
                       )}
                     </div>
-                    </div>
 
                     {isCurrent && !isExpired && subscription?.expires_at && (
                       <div className="text-center text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
