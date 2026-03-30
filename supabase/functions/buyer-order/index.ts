@@ -79,6 +79,11 @@ async function forwardToProvider(
     formData.append('service', externalServiceId);
     formData.append('link', targetUrl);
     formData.append('quantity', String(quantity));
+    // Forward drip feed params to upstream provider
+    if (extraParams?.runs) formData.append('runs', String(extraParams.runs));
+    if (extraParams?.interval) formData.append('interval', String(extraParams.interval));
+    if (extraParams?.delay) formData.append('delay', String(extraParams.delay));
+    if (extraParams?.comments) formData.append('comments', extraParams.comments);
 
     const response = await fetch(provider.api_endpoint, {
       method: 'POST',
