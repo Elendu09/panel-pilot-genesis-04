@@ -141,6 +141,18 @@ const BuyerProfile = () => {
         referralCount: buyer.referral_count || 0,
         referralEarnings,
       });
+
+      // Fetch MFA status
+      try {
+        const { data: mfaData } = await supabase.functions.invoke('buyer-auth', {
+          body: { action: 'mfa-status', panelId: buyer.panel_id, buyerId: buyer.id, token: getToken() }
+        });
+        if (mfaData?.enabled) {
+          setMfaEnabled(true);
+        }
+      } catch (e) {
+        console.error('MFA status check failed:', e);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
