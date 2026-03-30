@@ -291,7 +291,7 @@ const gatewayFieldLabels: Record<string, { field1Label: string; field1Placeholde
   coinpayments: { field1Label: "Merchant ID", field1Placeholder: "Your CoinPayments Merchant ID", field2Label: "IPN Secret", field2Placeholder: "Your IPN Secret Key", field2Required: true },
   triplea: { field1Label: "API Key", field1Placeholder: "Your TripleA API Key", field2Label: "Client Secret", field2Placeholder: "Your TripleA Client Secret", field2Required: true },
   oxapay: { field1Label: "API Key", field1Placeholder: "Your Oxapay Merchant API Key", field2Label: "Payout Key (optional)", field2Placeholder: "Payout API Key", field2Required: false },
-  utrust: { field1Label: "API Key", field1Placeholder: "Your Utrust API Key", field2Label: "Webhook Secret", field2Placeholder: "Your Utrust Webhook Secret", field2Required: true },
+  utrust: { field1Label: "API Key", field1Placeholder: "Your xPortal (Utrust) API Key", field2Label: "Webhook Secret", field2Placeholder: "Your xPortal Webhook Secret", field2Required: true },
   coinspaid: { field1Label: "API Key", field1Placeholder: "Your CoinsPaid API Key", field2Label: "API Secret", field2Placeholder: "Your CoinsPaid API Secret", field2Required: true },
   transak: { field1Label: "API Key", field1Placeholder: "Your Transak API Key", field2Label: "Secret Key (optional)", field2Placeholder: "Partner Secret", field2Required: false },
   moonpay: { field1Label: "API Key", field1Placeholder: "Your MoonPay API Key", field2Label: "Secret Key", field2Placeholder: "Your MoonPay Secret Key", field2Required: true },
