@@ -807,6 +807,59 @@ const BuyerNewOrder = () => {
                   )}
                 </AnimatePresence>
 
+                {/* Poll Answers (for poll-type services) */}
+                <AnimatePresence>
+                  {selectedService && (selectedService as any).service_type === 'poll' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20"
+                    >
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                        Poll Answers
+                      </Label>
+                      <Textarea
+                        placeholder="Enter each answer on a new line, e.g.&#10;Option A&#10;Option B&#10;Option C"
+                        value={pollAnswers}
+                        onChange={(e) => setPollAnswers(e.target.value)}
+                        className="min-h-[80px] bg-background/50 font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter poll options separated by new lines
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Subscription Expiry (for subscription-type services) */}
+                <AnimatePresence>
+                  {selectedService && (selectedService as any).service_type === 'subscriptions' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 p-4 rounded-lg bg-violet-500/5 border border-violet-500/20"
+                    >
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-violet-500" />
+                        Subscription Expiry
+                      </Label>
+                      <Input
+                        type="date"
+                        value={subscriptionExpiry}
+                        onChange={(e) => setSubscriptionExpiry(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="h-10 bg-background/50"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Select when the subscription should expire
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Promo Code */}
                 <PromoCodeInput 
                   panelId={panel?.id}
