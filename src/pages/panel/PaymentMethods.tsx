@@ -560,7 +560,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
   easypaisa: ["1. Go to developer.easypaisa.com.pk → Dashboard", "2. Copy Store ID, Hash Key, and configure callbacks"],
   cinetpay: ["1. Go to app.cinetpay.com → Settings → API", "2. Copy API Key and Site ID"],
   notchpay: ["1. Go to business.notchpay.co → Developers", "2. Copy Public Key (pk.xxxx)"],
-  utrust: ["1. Go to merchants.utrust.com → Integrations", "2. Copy API Key and Webhook Secret"],
+  utrust: ["1. Go to xportal.com → Merchant Dashboard → Integrations", "2. Copy API Key and Webhook Secret", "3. Formerly known as Utrust — now part of MultiversX ecosystem"],
   coinspaid: ["1. Go to app.coinspaid.com → API", "2. Copy API Key and API Secret"],
   transak: ["1. Go to dashboard.transak.com → Developers", "2. Copy API Key"],
   moonpay: ["1. Go to dashboard.moonpay.com → Developers", "2. Copy Publishable Key and Secret Key"],

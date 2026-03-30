@@ -77,11 +77,12 @@ export function BuyerThemeProvider({
     return () => window.removeEventListener('panelDesignUpdated', handleDesignUpdate);
   }, [defaultThemeMode, storageKey]);
 
-  // Listen for theme-change events from ThemeProvider to stay in sync
+  // Listen for theme-change events — only sync when source is 'buyer' (not admin dashboard)
   useEffect(() => {
     const handleThemeChange = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (detail?.theme && (detail.theme === 'light' || detail.theme === 'dark')) {
+      // Only sync if the event was dispatched by buyer toggle, not admin panel ThemeToggle
+      if (detail?.theme && (detail.theme === 'light' || detail.theme === 'dark') && detail?.source === 'buyer') {
         setThemeModeState(detail.theme);
         localStorage.setItem(storageKey, detail.theme);
       }
