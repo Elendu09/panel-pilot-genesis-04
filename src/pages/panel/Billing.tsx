@@ -407,7 +407,7 @@ const Billing = () => {
           action: 'balance-payment',
           panelId: panel.id,
           userId: profile.id,
-          amount: pendingUpgradePlan.price,
+          amount: getPlanPrice(pendingUpgradePlan),
           plan: pendingUpgradePlan.name.toLowerCase(),
         }
       });
