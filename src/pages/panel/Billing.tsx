@@ -141,10 +141,23 @@ const Billing = () => {
   const [pendingUpgradePlan, setPendingUpgradePlan] = useState<typeof plans[0] | null>(null);
   const [balancePaymentLoading, setBalancePaymentLoading] = useState(false);
 
+  // Gateway selection dialog state
+  const [gatewayDialogOpen, setGatewayDialogOpen] = useState(false);
+  const [pendingGatewayPlan, setPendingGatewayPlan] = useState<typeof plans[0] | null>(null);
+
   // Use admin-controlled payment gateways for panel owner billing (not panel-configured buyer gateways)
   const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 
-  const defaultGateway = availableGateways[0]?.id;
+  // Supported gateways that have backend processing in process-payment edge function
+  const SUPPORTED_GATEWAYS = new Set([
+    'stripe', 'paypal', 'coinbase', 'flutterwave', 'paystack', 'korapay',
+    'heleket', 'razorpay', 'monnify', 'nowpayments', 'coingate', 'binancepay',
+    'cryptomus', 'skrill', 'perfectmoney', 'square', 'braintree', 'ach',
+    'sepa', 'btcpay', 'wise', 'manual_transfer'
+  ]);
+
+  // Filter to only gateways supported by the backend
+  const supportedGateways = availableGateways.filter(g => SUPPORTED_GATEWAYS.has(g.id) || g.id.startsWith('manual_'));
 
   // Helper to get plan price based on billing cycle
   const getPlanPrice = (plan: typeof plans[0]) => {
