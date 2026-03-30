@@ -808,8 +808,16 @@ const Billing = () => {
                   
                   <CardContent className="space-y-6">
                     <div className="text-center">
-                      <span className="text-4xl font-bold">${plan.price}</span>
-                      <span className="text-muted-foreground">/{plan.period}</span>
+                      <span className="text-4xl font-bold">${getPlanPrice(plan)}</span>
+                      <span className="text-muted-foreground">/{billingCycle === 'yearly' && plan.monthlyPrice > 0 ? 'year' : plan.period}</span>
+                      {billingCycle === 'yearly' && getYearlySavings(plan) > 0 && (
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/30">
+                            Save ${getYearlySavings(plan)}/year
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
                     </div>
 
                     {isCurrent && !isExpired && subscription?.expires_at && (
