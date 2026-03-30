@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LanguageContext, Language } from '@/contexts/LanguageContext';
+import { BuyerMfaChallenge } from '@/components/buyer/BuyerMfaChallenge';
 
 interface BuyerUser {
   id: string;
