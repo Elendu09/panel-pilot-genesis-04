@@ -187,6 +187,11 @@ const defaultCustomization = {
   heroAnimatedTextStyle: 'gradient-wave' as 'plain' | 'glow-box' | 'underline' | 'highlight' | 'typewriter' | 'gradient-wave' | 'text-reveal' | 'bounce',
   heroAnimatedTextPosition: 'last' as 'first' | 'middle' | 'last',
   
+  // Hero Image
+  enableHeroImage: false,
+  heroImageUrl: '',
+  heroImagePosition: 'right' as 'left' | 'right',
+  
   // Section Toggles
   enablePlatformFeatures: true,
   enableStats: true,
