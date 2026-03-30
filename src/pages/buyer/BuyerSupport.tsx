@@ -258,8 +258,12 @@ const BuyerSupport = () => {
       toast({ variant: "destructive", title: "Please fill in all fields" });
       return;
     }
-    if (!buyer?.id || !resolvedPanelId) {
-      toast({ variant: "destructive", title: "Error", description: "Session expired. Please refresh and try again." });
+    if (!buyer?.id) {
+      toast({ variant: "destructive", title: "Error", description: "Please log in to submit a ticket." });
+      return;
+    }
+    if (!resolvedPanelId) {
+      toast({ variant: "destructive", title: "Error", description: "Unable to connect. Please refresh the page and try again." });
       return;
     }
     setSubmitting(true);
