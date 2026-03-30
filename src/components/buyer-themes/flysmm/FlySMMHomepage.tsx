@@ -333,8 +333,8 @@ export const FlySMMHomepage = ({
                   </motion.div>
                 </div>
               </motion.div>
+              )}
             </div>
-          </div>
         </section>
 
         {/* How It Works */}
