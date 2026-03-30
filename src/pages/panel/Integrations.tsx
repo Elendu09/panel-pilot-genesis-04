@@ -561,6 +561,9 @@ const Integrations = () => {
           // Load service integrations
           const integrationsData = (settings as any).integrations || {};
           setIntegrations(integrationsData);
+          if (integrationsData?.smtp?.host) {
+            setSmtpHost(integrationsData.smtp.host);
+          }
         }
       } catch (err) {
         console.error('Error fetching panel settings:', err);
@@ -1019,7 +1022,7 @@ const Integrations = () => {
         <CardContent>
           <div className={cn(
             "flex items-center justify-between p-4 rounded-lg border transition-all",
-            settings?.integrations?.smtp?.host
+            smtpHost
               ? "bg-emerald-500/5 border-emerald-500/30"
               : "bg-muted/20 border-border"
           )}>
@@ -1030,14 +1033,14 @@ const Integrations = () => {
               <div>
                 <p className="font-medium text-sm">SMTP Configuration</p>
                 <p className="text-xs text-muted-foreground">
-                  {settings?.integrations?.smtp?.host
-                    ? `Connected: ${settings.integrations.smtp.host}`
+                  {smtpHost
+                    ? `Connected: ${smtpHost}`
                     : "Not configured — temp passwords shown in UI only"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {settings?.integrations?.smtp?.host && (
+              {smtpHost && (
                 <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Connected</Badge>
               )}
               <Button
