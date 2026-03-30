@@ -68,8 +68,9 @@ const BuyerAuth = () => {
   
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordIdentifier, setForgotPasswordIdentifier] = useState("");
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [resetTempPassword, setResetTempPassword] = useState<string | null>(null);
   
   // OAuth providers state
   const [oauthProviders, setOauthProviders] = useState<EnabledOAuthProvider[]>([]);
@@ -196,7 +197,7 @@ const BuyerAuth = () => {
       if (reason === 'requiresPasswordReset' || errorMsg.includes('reset your password')) {
         toast.error("Please reset your password to continue");
         setShowForgotPassword(true);
-        setForgotPasswordEmail(loginData.identifier.includes('@') ? loginData.identifier : '');
+        setForgotPasswordIdentifier(loginData.identifier);
         return;
       }
       
@@ -236,29 +237,36 @@ const BuyerAuth = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!forgotPasswordEmail) {
-      toast.error("Please enter your email address");
+    if (!forgotPasswordIdentifier) {
+      toast.error("Please enter your email or username");
       return;
     }
 
     setForgotPasswordLoading(true);
+    setResetTempPassword(null);
     try {
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
         body: {
           action: 'forgot-password',
           panelId,
-          email: forgotPasswordEmail,
+          identifier: forgotPasswordIdentifier,
         }
       });
 
       if (error) throw error;
       
-      toast.success(data?.message || "If an account exists with this email, you will receive a password reset link.");
-      setShowForgotPassword(false);
-      setForgotPasswordEmail("");
+      if (data?.tempPassword) {
+        // Show the temp password to the user
+        setResetTempPassword(data.tempPassword);
+        toast.success("Password reset successfully! Save your new temporary password.");
+      } else {
+        toast.success(data?.message || "If an account exists, your password has been reset.");
+        setShowForgotPassword(false);
+        setForgotPasswordIdentifier("");
+      }
     } catch (error: any) {
       console.error('Forgot password error:', error);
-      toast.error("Failed to send reset email. Please try again.");
+      toast.error("Failed to reset password. Please try again.");
     } finally {
       setForgotPasswordLoading(false);
     }
@@ -550,7 +558,10 @@ const BuyerAuth = () => {
       </motion.div>
 
       {/* Forgot Password Dialog */}
-      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+      <Dialog open={showForgotPassword} onOpenChange={(open) => {
+        setShowForgotPassword(open);
+        if (!open) { setResetTempPassword(null); setForgotPasswordIdentifier(""); }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -558,50 +569,92 @@ const BuyerAuth = () => {
               Reset Password
             </DialogTitle>
             <DialogDescription>
-              Enter your email address and we'll send you a link to reset your password.
+              {resetTempPassword 
+                ? "Your password has been reset. Copy your new temporary password below and use it to log in."
+                : "Enter your email address or username to reset your password."
+              }
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="forgot-email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="forgot-email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={forgotPasswordEmail}
-                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                  className="pl-10"
-                  disabled={forgotPasswordLoading}
-                />
+          
+          {resetTempPassword ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg space-y-3">
+                <Label className="text-sm font-medium text-green-700 dark:text-green-300">Your New Temporary Password</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={resetTempPassword}
+                    className="font-mono text-lg bg-white dark:bg-background"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetTempPassword);
+                      toast.success("Password copied!");
+                    }}
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  ⚠️ Please change this password after logging in for security.
+                </p>
               </div>
-            </div>
-            <div className="flex gap-3">
               <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowForgotPassword(false)}
-                className="flex-1"
+                className="w-full"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setResetTempPassword(null);
+                  setForgotPasswordIdentifier("");
+                }}
               >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="flex-1"
-                disabled={forgotPasswordLoading}
-              >
-                {forgotPasswordLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  "Send Reset Link"
-                )}
+                Done - Go to Login
               </Button>
             </div>
-          </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="forgot-identifier">Email or Username</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="forgot-identifier"
+                    type="text"
+                    placeholder="your@email.com or username"
+                    value={forgotPasswordIdentifier}
+                    onChange={(e) => setForgotPasswordIdentifier(e.target.value)}
+                    className="pl-10"
+                    disabled={forgotPasswordLoading}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setShowForgotPassword(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={forgotPasswordLoading}
+                >
+                  {forgotPasswordLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    "Reset Password"
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
       </div>
