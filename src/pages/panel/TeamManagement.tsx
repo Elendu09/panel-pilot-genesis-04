@@ -98,14 +98,29 @@ const RoleCard = memo(({ roleKey, config }: { roleKey: PanelRole; config: typeof
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-1">
-          {config.permissions.map((perm) => (
-            <Badge key={perm} variant="secondary" className="text-[10px]">
-              {perm}
-            </Badge>
-          ))}
+      <CardContent className="space-y-2">
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-1 font-medium">Can access:</p>
+          <div className="flex flex-wrap gap-1">
+            {config.permissions.map((perm) => (
+              <Badge key={perm} variant="secondary" className="text-[10px]">
+                {perm}
+              </Badge>
+            ))}
+          </div>
         </div>
+        {config.lockedPages.length > 0 && (
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-1 font-medium">Locked pages:</p>
+            <div className="flex flex-wrap gap-1">
+              {config.lockedPages.map((page) => (
+                <Badge key={page} variant="outline" className="text-[10px] text-destructive border-destructive/30">
+                  {page}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
