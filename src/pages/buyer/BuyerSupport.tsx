@@ -165,7 +165,7 @@ const BuyerSupport = () => {
 
   useEffect(() => {
     fetchTickets();
-  }, [buyer?.id, panel?.id]);
+  }, [buyer?.id, resolvedPanelId]);
 
   // Fetch chat sessions
   useEffect(() => {
@@ -229,14 +229,14 @@ const BuyerSupport = () => {
   }, [selectedChat?.id]);
 
   const fetchTickets = async () => {
-    if (!buyer?.id || !panel?.id) return;
+    if (!buyer?.id || !resolvedPanelId) return;
     setLoading(true);
     setError(null);
     try {
       const { data, error } = await supabase
         .from('support_tickets')
         .select('*')
-        .eq('panel_id', panel.id)
+        .eq('panel_id', resolvedPanelId)
         .eq('user_id', buyer.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -258,7 +258,7 @@ const BuyerSupport = () => {
       toast({ variant: "destructive", title: "Please fill in all fields" });
       return;
     }
-    if (!buyer?.id || !panel?.id) {
+    if (!buyer?.id || !resolvedPanelId) {
       toast({ variant: "destructive", title: "Error", description: "Session expired. Please refresh and try again." });
       return;
     }
