@@ -3250,7 +3250,10 @@ const ServicesManagement = () => {
 
       {/* Service View Dialog */}
       <ServiceViewDialog
-        service={viewingService}
+        service={viewingService ? {
+          ...viewingService,
+          providerServiceId: viewingService.providerServiceId,
+        } : null}
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
         onEdit={() => {

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   CreditCard, 
   Check, 
@@ -14,7 +16,8 @@ import {
   Sparkles,
   Percent,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  ArrowDownRight
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,7 +61,8 @@ interface CommissionData {
 const plans = [
   {
     name: 'Free',
-    price: 0,
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     period: 'forever',
     description: 'Get started with basic features',
     icon: Zap,
@@ -73,7 +77,8 @@ const plans = [
   },
   {
     name: 'Basic',
-    price: 5,
+    monthlyPrice: 5,
+    yearlyPrice: 50,
     period: 'month',
     description: 'Perfect for growing panels',
     icon: Sparkles,
@@ -91,7 +96,8 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: 15,
+    monthlyPrice: 15,
+    yearlyPrice: 150,
     period: 'month',
     description: 'For serious SMM businesses',
     icon: Crown,
@@ -119,6 +125,9 @@ const Billing = () => {
   const [panelBalance, setPanelBalance] = useState(0);
   const [depositLoading, setDepositLoading] = useState(false);
   const [upgradeLoading, setUpgradeLoading] = useState<string | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [downgradeDialogOpen, setDowngradeDialogOpen] = useState(false);
+  const [pendingDowngradePlan, setPendingDowngradePlan] = useState<string | null>(null);
   const [commissionData, setCommissionData] = useState<CommissionData>({
     commissionRate: 5,
     earnedThisMonth: 0,
@@ -135,6 +144,17 @@ const Billing = () => {
   const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 
   const defaultGateway = availableGateways[0]?.id;
+
+  // Helper to get plan price based on billing cycle
+  const getPlanPrice = (plan: typeof plans[0]) => {
+    if (plan.monthlyPrice === 0) return 0;
+    return billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+  };
+
+  const getYearlySavings = (plan: typeof plans[0]) => {
+    if (plan.monthlyPrice === 0) return 0;
+    return (plan.monthlyPrice * 12) - plan.yearlyPrice;
+  };
 
   useEffect(() => {
     if (panel?.id) {
@@ -343,7 +363,7 @@ const Billing = () => {
     if (!plan) return;
 
     // Free plan - direct upgrade without payment
-    if (plan.price === 0) {
+    if (getPlanPrice(plan) === 0) {
       try {
         const { error } = await supabase
           .from('panel_subscriptions')
@@ -367,7 +387,7 @@ const Billing = () => {
     }
 
     // Check if panel balance covers the plan price — show choice dialog
-    if (panelBalance >= plan.price) {
+    if (panelBalance >= getPlanPrice(plan)) {
       setPendingUpgradePlan(plan);
       setBalanceDialogOpen(true);
       return;
@@ -387,7 +407,7 @@ const Billing = () => {
           action: 'balance-payment',
           panelId: panel.id,
           userId: profile.id,
-          amount: pendingUpgradePlan.price,
+          amount: getPlanPrice(pendingUpgradePlan),
           plan: pendingUpgradePlan.name.toLowerCase(),
         }
       });
@@ -423,7 +443,7 @@ const Billing = () => {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: defaultGateway,
-          amount: plan.price,
+          amount: getPlanPrice(plan),
           panelId: panel.id,
           buyerId: profile.id,
           isOwnerDeposit: true,
@@ -612,7 +632,7 @@ const Billing = () => {
             Your <span className="font-semibold capitalize">{currentPlan}</span> plan has expired. 
             Please renew your subscription to regain full access to your panel features.
           </p>
-          {panelBalance >= (plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 999) && (
+          {panelBalance >= (plans.find(p => p.name.toLowerCase() === currentPlan)?.monthlyPrice || 999) && (
             <Badge className="bg-emerald-500/20 text-emerald-500 text-sm">
               You have ${panelBalance.toFixed(2)} — enough to renew!
             </Badge>
@@ -688,7 +708,7 @@ const Billing = () => {
               <span className="text-sm">Next Billing</span>
             </div>
             <p className="text-2xl lg:text-3xl font-bold">
-              ${plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 0}
+              ${getPlanPrice(plans.find(p => p.name.toLowerCase() === currentPlan) || plans[0])}
             </p>
             <p className="text-xs text-muted-foreground">
               {subscription?.expires_at 
@@ -722,9 +742,23 @@ const Billing = () => {
       </motion.div>
 
 
-      {/* Pricing Plans */}
+      {/* Billing Cycle Toggle + Pricing Plans */}
       <motion.div variants={itemVariants}>
-        <h2 className="text-xl font-bold mb-4">Choose Your Plan</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold">Choose Your Plan</h2>
+          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-2">
+            <Label htmlFor="billing-cycle" className={cn("text-sm cursor-pointer", billingCycle === 'monthly' && "font-semibold")}>Monthly</Label>
+            <Switch 
+              id="billing-cycle"
+              checked={billingCycle === 'yearly'}
+              onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+            />
+            <Label htmlFor="billing-cycle" className={cn("text-sm cursor-pointer", billingCycle === 'yearly' && "font-semibold")}>
+              Yearly
+              <Badge className="ml-2 bg-emerald-500/20 text-emerald-500 text-[10px]">Save up to 17%</Badge>
+            </Label>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan, planIndex) => {
             const Icon = plan.icon;
@@ -774,8 +808,15 @@ const Billing = () => {
                   
                   <CardContent className="space-y-6">
                     <div className="text-center">
-                      <span className="text-4xl font-bold">${plan.price}</span>
-                      <span className="text-muted-foreground">/{plan.period}</span>
+                      <span className="text-4xl font-bold">${getPlanPrice(plan)}</span>
+                      <span className="text-muted-foreground">/{billingCycle === 'yearly' && plan.monthlyPrice > 0 ? 'year' : plan.period}</span>
+                      {billingCycle === 'yearly' && getYearlySavings(plan) > 0 && (
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-xs text-emerald-500 border-emerald-500/30">
+                            Save ${getYearlySavings(plan)}/year
+                          </Badge>
+                        </div>
+                      )}
                     </div>
 
                     {isCurrent && !isExpired && subscription?.expires_at && (
@@ -798,11 +839,18 @@ const Billing = () => {
                       className={cn(
                         "w-full gap-2",
                         isRenewable && "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600",
-                        (isCurrent && !isRenewable || (isDisabled && !isRenewable)) && "bg-muted text-muted-foreground hover:bg-muted"
+                        (isCurrent && !isRenewable || (isDisabled && !isRenewable && !(isLowerTier && isActivePaid))) && "bg-muted text-muted-foreground hover:bg-muted"
                       )}
-                      variant={isRenewable ? 'default' : plan.popular && !isDisabled ? 'default' : 'outline'}
-                      onClick={() => (isRenewable || !isDisabled) && handleUpgrade(plan.name)}
-                      disabled={isDisabled && !isRenewable}
+                      variant={isRenewable ? 'default' : isLowerTier && isActivePaid ? 'outline' : plan.popular && !isDisabled ? 'default' : 'outline'}
+                      onClick={() => {
+                        if (isLowerTier && isActivePaid) {
+                          setPendingDowngradePlan(plan.name.toLowerCase());
+                          setDowngradeDialogOpen(true);
+                        } else if (isRenewable || !isDisabled) {
+                          handleUpgrade(plan.name);
+                        }
+                      }}
+                      disabled={isCurrent && !isRenewable}
                     >
                       {isLoading ? (
                         <>
@@ -817,7 +865,10 @@ const Billing = () => {
                       ) : isCurrent ? (
                         'Current Plan'
                       ) : isLowerTier && isActivePaid ? (
-                        'Downgrade N/A'
+                        <>
+                          <ArrowDownRight className="w-4 h-4" />
+                          Downgrade
+                        </>
                       ) : (
                         <>
                           Upgrade <ArrowUpRight className="w-4 h-4" />
@@ -832,7 +883,51 @@ const Billing = () => {
         </div>
       </motion.div>
 
-      {/* Balance Upgrade Dialog */}
+      {/* Downgrade Confirmation Dialog */}
+      <AlertDialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ArrowDownRight className="w-5 h-5 text-amber-500" />
+              Downgrade Plan?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Your current <span className="font-semibold capitalize">{currentPlan}</span> plan will remain active until{' '}
+                <span className="font-semibold">
+                  {subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'the end of your billing period'}
+                </span>.
+              </p>
+              <p>
+                After that, you'll be switched to the <span className="font-semibold capitalize">{pendingDowngradePlan}</span> plan.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!panel?.id || !pendingDowngradePlan) return;
+                try {
+                  await supabase
+                    .from('panel_subscriptions')
+                    .update({ pending_downgrade: pendingDowngradePlan })
+                    .eq('panel_id', panel.id);
+                  toast({ title: 'Downgrade Scheduled', description: `Your plan will change to ${pendingDowngradePlan} at the end of the current billing period.` });
+                  setDowngradeDialogOpen(false);
+                  setPendingDowngradePlan(null);
+                } catch (err) {
+                  toast({ variant: 'destructive', title: 'Error', description: 'Failed to schedule downgrade.' });
+                }
+              }}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Confirm Downgrade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={balanceDialogOpen} onOpenChange={setBalanceDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -843,7 +938,7 @@ const Billing = () => {
             <AlertDialogDescription className="space-y-2">
               <p>
                 You have <span className="font-semibold text-emerald-500">${panelBalance.toFixed(2)}</span> in your panel balance. 
-                The <span className="font-semibold capitalize">{pendingUpgradePlan?.name}</span> plan costs <span className="font-semibold">${pendingUpgradePlan?.price}/month</span>.
+                The <span className="font-semibold capitalize">{pendingUpgradePlan?.name}</span> plan costs <span className="font-semibold">${pendingUpgradePlan ? getPlanPrice(pendingUpgradePlan) : 0}/{billingCycle}</span>.
               </p>
               <p>Would you like to pay from your balance or use an external payment gateway?</p>
             </AlertDialogDescription>
@@ -871,7 +966,7 @@ const Billing = () => {
               ) : (
                 <Wallet className="w-4 h-4 mr-2" />
               )}
-              Use Balance (${pendingUpgradePlan?.price})
+              Use Balance (${pendingUpgradePlan ? getPlanPrice(pendingUpgradePlan) : 0})
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

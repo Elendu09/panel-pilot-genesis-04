@@ -169,6 +169,21 @@ export const ServiceEditDialog = ({
         image_url: service.image_url || service.imageUrl || "",
       });
       setFixedPrice(service.price || 0);
+
+      // Calculate actual markup from existing price vs original price
+      const origPrice = service.originalPrice || service.price || 0;
+      const currentPrice = service.price || 0;
+      if (origPrice > 0 && currentPrice > 0) {
+        const calculatedMarkup = ((currentPrice - origPrice) / origPrice) * 100;
+        if (calculatedMarkup >= 0 && calculatedMarkup <= 500) {
+          setMarkupPercent(Math.round(calculatedMarkup));
+          setUseFixedPrice(false);
+        } else {
+          // Price doesn't match a reasonable markup — use fixed price mode
+          setUseFixedPrice(true);
+        }
+      }
+
       setSeoData(prev => ({
         ...prev,
         slug: service.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || "",

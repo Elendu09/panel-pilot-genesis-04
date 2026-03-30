@@ -266,7 +266,7 @@ const UserManagement = () => {
 
         <div className="flex items-center gap-2">
           <Badge variant={user.role === 'admin' ? 'destructive' : 'default'} className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
-            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />Panel Owner</>}
+            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />User</>}
           </Badge>
           <Badge variant={user.is_active ? "default" : "secondary"} className={user.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}>
             {user.is_active ? 'Active' : 'Inactive'}
@@ -381,7 +381,7 @@ const UserManagement = () => {
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="panel_owner">Panel Owner</SelectItem>
+                  <SelectItem value="panel_owner">User (Panel Owner)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -507,7 +507,7 @@ const UserManagement = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.role === 'admin' ? 'destructive' : 'default'} className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
-                            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />Panel Owner</>}
+                            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />User</>}
                           </Badge>
                         </TableCell>
                         <TableCell><span className="font-medium">${user.balance?.toFixed(2) || '0.00'}</span></TableCell>
@@ -562,7 +562,7 @@ const UserManagement = () => {
                     <div className="grid grid-cols-3 gap-2 text-sm mb-3">
                       <div>
                         <p className="text-xs text-muted-foreground">Role</p>
-                        <Badge variant="outline" className="text-xs mt-1">{user.role === 'admin' ? 'Admin' : 'Panel Owner'}</Badge>
+                        <Badge variant="outline" className="text-xs mt-1">{user.role === 'admin' ? 'Admin' : 'User'}</Badge>
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Balance</p>
