@@ -534,7 +534,7 @@ const BuyerSupport = () => {
           {/* ===== LIVE CHAT TAB (Twitter-style unified) ===== */}
           <TabsContent value="chat" className="mt-4">
             <Card className="glass-card overflow-hidden">
-              <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+            <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
                 {/* Chat Header */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
@@ -546,6 +546,33 @@ const BuyerSupport = () => {
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Online
                     </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {/* Filter: Active / Archived */}
+                    <Button
+                      variant={chatFilter === 'active' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setChatFilter('active')}
+                    >Active</Button>
+                    <Button
+                      variant={chatFilter === 'archived' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setChatFilter('archived')}
+                    >Archived</Button>
+                    {/* New Chat */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 px-2 gap-1"
+                      onClick={async () => {
+                        const session = await handleStartChat();
+                        if (session) setChatFilter('active');
+                      }}
+                    >
+                      <Plus className="w-3 h-3" />New
+                    </Button>
                   </div>
                   {selectedChat && (
                     <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
