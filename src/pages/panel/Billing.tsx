@@ -742,9 +742,23 @@ const Billing = () => {
       </motion.div>
 
 
-      {/* Pricing Plans */}
+      {/* Billing Cycle Toggle + Pricing Plans */}
       <motion.div variants={itemVariants}>
-        <h2 className="text-xl font-bold mb-4">Choose Your Plan</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold">Choose Your Plan</h2>
+          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-2">
+            <Label htmlFor="billing-cycle" className={cn("text-sm cursor-pointer", billingCycle === 'monthly' && "font-semibold")}>Monthly</Label>
+            <Switch 
+              id="billing-cycle"
+              checked={billingCycle === 'yearly'}
+              onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+            />
+            <Label htmlFor="billing-cycle" className={cn("text-sm cursor-pointer", billingCycle === 'yearly' && "font-semibold")}>
+              Yearly
+              <Badge className="ml-2 bg-emerald-500/20 text-emerald-500 text-[10px]">Save up to 17%</Badge>
+            </Label>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((plan, planIndex) => {
             const Icon = plan.icon;
