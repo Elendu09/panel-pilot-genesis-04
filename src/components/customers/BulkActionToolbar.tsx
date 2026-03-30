@@ -58,8 +58,8 @@ export const BulkActionToolbar = ({
             )}
             
             {onAdjustBalance && (
-              <Button variant="ghost" size="icon" onClick={onAdjustBalance} className="h-8 w-8 shrink-0">
-                <Wallet className="w-4 h-4" />
+              <Button variant="ghost" size="icon" onClick={onAdjustBalance} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+                <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
             )}
             
