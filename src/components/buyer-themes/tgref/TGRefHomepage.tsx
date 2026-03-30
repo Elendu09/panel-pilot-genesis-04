@@ -211,6 +211,15 @@ export const TGRefHomepage = ({
             style={{ maxWidth: containerMax }}
             {...(enableAnimations ? { variants: containerVariants, initial: "hidden", animate: "visible" } : {})}
           >
+            {customization.enableHeroImage && customization.heroImageUrl ? (
+              <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="flex-1 text-left">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
+                    style={{ backgroundColor: `${primary}1a`, border: `1px solid ${primary}4d` }}>
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
+                    <span className="text-sm" style={{ color: primary }}>system.status: online</span>
+                  </div>
+            ) : (
             <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="text-center max-w-4xl mx-auto">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
                 style={{ backgroundColor: `${primary}1a`, border: `1px solid ${primary}4d` }}>

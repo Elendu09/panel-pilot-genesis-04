@@ -321,43 +321,57 @@ export const AliPanelHomepage = ({
                 </div>
               </motion.div>
 
-              {/* Right Side - Floating Icons & Comparison */}
-              <motion.div
-                {...(enableAnimations ? { initial: { opacity: 0, x: 50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6, delay: 0.2 } } : {})}
-                className="relative hidden lg:block"
-              >
-                <div className="relative w-full h-[400px]">
-                  {floatingIcons.map((item, idx) => (
+              {/* Right Side - Hero Image or Floating Icons */}
+              {customization.enableHeroImage && customization.heroImageUrl ? (
+                <motion.div
+                  {...(enableAnimations ? { initial: { opacity: 0, x: 50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6, delay: 0.2 } } : {})}
+                  className="relative"
+                >
+                  <img 
+                    src={customization.heroImageUrl} 
+                    alt="Hero" 
+                    className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+                    loading="eager"
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  {...(enableAnimations ? { initial: { opacity: 0, x: 50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6, delay: 0.2 } } : {})}
+                  className="relative hidden lg:block"
+                >
+                  <div className="relative w-full h-[400px]">
+                    {floatingIcons.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        {...(enableAnimations ? { initial: { opacity: 0, scale: 0 }, animate: { opacity: 1, scale: 1 }, transition: { delay: 0.5 + item.delay, type: 'spring' } } : {})}
+                        className="absolute left-1/2 top-1/2 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm"
+                        style={{ transform: `translate(${item.x}px, ${item.y}px)`, backgroundColor: `${item.color}20`, border: `1px solid ${item.color}40` }}
+                      >
+                        <item.icon className="w-7 h-7" style={{ color: item.color }} />
+                      </motion.div>
+                    ))}
+                    
                     <motion.div
-                      key={idx}
-                      {...(enableAnimations ? { initial: { opacity: 0, scale: 0 }, animate: { opacity: 1, scale: 1 }, transition: { delay: 0.5 + item.delay, type: 'spring' } } : {})}
-                      className="absolute left-1/2 top-1/2 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg backdrop-blur-sm"
-                      style={{ transform: `translate(${item.x}px, ${item.y}px)`, backgroundColor: `${item.color}20`, border: `1px solid ${item.color}40` }}
+                      {...(enableAnimations ? { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, transition: { delay: 0.8 } } : {})}
+                      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 rounded-2xl backdrop-blur-xl"
+                      style={{ backgroundColor: `${surfaceColor}cc`, border: `1px solid ${primary}26` }}
                     >
-                      <item.icon className="w-7 h-7" style={{ color: item.color }} />
-                    </motion.div>
-                  ))}
-                  
-                  <motion.div
-                    {...(enableAnimations ? { initial: { opacity: 0, scale: 0.8 }, animate: { opacity: 1, scale: 1 }, transition: { delay: 0.8 } } : {})}
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 p-6 rounded-2xl backdrop-blur-xl"
-                    style={{ backgroundColor: `${surfaceColor}cc`, border: `1px solid ${primary}26` }}
-                  >
-                    <h3 className="text-lg font-bold mb-4 text-center">{t('buyer.features.whyChooseUs') || 'Why Choose Us?'}</h3>
-                    <div className="space-y-3">
-                      {comparisonItems.map((item) => (
-                        <div key={item.feature} className="flex items-center justify-between gap-8 text-sm">
-                          <span style={{ color: mutedColor }}>{item.feature}</span>
-                          <div className="flex items-center gap-4">
-                            <CheckCircle className="w-5 h-5 text-green-500" />
-                            {item.others ? <CheckCircle className="w-5 h-5 text-gray-500" /> : <X className="w-5 h-5 text-red-500" />}
+                      <h3 className="text-lg font-bold mb-4 text-center">{t('buyer.features.whyChooseUs') || 'Why Choose Us?'}</h3>
+                      <div className="space-y-3">
+                        {comparisonItems.map((item) => (
+                          <div key={item.feature} className="flex items-center justify-between gap-8 text-sm">
+                            <span style={{ color: mutedColor }}>{item.feature}</span>
+                            <div className="flex items-center gap-4">
+                              <CheckCircle className="w-5 h-5 text-green-500" />
+                              {item.others ? <CheckCircle className="w-5 h-5 text-gray-500" /> : <X className="w-5 h-5 text-red-500" />}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </motion.div>
-                </div>
-              </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )}
             </div>
           </div>
         </section>
