@@ -276,6 +276,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
       setSession(newSession);
       setBuyer(data.user as BuyerUser);
 
+      // Persist panelId for reliable fallback in support/chat pages
+      localStorage.setItem('current_panel_id', panelId);
       toast({ title: 'Welcome back!', description: `Logged in as ${data.user.email}` });
       return { error: null };
     } catch (err: any) {
@@ -363,6 +365,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
       setSession(newSession);
       setBuyer(data.user as BuyerUser);
 
+      // Persist panelId for reliable fallback in support/chat pages
+      localStorage.setItem('current_panel_id', panelId);
       toast({ title: 'Account created!', description: 'Welcome to the panel' });
       return { error: null };
     } catch (err: any) {
