@@ -612,7 +612,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   
   // Creator & Blog Platforms
   patreon: { icon: PatreonIcon, label: "Patreon", color: "#FF424D", bgColor: "bg-orange-500" },
-  medium: { icon: MediumIcon, label: "Medium", color: "#000000", bgColor: "bg-black" },
+  medium: { icon: MediumIcon, label: "Medium", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   
   // Gaming Platforms
   roblox: { icon: RobloxIcon, label: "Roblox", color: "#E2231A", bgColor: "bg-red-500" },
