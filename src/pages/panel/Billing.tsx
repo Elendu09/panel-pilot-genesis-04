@@ -407,8 +407,13 @@ const Billing = () => {
       return;
     }
 
-    // Not enough balance — go directly to payment gateway
-    await proceedWithGatewayPayment(plan);
+    // Not enough balance — show gateway selector
+    if (supportedGateways.length === 1) {
+      await proceedWithGatewayPayment(plan, supportedGateways[0].id);
+    } else {
+      setPendingGatewayPlan(plan);
+      setGatewayDialogOpen(true);
+    }
   };
 
   const handleBalanceUpgrade = async () => {
