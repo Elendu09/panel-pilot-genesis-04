@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { 
   CreditCard, 
   Check, 
@@ -14,7 +16,8 @@ import {
   Sparkles,
   Percent,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  ArrowDownRight
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from '@/contexts/AuthContext';
