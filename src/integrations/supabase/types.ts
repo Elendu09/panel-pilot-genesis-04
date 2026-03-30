@@ -221,6 +221,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       api_logs: {
@@ -488,6 +495,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_operation_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
           {
@@ -1531,6 +1545,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "invoices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       newsletter_subscribers: {
@@ -2016,6 +2037,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "panel_notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       panel_settings: {
@@ -2457,6 +2485,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "panels_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -3636,6 +3671,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "service_access_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "service_access_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
@@ -3946,6 +3988,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "services_hidden_by_fkey"
+            columns: ["hidden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "services_panel_id_fkey"
             columns: ["panel_id"]
             isOneToOne: false
@@ -4039,6 +4088,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -4590,6 +4646,87 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      profiles_safe: {
+        Row: {
+          active_panel_id: string | null
+          avatar_url: string | null
+          balance: number | null
+          created_at: string | null
+          email: string | null
+          email_verified_at: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          mfa_backup_codes: Json | null
+          mfa_verified: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_step: number | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          theme_preference: string | null
+          total_spent: number | null
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          active_panel_id?: string | null
+          avatar_url?: string | null
+          balance?: number | null
+          created_at?: string | null
+          email?: string | null
+          email_verified_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          mfa_backup_codes?: Json | null
+          mfa_verified?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          theme_preference?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          active_panel_id?: string | null
+          avatar_url?: string | null
+          balance?: number | null
+          created_at?: string | null
+          email?: string | null
+          email_verified_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          mfa_backup_codes?: Json | null
+          mfa_verified?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
+          role?: Database["public"]["Enums"]["user_role"] | null
+          theme_preference?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_panel_id_fkey"
+            columns: ["active_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_active_panel_id_fkey"
+            columns: ["active_panel_id"]
+            isOneToOne: false
+            referencedRelation: "panels_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
