@@ -1004,6 +1004,54 @@ const Integrations = () => {
         </CardContent>
       </Card>
 
+      {/* Email / SMTP Integration Card */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-blue-500" />
+            Email / SMTP
+          </CardTitle>
+          <CardDescription>
+            Configure SMTP to send password reset and verification emails to your tenant users
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className={cn(
+            "flex items-center justify-between p-4 rounded-lg border transition-all",
+            settings?.integrations?.smtp?.host
+              ? "bg-emerald-500/5 border-emerald-500/30"
+              : "bg-muted/20 border-border"
+          )}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <Send className="w-5 h-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">SMTP Configuration</p>
+                <p className="text-xs text-muted-foreground">
+                  {settings?.integrations?.smtp?.host
+                    ? `Connected: ${settings.integrations.smtp.host}`
+                    : "Not configured — temp passwords shown in UI only"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {settings?.integrations?.smtp?.host && (
+                <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">Connected</Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/panel/settings'}
+              >
+                <Settings2 className="w-4 h-4 mr-1" />
+                Configure
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* OAuth Configuration Dialog */}
       <Dialog open={oauthDialogOpen} onOpenChange={setOauthDialogOpen}>
         <DialogContent className="glass-card max-w-lg">

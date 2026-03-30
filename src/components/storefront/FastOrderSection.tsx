@@ -205,7 +205,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   const [isOrdering, setIsOrdering] = useState(false);
   
   // Drip feed state
-  const [dripFeedRuns, setDripFeedRuns] = useState(1);
+  const [dripFeedEnabled, setDripFeedEnabled] = useState(false);
+  const [dripFeedRuns, setDripFeedRuns] = useState(2);
   const [dripFeedInterval, setDripFeedInterval] = useState(60);
   
   // Payment state - use available payment gateways hook for consistent behavior with deposits

@@ -115,6 +115,7 @@ const BuyerNewOrder = () => {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   
   // Drip feed state
+  const [dripFeedEnabled, setDripFeedEnabled] = useState(false);
   const [dripFeedRuns, setDripFeedRuns] = useState<number>(1);
   const [dripFeedInterval, setDripFeedInterval] = useState<number>(60);
   
@@ -400,7 +401,7 @@ const BuyerNewOrder = () => {
           price: totalPrice,
           promoCode: appliedPromo?.code,
           notes: appliedPromo ? `Promo: ${appliedPromo.code}` : null,
-          ...(((selectedService as any).dripfeed_available && dripFeedRuns > 1) ? {
+          ...(dripFeedEnabled && (selectedService as any).dripfeed_available && dripFeedRuns >= 2 ? {
             runs: dripFeedRuns,
             interval: dripFeedInterval,
           } : {}),
@@ -779,38 +780,55 @@ const BuyerNewOrder = () => {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3 p-4 rounded-lg bg-primary/5 border border-primary/20"
+                      className="space-y-3"
                     >
-                      <Label className="text-sm font-medium flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-primary" />
-                        Drip Feed (Gradual Delivery)
-                      </Label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Runs</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={dripFeedRuns}
-                            onChange={(e) => setDripFeedRuns(parseInt(e.target.value) || 1)}
-                            className="h-10 bg-background/50 font-mono"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Interval (min)</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={dripFeedInterval}
-                            onChange={(e) => setDripFeedInterval(parseInt(e.target.value) || 60)}
-                            className="h-10 bg-background/50 font-mono"
-                          />
-                        </div>
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <Label className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                          <Layers className="w-4 h-4 text-primary" />
+                          Enable Drip Feed
+                        </Label>
+                        <Switch
+                          checked={dripFeedEnabled}
+                          onCheckedChange={setDripFeedEnabled}
+                        />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {dripFeedRuns} runs × {quantity} quantity every {dripFeedInterval} minutes
-                      </p>
+                      <AnimatePresence>
+                        {dripFeedEnabled && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="space-y-3 p-4 rounded-lg bg-primary/5 border border-primary/20"
+                          >
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Runs</Label>
+                                <Input
+                                  type="number"
+                                  min={2}
+                                  max={100}
+                                  value={dripFeedRuns < 2 ? 2 : dripFeedRuns}
+                                  onChange={(e) => setDripFeedRuns(Math.max(2, parseInt(e.target.value) || 2))}
+                                  className="h-10 bg-background/50 font-mono"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Interval (min)</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={dripFeedInterval}
+                                  onChange={(e) => setDripFeedInterval(parseInt(e.target.value) || 60)}
+                                  className="h-10 bg-background/50 font-mono"
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {dripFeedRuns} runs × {quantity} quantity every {dripFeedInterval} minutes
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                 </AnimatePresence>
