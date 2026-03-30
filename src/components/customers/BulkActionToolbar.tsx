@@ -52,8 +52,8 @@ export const BulkActionToolbar = ({
             <div className="w-px h-6 bg-border mx-0.5 sm:mx-1 shrink-0" />
             
             {onBulkEdit && (
-              <Button variant="ghost" size="icon" onClick={onBulkEdit} className="h-8 w-8 shrink-0">
-                <Edit className="w-4 h-4" />
+              <Button variant="ghost" size="icon" onClick={onBulkEdit} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+                <Edit className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Button>
             )}
             
