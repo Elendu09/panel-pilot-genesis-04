@@ -987,7 +987,7 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
   });
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, api_key: _ak3, ...safeUser } = newUser;
+  const { password_hash, password_temp, api_key: _ak3, mfa_secret: _ms2, ...safeUser } = newUser;
   
   return jsonResponse({ 
     success: true, 
