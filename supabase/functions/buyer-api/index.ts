@@ -807,3 +807,78 @@ function formatStatus(status: string): string {
   };
   return statusMap[status?.toLowerCase()] || status || 'Pending';
 }
+
+// ========= CART HANDLERS =========
+
+async function handleCartList(supabase: any, panelId: string, buyerId: string | null) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { data, error } = await supabase
+    .from('buyer_cart')
+    .select('*')
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to fetch cart');
+  return jsonResponse({ items: data || [] });
+}
+
+async function handleCartAdd(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { serviceId, quantity, targetUrl } = params;
+  if (!serviceId || !quantity || !targetUrl) return errorResponse('Missing serviceId, quantity, or targetUrl');
+  
+  const { data, error } = await supabase
+    .from('buyer_cart')
+    .insert({ buyer_id: buyerId, panel_id: panelId, service_id: serviceId, quantity, target_url: targetUrl })
+    .select()
+    .single();
+  if (error) {
+    console.error('[buyer-api] cart-add error:', error);
+    return errorResponse('Failed to add to cart');
+  }
+  return jsonResponse({ id: data.id, item: data });
+}
+
+async function handleCartUpdate(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { itemId, quantity, targetUrl } = params;
+  if (!itemId) return errorResponse('Missing itemId');
+
+  const updateData: any = {};
+  if (quantity !== undefined) updateData.quantity = quantity;
+  if (targetUrl !== undefined) updateData.target_url = targetUrl;
+
+  const { error } = await supabase
+    .from('buyer_cart')
+    .update(updateData)
+    .eq('id', itemId)
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to update cart item');
+  return jsonResponse({ success: true });
+}
+
+async function handleCartRemove(supabase: any, panelId: string, buyerId: string | null, params: any) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { itemId } = params;
+  if (!itemId) return errorResponse('Missing itemId');
+
+  const { error } = await supabase
+    .from('buyer_cart')
+    .delete()
+    .eq('id', itemId)
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to remove cart item');
+  return jsonResponse({ success: true });
+}
+
+async function handleCartClear(supabase: any, panelId: string, buyerId: string | null) {
+  if (!buyerId) return errorResponse('Buyer ID required');
+  const { error } = await supabase
+    .from('buyer_cart')
+    .delete()
+    .eq('buyer_id', buyerId)
+    .eq('panel_id', panelId);
+  if (error) return errorResponse('Failed to clear cart');
+  return jsonResponse({ success: true });
+}
