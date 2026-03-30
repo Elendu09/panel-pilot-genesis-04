@@ -373,6 +373,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   const signOut = () => {
     clearSession();
+    setNeedsMfaChallenge(false);
+    setPendingMfaSession(null);
     toast({ title: 'Signed out successfully' });
   };
 
@@ -382,9 +384,41 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     return !result.error;
   };
 
+  const handleMfaVerified = () => {
+    if (!pendingMfaSession) return;
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+    const newSession: BuyerSession = {
+      buyerId: pendingMfaSession.buyerId,
+      panelId,
+      token: pendingMfaSession.token,
+      expiresAt
+    };
+    localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify(newSession));
+    setSession(newSession);
+    setNeedsMfaChallenge(false);
+    // Fetch buyer data now
+    fetchBuyer(pendingMfaSession.buyerId, pendingMfaSession.token);
+    setPendingMfaSession(null);
+  };
+
+  const handleMfaCancelled = () => {
+    setNeedsMfaChallenge(false);
+    setPendingMfaSession(null);
+  };
+
   return (
     <BuyerAuthContext.Provider value={{ buyer, loading, panelId, signIn, signUp, signOut, refreshBuyer, login, getToken }}>
       {children}
+      {needsMfaChallenge && pendingMfaSession && (
+        <BuyerMfaChallenge
+          open={needsMfaChallenge}
+          buyerId={pendingMfaSession.buyerId}
+          panelId={panelId}
+          token={pendingMfaSession.token}
+          onVerified={handleMfaVerified}
+          onCancel={handleMfaCancelled}
+        />
+      )}
     </BuyerAuthContext.Provider>
   );
 }
