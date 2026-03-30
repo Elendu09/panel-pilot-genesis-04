@@ -156,6 +156,7 @@ serve(async (req) => {
         response = await handleCancel(supabase, panelId, params);
         break;
       case 'get-orders':
+      case 'orders':
         response = await handleGetOrders(supabase, panelId, buyerId);
         break;
       case 'get-order':
