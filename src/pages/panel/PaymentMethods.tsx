@@ -15,11 +15,23 @@ import { cn } from "@/lib/utils";
 import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, GenericPaymentIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
 import {
   AdyenIcon, CheckoutComIcon, WorldpayIcon, AuthorizeNetIcon, TwoCheckoutIcon, MollieIcon, DLocalIcon, RapydIcon,
+  BraintreeIcon, PayUIcon, PaytmIcon, CCAvenueIcon, PaddleIcon, GumroadIcon, FastSpringIcon, RecurlyIcon, ChargebeeIcon,
+  TwoCTwoPIcon, PayGateIcon, EbanxIcon, PagSeguroIcon, NuveiIcon, BlueSnapIcon, CybersourceIcon, PayFastIcon,
+  ThawaniIcon, TapIcon, MoyasarIcon, HyperPayIcon, BenefitIcon, STCPayIcon, FawryIcon, KashierIcon, AcceptPaymobIcon,
+  IPayAfricaIcon, YocoIcon, CellulantIcon, DPOGroupIcon, PesapalIcon, HubtelIcon, AZAFinanceIcon, FlywireIcon, BokuIcon,
   MercadoPagoIcon, IyzicoIcon, PaymobIcon, XenditIcon, MidtransIcon, GCashIcon, GrabPayIcon, OpayIcon, MoovIcon, ChipperIcon, PagaIcon, RemitaIcon, InterswitchIcon, MTNMoMoIcon, MPesaIcon,
+  ToyyibPayIcon, BillplzIcon, PayHereIcon, BkashIcon, SSLCommerzIcon, ESewaIcon, KhaltiIcon, JazzCashIcon, EasypaisaIcon,
+  FlouciIcon, CinetPayIcon, PayDunyaIcon, CampayIcon, NotchPayIcon, WaveIcon, TigoMoneyIcon, AirtelMoneyIcon,
+  UPIIcon, PhonePeIcon, DANAIcon, OVOIcon, ShopeePayIcon, TrueMoneyIcon, PromptPayIcon,
+  KakaoPayIcon, TossPaymentsIcon, LinePayIcon, KonbiniIcon, PayPayIcon, AuPayIcon, VNPayIcon, MoMoVNIcon, ZaloPayIcon,
   NetellerIcon, WebMoneyIcon, PayoneerIcon, AlipayIcon, WeChatPayIcon, RevolutIcon, VenmoIcon, ZelleIcon,
+  PaySeraIcon, PaysafecardIcon, CashAppIcon, ApplePayIcon, GooglePayIcon, SamsungPayIcon, AmazonPayIcon, ShopPayIcon,
   WireTransferIcon, IDealIcon, BancontactIcon, BoletoIcon, PIXIcon,
+  TrustlyIcon, SofortIcon, GiropayIcon, EPSIcon, Przelewy24Icon, MultiBancoIcon, OXXOIcon, SPEIIcon,
   PlisioIcon, CoinPaymentsIcon, TripleAIcon, BitPayIcon, BlockonomicsIcon, OpenNodeIcon, MixPayIcon, CryptocloudIcon, OxapayIcon, SpicePayIcon, CryptomusIcon, HeleketIcon,
+  UtrustIcon, ConfirmoIcon, SpeedIcon, GoURLIcon, B2BinPayIcon, CoinremitterIcon, CoinsPaidIcon, SpectrocoinIcon, TransakIcon, MoonPayIcon, SimplexIcon, RampIcon, SardineIcon,
   KlarnaIcon, AfterpayIcon, TabbyIcon, TamaraIcon, SezzleIcon,
+  AffirmIcon, ZipPayIcon, SplititIcon, LaybuyIcon, OpenpayIcon, AtomeIcon, HoolahIcon, PaceIcon,
 } from "@/components/payment/PaymentIconsExtended";
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
