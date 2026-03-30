@@ -1130,6 +1130,23 @@ const gatewaySetupSteps: Record<string, string[]> = {
                 )}
                 
                 <button
+                  onClick={() => {
+                    setEditingManual(null);
+                    setManualForm({ 
+                      title: "Wire Transfer", 
+                      bankDetails: "Bank Name: \nAccount Name: \nAccount Number: \nRouting/SWIFT: ", 
+                      instructions: "1. Transfer the exact amount to the bank details above\n2. Include your username as reference\n3. Send proof of payment to support\n4. Your account will be credited within 1-2 business days", 
+                      processingTime: "1-2 business days" 
+                    });
+                    setManualDialogOpen(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-muted/50 transition-colors text-sm border border-dashed border-border/50 hover:border-emerald-500/50"
+                >
+                  <Building2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-emerald-600 dark:text-emerald-400">Quick Add: Wire Transfer</span>
+                </button>
+
+                <button
                   onClick={() => openManualDialog()}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-muted/50 transition-colors text-primary text-sm border border-dashed border-border/50 hover:border-primary/50"
                 >
