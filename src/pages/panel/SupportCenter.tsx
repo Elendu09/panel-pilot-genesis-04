@@ -24,7 +24,11 @@ import {
   Inbox,
   Book,
   MessagesSquare,
-  ArrowLeft
+  ArrowLeft,
+  Trash2,
+  Edit,
+  GripVertical,
+  HelpCircle
 } from "lucide-react";
 import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
