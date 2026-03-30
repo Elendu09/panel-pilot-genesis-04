@@ -403,11 +403,6 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
       
       if (hashB64 === storedHashB64) return true;
       
-      // Fallback: try hex comparison in case of encoding mismatch
-      const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
-      const storedHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
-      if (hashHex === storedHex) return true;
-      
       return false;
     }
     
@@ -1067,19 +1062,38 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
     });
   }
 
-  if (!email) {
-    return jsonResponse({ error: 'Email is required' });
+  const identifier = email || body.identifier;
+  if (!identifier) {
+    return jsonResponse({ error: 'Email or username is required' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedIdentifier = identifier.trim().toLowerCase();
+  const isEmail = trimmedIdentifier.includes('@');
 
-  // Find user by email
-  const { data: user, error: queryError } = await supabaseAdmin
-    .from('client_users')
-    .select('id, email, full_name')
-    .eq('email', normalizedEmail)
-    .eq('panel_id', panelId)
-    .maybeSingle();
+  let user: any = null;
+  let queryError: any = null;
+
+  if (isEmail) {
+    // Find user by email
+    const result = await supabaseAdmin
+      .from('client_users')
+      .select('id, email, full_name')
+      .eq('email', trimmedIdentifier)
+      .eq('panel_id', panelId)
+      .maybeSingle();
+    user = result.data;
+    queryError = result.error;
+  } else {
+    // Find user by username
+    const result = await supabaseAdmin
+      .from('client_users')
+      .select('id, email, full_name')
+      .ilike('username', trimmedIdentifier)
+      .eq('panel_id', panelId)
+      .maybeSingle();
+    user = result.data;
+    queryError = result.error;
+  }
 
   if (queryError) {
     console.error('Database query error:', queryError);
@@ -1119,13 +1133,11 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
 
   console.log('Password reset for user:', user.id);
 
-  // In production, you would send an email here with the new password
-  // For now, we just log it and return success
-  console.log(`Password reset - Email: ${user.email}, New Password: [REDACTED]`);
-
+  // Return the temp password to show in the UI
   return jsonResponse({ 
     success: true, 
-    message: 'If an account exists with this email, you will receive a password reset link.'
+    tempPassword: newPassword,
+    message: 'Your password has been reset. Please save your new temporary password and change it after logging in.'
   });
 }
 
