@@ -970,7 +970,14 @@ const Billing = () => {
               variant="outline"
               onClick={() => {
                 setBalanceDialogOpen(false);
-                if (pendingUpgradePlan) proceedWithGatewayPayment(pendingUpgradePlan);
+                if (pendingUpgradePlan) {
+                  if (supportedGateways.length === 1) {
+                    proceedWithGatewayPayment(pendingUpgradePlan, supportedGateways[0].id);
+                  } else {
+                    setPendingGatewayPlan(pendingUpgradePlan);
+                    setGatewayDialogOpen(true);
+                  }
+                }
               }}
               disabled={balancePaymentLoading}
             >
