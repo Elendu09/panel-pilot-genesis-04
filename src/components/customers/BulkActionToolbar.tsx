@@ -63,16 +63,16 @@ export const BulkActionToolbar = ({
               </Button>
             )}
             
-            <Button variant="ghost" size="icon" onClick={onSendEmail} className="h-8 w-8 shrink-0">
-              <Mail className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onSendEmail} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+              <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={onApplyDiscount} className="h-8 w-8 shrink-0">
-              <Percent className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onApplyDiscount} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+              <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={onExport} className="h-8 w-8 shrink-0">
-              <Download className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={onExport} className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
             
             <div className="w-px h-6 bg-border mx-0.5 sm:mx-1 shrink-0" />
