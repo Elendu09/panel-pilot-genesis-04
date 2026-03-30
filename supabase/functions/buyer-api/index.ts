@@ -295,7 +295,7 @@ async function forwardOrderToProvider(
 
 // Add new order — with balance check & deduction
 async function handleAddOrder(supabase: any, panelId: string, buyerId: string | null, params: BuyerApiRequest) {
-  const { service, link, quantity, comments } = params;
+  const { service, link, quantity, comments, runs, interval, delay } = params;
 
   if (!service) return errorResponse("Service ID is required");
   if (!link) return errorResponse("Link is required");
