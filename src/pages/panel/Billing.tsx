@@ -39,6 +39,7 @@ import {
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
+import { GatewaySelectDialog } from '@/components/billing/GatewaySelectDialog';
 import { usePanel } from '@/hooks/usePanel';
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
