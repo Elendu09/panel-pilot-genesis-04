@@ -61,7 +61,8 @@ interface CommissionData {
 const plans = [
   {
     name: 'Free',
-    price: 0,
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     period: 'forever',
     description: 'Get started with basic features',
     icon: Zap,
@@ -76,7 +77,8 @@ const plans = [
   },
   {
     name: 'Basic',
-    price: 5,
+    monthlyPrice: 5,
+    yearlyPrice: 50,
     period: 'month',
     description: 'Perfect for growing panels',
     icon: Sparkles,
@@ -94,7 +96,8 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: 15,
+    monthlyPrice: 15,
+    yearlyPrice: 150,
     period: 'month',
     description: 'For serious SMM businesses',
     icon: Crown,
