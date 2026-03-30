@@ -524,6 +524,7 @@ const AdminOverview = () => {
         </Card>
       </motion.div>
 
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card data-testid="card-recent-activity">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
