@@ -616,7 +616,7 @@ const ServicesManagement = () => {
           query = query.order('name', { ascending: true });
           break;
         default:
-          query = query.order('display_order', { ascending: true });
+          query = query.order('sort_order', { ascending: true, nullsFirst: false }).order('display_order', { ascending: true });
       }
 
       // Pagination with range
@@ -819,18 +819,19 @@ const ServicesManagement = () => {
       const newIndex = services.findIndex((item) => item.id === over.id);
       
       const newOrder = arrayMove(services, oldIndex, newIndex);
+      // Keep displayOrder (service ID) stable — only update visual sort position
       const updatedOrder = newOrder.map((item, index) => ({
         ...item,
-        displayOrder: index + 1,
+        sortOrder: index + 1,
       }));
       
       // Optimistic update
       setServices(updatedOrder);
       
-      // Queue the database update (debounced)
+      // Queue the database update (debounced) — updates sort_order, NOT display_order
       const updates = updatedOrder.map((s, idx) => ({
         id: s.id,
-        display_order: idx + 1,
+        display_order: idx + 1, // This maps to sort_order in bulkUpdateDisplayOrder
       }));
       setPendingOrderUpdates(updates);
     }
@@ -1758,9 +1759,20 @@ const ServicesManagement = () => {
         });
       }
 
-      // Step 4: Build update and insert arrays
+      // Step 4: Get current max display_order for stable service IDs
+      const { data: maxData } = await supabase
+        .from('services')
+        .select('display_order')
+        .eq('panel_id', panel.id)
+        .order('display_order', { ascending: false })
+        .limit(1)
+        .single();
+      const maxDisplayOrder = maxData?.display_order || 0;
+
+      // Step 5: Build update and insert arrays
       const toUpdate: any[] = [];
       const toInsert: any[] = [];
+      let insertIdx = 0;
 
       servicesToImport.forEach((service, idx) => {
         const markupPercent = markups[service.id] ?? 25;
@@ -1784,7 +1796,6 @@ const ServicesManagement = () => {
           min_quantity: service.minQty || 100,
           max_quantity: service.maxQty || 10000,
           is_active: true,
-          display_order: activeCount + idx + 1,
           features: JSON.stringify({ 
             original_service_id: service.id, 
             provider_name: providerName || 'Direct',
@@ -1795,8 +1806,12 @@ const ServicesManagement = () => {
 
         const existingId = existingMap.get(provServiceIdStr);
         if (existingId) {
-          toUpdate.push({ ...serviceData, id: existingId });
+          // Don't change display_order on updates (keep stable service ID)
+          const { display_order, ...updateData } = serviceData;
+          toUpdate.push({ ...updateData, id: existingId });
         } else {
+          insertIdx++;
+          serviceData.display_order = maxDisplayOrder + insertIdx;
           toInsert.push(serviceData);
         }
       });

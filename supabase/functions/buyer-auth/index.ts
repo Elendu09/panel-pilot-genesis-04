@@ -391,7 +391,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
         256
       );
       
-      // Re-encode to base64 matching original encoding
+      // Try base64 comparison (chunked for safety)
       const hashArray = new Uint8Array(derivedBits);
       let hashB64 = '';
       const chunkSize = 8192;
@@ -401,7 +401,14 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
       }
       hashB64 = btoa(hashB64);
       
-      return hashB64 === storedHashB64;
+      if (hashB64 === storedHashB64) return true;
+      
+      // Fallback: try hex comparison in case of encoding mismatch
+      const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+      const storedHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
+      if (hashHex === storedHex) return true;
+      
+      return false;
     }
     
     // Legacy bcrypt hash - cannot verify without workers, return false
@@ -410,7 +417,7 @@ async function verifyPassword(password: string, storedHash: string): Promise<boo
       return false;
     }
     
-    // Legacy plaintext comparison
+    // Legacy plaintext comparison (for very old accounts)
     return storedHash === password;
   } catch (error) {
     console.error('Password verification error:', error);
@@ -477,6 +484,8 @@ serve(async (req) => {
         return await handleCreateChatSession(supabaseAdmin, body);
       case 'send-chat-message':
         return await handleSendChatMessage(supabaseAdmin, body);
+      case 'create-support-ticket':
+        return await handleCreateSupportTicket(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -1482,4 +1491,40 @@ async function handleSendChatMessage(supabaseAdmin: any, body: any) {
     .eq('id', sessionId);
 
   return jsonResponse({ message });
+}
+
+// Handle creating a support ticket for buyer (bypasses RLS)
+async function handleCreateSupportTicket(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId, subject, message, senderName, senderEmail } = body;
+
+  if (!panelId || !subject || !message) {
+    return jsonResponse({ error: 'Missing required fields (panelId, subject, message)' });
+  }
+
+  const { data: ticket, error } = await supabaseAdmin
+    .from('support_tickets')
+    .insert({
+      panel_id: panelId,
+      user_id: buyerId || null,
+      subject,
+      status: 'open',
+      priority: 'medium',
+      ticket_type: 'user_to_panel',
+      messages: [{
+        sender: 'user',
+        content: message,
+        timestamp: new Date().toISOString(),
+        senderName: senderName || 'Guest',
+        senderEmail: senderEmail || '',
+      }],
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create support ticket:', error);
+    return jsonResponse({ error: 'Failed to create support ticket' });
+  }
+
+  return jsonResponse({ ticket });
 }

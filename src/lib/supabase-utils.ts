@@ -37,6 +37,7 @@ export async function fetchAllServices(
     }
     
     query = query
+      .order('sort_order', { ascending: true, nullsFirst: false })
       .order('display_order', { ascending: true })
       .range(from, from + SUPABASE_PAGE_SIZE - 1);
     

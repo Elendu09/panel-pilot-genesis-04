@@ -130,6 +130,8 @@ const BuyerSupport = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
+  const [showAIChat, setShowAIChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // FAQ state
@@ -261,12 +263,19 @@ const BuyerSupport = () => {
     setSubmitting(true);
     try {
       const initialMessage = { sender: 'buyer' as const, content: newTicket.message, timestamp: new Date().toISOString() };
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert([{ panel_id: panel.id, user_id: buyer.id, subject: newTicket.subject, priority: newTicket.priority, ticket_type: 'user_to_panel', status: 'open', messages: [initialMessage] as unknown as any }])
-        .select()
-        .single();
-      if (error) throw new Error(error.message || 'Failed to create ticket');
+      // Route through edge function to bypass RLS
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'create-support-ticket',
+          panelId: panel.id,
+          buyerId: buyer.id,
+          subject: newTicket.subject,
+          message: newTicket.message,
+          senderName: buyer.full_name || buyer.email,
+          senderEmail: buyer.email,
+        }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || 'Failed to create ticket');
 
       // Notify panel owner
       try {
@@ -444,7 +453,9 @@ const BuyerSupport = () => {
             <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Support Center</h1>
             <p className="text-muted-foreground">Get help with your orders and account</p>
           </div>
-          <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+          <div className="hidden md:block">
+            <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+          </div>
         </motion.div>
 
         {/* Tabs: Tickets | Live Chat | FAQ */}
@@ -532,7 +543,7 @@ const BuyerSupport = () => {
           {/* ===== LIVE CHAT TAB (Twitter-style unified) ===== */}
           <TabsContent value="chat" className="mt-4">
             <Card className="glass-card overflow-hidden">
-              <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+            <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
                 {/* Chat Header */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
@@ -544,6 +555,33 @@ const BuyerSupport = () => {
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Online
                     </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {/* Filter: Active / Archived */}
+                    <Button
+                      variant={chatFilter === 'active' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setChatFilter('active')}
+                    >Active</Button>
+                    <Button
+                      variant={chatFilter === 'archived' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="text-xs h-7 px-2"
+                      onClick={() => setChatFilter('archived')}
+                    >Archived</Button>
+                    {/* New Chat */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 px-2 gap-1"
+                      onClick={async () => {
+                        const session = await handleStartChat();
+                        if (session) setChatFilter('active');
+                      }}
+                    >
+                      <Plus className="w-3 h-3" />New
+                    </Button>
                   </div>
                   {selectedChat && (
                     <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
@@ -563,10 +601,51 @@ const BuyerSupport = () => {
                           <MessagesSquare className="w-8 h-8 text-primary" />
                         </div>
                         <h3 className="font-semibold mb-1">Start a Conversation</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Type a message below to chat with support</p>
+                        <p className="text-sm text-muted-foreground mb-4">Type a message below or tap a quick reply to chat with support</p>
+                      </div>
+                    ) : !selectedChat ? (
+                      /* Session List */
+                      <div className="space-y-2">
+                        {chatSessions
+                          .filter(s => chatFilter === 'archived' 
+                            ? (s.status === 'closed' || s.status === 'archived')
+                            : (s.status === 'active' || s.status === 'open'))
+                          .map(session => (
+                            <motion.div
+                              key={session.id}
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-3 rounded-xl bg-muted/40 hover:bg-muted/60 cursor-pointer transition-colors"
+                              onClick={() => setSelectedChat(session)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <p className="text-sm font-medium">Chat #{session.id.slice(0, 6)}</p>
+                                <Badge variant={session.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">{session.status}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
+                              </p>
+                            </motion.div>
+                          ))}
+                        {chatSessions.filter(s => chatFilter === 'archived' 
+                          ? (s.status === 'closed' || s.status === 'archived')
+                          : (s.status === 'active' || s.status === 'open')).length === 0 && (
+                          <div className="text-center py-8 text-sm text-muted-foreground">
+                            No {chatFilter} conversations
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <>
+                        {/* Back button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs gap-1 mb-2"
+                          onClick={() => setSelectedChat(null)}
+                        >
+                          ← Back to chats
+                        </Button>
                         {chatMessages.map(msg => (
                           <motion.div
                             key={msg.id}
@@ -599,6 +678,19 @@ const BuyerSupport = () => {
                             </div>
                           </motion.div>
                         ))}
+                        {/* Continue with AI button when chat has messages but no recent reply */}
+                        {chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.sender_type === 'visitor' && (
+                          <div className="flex justify-center pt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1.5 rounded-full"
+                              onClick={() => setShowAIChat(true)}
+                            >
+                              🤖 Continue with AI
+                            </Button>
+                          </div>
+                        )}
                         <div ref={chatEndRef} />
                       </>
                     )}
@@ -661,6 +753,23 @@ const BuyerSupport = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* AI Chat Modal */}
+            {showAIChat && (
+              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end justify-center sm:items-center">
+                <div className="w-full max-w-md h-[80vh] relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-2 right-2 z-10"
+                    onClick={() => setShowAIChat(false)}
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </Button>
+                  <FloatingChatWidget />
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
