@@ -281,7 +281,7 @@ const BuyerSupport = () => {
 
       // Notify panel owner
       try {
-        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', panel.id).single();
+        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', resolvedPanelId).single();
         if (panelData?.owner_id) {
           await supabase.from('panel_notifications').insert({ user_id: panelData.owner_id, title: 'New Support Ticket', message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`, type: 'system', is_read: false });
         }
