@@ -457,6 +457,7 @@ const Integrations = () => {
   const [panelId, setPanelId] = useState<string | null>(null);
   const [panelSubdomain, setPanelSubdomain] = useState<string>('');
   const [panelDomains, setPanelDomains] = useState<string[]>([]);
+  const [smtpHost, setSmtpHost] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   
