@@ -254,6 +254,13 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Login failed. Please try again.' } };
       }
 
+      // Check if MFA is required
+      if (data.mfa_required) {
+        setPendingMfaSession({ buyerId: data.user.id, token: data.token });
+        setNeedsMfaChallenge(true);
+        return { error: null };
+      }
+
       // Calculate expiry time
       const expiresAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 3600);
 
