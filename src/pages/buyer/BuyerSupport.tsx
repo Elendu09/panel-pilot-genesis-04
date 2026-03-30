@@ -130,6 +130,8 @@ const BuyerSupport = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
+  const [showAIChat, setShowAIChat] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // FAQ state
