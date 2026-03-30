@@ -507,7 +507,7 @@ const UserManagement = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant={user.role === 'admin' ? 'destructive' : 'default'} className={user.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}>
-                            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />Panel Owner</>}
+                            {user.role === 'admin' ? <><Shield className="w-3 h-3 mr-1" />Admin</> : <><Users className="w-3 h-3 mr-1" />User</>}
                           </Badge>
                         </TableCell>
                         <TableCell><span className="font-medium">${user.balance?.toFixed(2) || '0.00'}</span></TableCell>
