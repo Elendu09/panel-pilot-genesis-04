@@ -223,6 +223,34 @@ export const ServiceViewDialog = ({
           )}
         </div>
 
+        {/* Provider Service ID */}
+        {service.providerServiceId && (
+          <div className="mb-4 p-3 rounded-lg bg-muted/30 border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Provider Service ID</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="text-xs bg-muted px-2 py-1 rounded font-mono">{service.providerServiceId}</code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    navigator.clipboard.writeText(service.providerServiceId || '');
+                    import('@/hooks/use-toast').then(({ toast }) => {
+                      toast({ title: 'Copied!', description: 'Provider Service ID copied to clipboard' });
+                    });
+                  }}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Provider Info */}
         <div className="mb-4 p-3 rounded-lg bg-muted/30 border">
           <div className="flex items-center justify-between">
