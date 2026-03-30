@@ -1318,7 +1318,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                     </div>
 
                     {/* Drip Feed Options */}
-                    {selectedService && (selectedService as any).dripfeed_available && (
+                    {selectedService && (
                       <div className="space-y-3">
                         <div className={cn(
                           "flex items-center justify-between p-3 rounded-xl border",
