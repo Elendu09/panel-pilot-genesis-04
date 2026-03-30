@@ -4248,27 +4248,88 @@ export type Database = {
       buyer_visible_services: {
         Row: {
           average_time: string | null
-          buyer_price: number | null
           cancel_available: boolean | null
-          confidence_score: number | null
-          delivery_type: string | null
+          category: Database["public"]["Enums"]["service_category"] | null
+          category_id: string | null
+          created_at: string | null
           description: string | null
-          display_name: string | null
           display_order: number | null
           dripfeed_available: boolean | null
-          icon: string | null
+          estimated_time: string | null
           id: string | null
+          image_url: string | null
           is_active: boolean | null
           max_quantity: number | null
           min_quantity: number | null
           name: string | null
           panel_id: string | null
-          platform: string | null
-          provider_cost: number | null
+          price: number | null
           refill_available: boolean | null
           service_type: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          average_time?: string | null
+          cancel_available?: boolean | null
+          category?: Database["public"]["Enums"]["service_category"] | null
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          dripfeed_available?: boolean | null
+          estimated_time?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          max_quantity?: number | null
+          min_quantity?: number | null
+          name?: string | null
+          panel_id?: string | null
+          price?: number | null
+          refill_available?: boolean | null
+          service_type?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          average_time?: string | null
+          cancel_available?: boolean | null
+          category?: Database["public"]["Enums"]["service_category"] | null
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          dripfeed_available?: boolean | null
+          estimated_time?: string | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          max_quantity?: number | null
+          min_quantity?: number | null
+          name?: string | null
+          panel_id?: string | null
+          price?: number | null
+          refill_available?: boolean | null
+          service_type?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_services_category"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "services_panel_id_fkey"
             columns: ["panel_id"]
