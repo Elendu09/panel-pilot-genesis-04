@@ -411,7 +411,7 @@ serve(async (req) => {
       gatewayConfig = {
         id: adminProvider.provider_name,
         enabled: true,
-        secretKey: config.secret_key || config.secretKey,
+        secretKey: config.secret_key || config.secretKey || config.api_secret || config.apiSecret,
         // Many providers store the primary API key under publicKey (e.g. Coinbase, NOWPayments)
         apiKey: config.api_key || config.apiKey || resolvedPublicKey,
         publicKey: resolvedPublicKey,
@@ -421,7 +421,7 @@ serve(async (req) => {
         merchantId: config.merchant_id || config.merchantId,
       };
       
-      console.log('[process-payment] Using admin gateway config for:', gateway);
+      console.log('[process-payment] Using admin gateway config for:', gateway, 'Config keys:', Object.keys(config).filter(k => config[k]));
     } else {
       // For buyer/tenant payments, use panel-configured gateways
       const panelSettings = panel.settings as Record<string, any> || {};
