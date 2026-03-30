@@ -394,6 +394,10 @@ const BuyerNewOrder = () => {
           price: totalPrice,
           promoCode: appliedPromo?.code,
           notes: appliedPromo ? `Promo: ${appliedPromo.code}` : null,
+          ...(((selectedService as any).dripfeed_available && dripFeedRuns > 1) ? {
+            runs: dripFeedRuns,
+            interval: dripFeedInterval,
+          } : {}),
         }
       });
 
