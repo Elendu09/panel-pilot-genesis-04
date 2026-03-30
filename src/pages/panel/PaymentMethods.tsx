@@ -203,7 +203,7 @@ const paymentGateways = {
     { id: "cryptocloud", name: "Cryptocloud", Icon: CryptocloudIcon, regions: ["Worldwide"], fee: "0.6%", docsUrl: "https://docs.cryptocloud.plus" },
     { id: "oxapay", name: "Oxapay", Icon: OxapayIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://docs.oxapay.com" },
     { id: "spicepay", name: "SpicePay", Icon: SpicePayIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://www.spicepay.com/docs" },
-    { id: "utrust", name: "Utrust", Icon: UtrustIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://docs.utrust.com" },
+    { id: "utrust", name: "xPortal (Utrust)", Icon: UtrustIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://xportal.com" },
     { id: "confirmo", name: "Confirmo", Icon: ConfirmoIcon, regions: ["Worldwide"], fee: "0.8%", docsUrl: "https://confirmo.net/docs" },
     { id: "speed", name: "Speed", Icon: SpeedIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://docs.tryspeed.com" },
     { id: "gourl", name: "GoURL", Icon: GoURLIcon, regions: ["Worldwide"], fee: "1.5%", docsUrl: "https://gourl.io/api-php.html" },
