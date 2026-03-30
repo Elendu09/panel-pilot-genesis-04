@@ -16,6 +16,10 @@ interface OrderRequest {
   promoCode?: string;
   notes?: string;
   paymentType?: 'balance' | 'direct';
+  runs?: number;
+  interval?: number;
+  delay?: number;
+  comments?: string;
 }
 
 // Resolve the external service ID that the provider API expects
@@ -35,7 +39,8 @@ async function forwardToProvider(
   serviceId: string,
   targetUrl: string,
   quantity: number,
-  orderId: string
+  orderId: string,
+  extraParams?: { runs?: number; interval?: number; delay?: number; comments?: string }
 ): Promise<{ success: boolean; externalOrderId?: string; error?: string }> {
   try {
     const { data: service } = await supabase

@@ -476,7 +476,7 @@ async function handleAddOrder(supabase: any, panelId: string, buyerId: string | 
   }
 
   // Forward to upstream provider
-  const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id);
+  const providerResult = await forwardOrderToProvider(supabase, serviceData.id, link, orderQuantity, order.id, { runs, interval, delay, comments });
   console.log(`[buyer-api] Order ${order.order_number} forwarding result:`, providerResult);
 
   // Surface provider errors alongside order number
