@@ -95,6 +95,9 @@ export interface ThemeCustomization {
   heroSecondaryCTAText?: string;
   heroAnimatedTexts?: string[];
   enableFastOrder?: boolean;
+  enableHeroImage?: boolean;
+  heroImageUrl?: string;
+  heroImagePosition?: 'left' | 'right';
   
   // Section Toggles
   enablePlatformFeatures?: boolean;
