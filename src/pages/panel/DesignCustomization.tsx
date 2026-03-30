@@ -1880,6 +1880,50 @@ export default function DesignCustomization() {
                 ))}
               </div>
             </div>
+
+            {/* Hero Image Upload */}
+            <div className="pt-4 border-t border-border/50 space-y-3">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/30">
+                <div>
+                  <span className="font-medium">Hero Image</span>
+                  <p className="text-xs text-muted-foreground">Display an image beside hero text on desktop</p>
+                </div>
+                <Switch 
+                  checked={customization.enableHeroImage || false} 
+                  onCheckedChange={(c) => updateCustomization('enableHeroImage', c)} 
+                />
+              </div>
+              
+              {customization.enableHeroImage && (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="mb-2 block">Upload Hero Image</Label>
+                    <ImageUpload
+                      value={customization.heroImageUrl || ''}
+                      onChange={(url) => updateCustomization('heroImageUrl', url)}
+                      label="Hero Image"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-2 block">Image Position</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'left', label: 'Left of Text' },
+                        { id: 'right', label: 'Right of Text' },
+                      ].map(pos => (
+                        <button 
+                          key={pos.id} 
+                          onClick={() => updateCustomization('heroImagePosition', pos.id)} 
+                          className={`p-3 rounded-lg border-2 text-sm transition-all ${(customization.heroImagePosition || 'right') === pos.id ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}`}
+                        >
+                          {pos.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         );
       
