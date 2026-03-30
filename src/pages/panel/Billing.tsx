@@ -883,7 +883,51 @@ const Billing = () => {
         </div>
       </motion.div>
 
-      {/* Balance Upgrade Dialog */}
+      {/* Downgrade Confirmation Dialog */}
+      <AlertDialog open={downgradeDialogOpen} onOpenChange={setDowngradeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ArrowDownRight className="w-5 h-5 text-amber-500" />
+              Downgrade Plan?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Your current <span className="font-semibold capitalize">{currentPlan}</span> plan will remain active until{' '}
+                <span className="font-semibold">
+                  {subscription?.expires_at ? new Date(subscription.expires_at).toLocaleDateString() : 'the end of your billing period'}
+                </span>.
+              </p>
+              <p>
+                After that, you'll be switched to the <span className="font-semibold capitalize">{pendingDowngradePlan}</span> plan.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!panel?.id || !pendingDowngradePlan) return;
+                try {
+                  await supabase
+                    .from('panel_subscriptions')
+                    .update({ pending_downgrade: pendingDowngradePlan })
+                    .eq('panel_id', panel.id);
+                  toast({ title: 'Downgrade Scheduled', description: `Your plan will change to ${pendingDowngradePlan} at the end of the current billing period.` });
+                  setDowngradeDialogOpen(false);
+                  setPendingDowngradePlan(null);
+                } catch (err) {
+                  toast({ variant: 'destructive', title: 'Error', description: 'Failed to schedule downgrade.' });
+                }
+              }}
+              className="bg-amber-500 hover:bg-amber-600"
+            >
+              Confirm Downgrade
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={balanceDialogOpen} onOpenChange={setBalanceDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
