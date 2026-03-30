@@ -102,26 +102,22 @@ const BuyerContact = () => {
     setSending(true);
     
     try {
-      // Create a support ticket
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          panel_id: panel?.id,
-          user_id: buyer?.id,
+      // Route through edge function to bypass RLS
+      const { data, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'create-support-ticket',
+          panelId: panel?.id,
+          buyerId: buyer?.id,
           subject: formData.subject,
-          status: 'open',
-          priority: 'medium',
-          ticket_type: 'user_to_panel',
-          messages: [{
-            sender: 'user',
-            content: formData.message,
-            timestamp: new Date().toISOString(),
-            senderName: formData.name,
-            senderEmail: formData.email,
-          }],
-        });
+          message: formData.message,
+          senderName: formData.name,
+          senderEmail: formData.email,
+        }
+      });
 
-      if (error) throw error;
+      if (fnError || data?.error) {
+        throw new Error(data?.error || fnError?.message || 'Failed to send message');
+      }
 
       toast({
         title: "Message Sent!",
@@ -142,14 +138,14 @@ const BuyerContact = () => {
 
   const defaultEmail = '';
   const contactMethods = [
-    {
+    contactInfo.email ? {
       icon: Mail,
       label: "Email",
-      value: contactInfo.email || defaultEmail,
-      href: `mailto:${contactInfo.email || defaultEmail}`,
+      value: contactInfo.email,
+      href: `mailto:${contactInfo.email}`,
       color: "text-primary",
       bgColor: "bg-primary/10",
-    },
+    } : null,
     {
       icon: Phone,
       label: "Phone",
