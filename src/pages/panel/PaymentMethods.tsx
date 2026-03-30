@@ -12,7 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import { StripeIcon, PayPalIcon, BitcoinIcon, CoinbaseIcon, RazorpayIcon, PaystackIcon, FlutterwaveIcon, SquareIcon, SkrillIcon, WiseIcon, KoraPayIcon, MonnifyIcon, NowPaymentsIcon, CoinGateIcon, BinancePayIcon, PerfectMoneyIcon, GenericPaymentIcon, getPaymentIcon } from "@/components/payment/PaymentIcons";
+import {
+  AdyenIcon, CheckoutComIcon, WorldpayIcon, AuthorizeNetIcon, TwoCheckoutIcon, MollieIcon, DLocalIcon, RapydIcon,
+  MercadoPagoIcon, IyzicoIcon, PaymobIcon, XenditIcon, MidtransIcon, GCashIcon, GrabPayIcon, OpayIcon, MoovIcon, ChipperIcon, PagaIcon, RemitaIcon, InterswitchIcon, MTNMoMoIcon, MPesaIcon,
+  NetellerIcon, WebMoneyIcon, PayoneerIcon, AlipayIcon, WeChatPayIcon, RevolutIcon, VenmoIcon, ZelleIcon,
+  WireTransferIcon, IDealIcon, BancontactIcon, BoletoIcon, PIXIcon,
+  PlisioIcon, CoinPaymentsIcon, TripleAIcon, BitPayIcon, BlockonomicsIcon, OpenNodeIcon, MixPayIcon, CryptocloudIcon, OxapayIcon, SpicePayIcon, CryptomusIcon, HeleketIcon,
+  KlarnaIcon, AfterpayIcon, TabbyIcon, TamaraIcon, SezzleIcon,
+} from "@/components/payment/PaymentIconsExtended";
 import PaymentAnalyticsChart from "@/components/payment/PaymentAnalyticsChart";
 import { usePanel } from "@/hooks/usePanel";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,22 +39,58 @@ const paymentGateways = {
     { id: "paypal", name: "PayPal", Icon: PayPalIcon, regions: ["Worldwide"], fee: "2.9% + $0.30", docsUrl: "https://developer.paypal.com" },
     { id: "square", name: "Square", Icon: SquareIcon, regions: ["US, CA, UK, AU, JP"], fee: "2.6% + $0.10", docsUrl: "https://developer.squareup.com" },
     { id: "braintree", name: "Braintree", Icon: PayPalIcon, regions: ["Worldwide"], fee: "2.9% + $0.30", docsUrl: "https://developer.paypal.com/braintree" },
+    { id: "adyen", name: "Adyen", Icon: AdyenIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "https://docs.adyen.com" },
+    { id: "checkoutcom", name: "Checkout.com", Icon: CheckoutComIcon, regions: ["Worldwide"], fee: "2.9% + $0.20", docsUrl: "https://docs.checkout.com" },
+    { id: "worldpay", name: "Worldpay", Icon: WorldpayIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "https://developer.worldpay.com" },
+    { id: "authorizenet", name: "Authorize.net", Icon: AuthorizeNetIcon, regions: ["US, CA, UK, EU"], fee: "2.9% + $0.30", docsUrl: "https://developer.authorize.net" },
+    { id: "twocheckout", name: "2Checkout (Verifone)", Icon: TwoCheckoutIcon, regions: ["Worldwide"], fee: "3.5% + $0.35", docsUrl: "https://verifone.cloud/docs" },
+    { id: "mollie", name: "Mollie", Icon: MollieIcon, regions: ["Europe"], fee: "1.8% + €0.25", docsUrl: "https://docs.mollie.com" },
+    { id: "dlocal", name: "dLocal", Icon: DLocalIcon, regions: ["LATAM, Africa, Asia"], fee: "Variable", docsUrl: "https://docs.dlocal.com" },
+    { id: "rapyd", name: "Rapyd", Icon: RapydIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "https://docs.rapyd.net" },
   ],
   regional: [
     { id: "razorpay", name: "Razorpay", Icon: RazorpayIcon, regions: ["India"], fee: "2%", docsUrl: "https://razorpay.com/docs" },
-    { id: "paystack", name: "Paystack", Icon: PaystackIcon, regions: ["Africa"], fee: "1.5% + $0.15", docsUrl: "https://paystack.com/docs" },
+    { id: "paystack", name: "Paystack", Icon: PaystackIcon, regions: ["Africa"], fee: "1.5% + ₦100", docsUrl: "https://paystack.com/docs" },
     { id: "flutterwave", name: "Flutterwave", Icon: FlutterwaveIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://developer.flutterwave.com" },
-    { id: "korapay", name: "Kora Pay", Icon: KoraPayIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://korahq.com/docs" },
+    { id: "korapay", name: "Kora Pay", Icon: KoraPayIcon, regions: ["Africa"], fee: "1.4%", docsUrl: "https://docs.korapay.com" },
     { id: "monnify", name: "Monnify", Icon: MonnifyIcon, regions: ["Nigeria"], fee: "1.5%", docsUrl: "https://docs.monnify.com" },
+    { id: "mercadopago", name: "Mercado Pago", Icon: MercadoPagoIcon, regions: ["LATAM"], fee: "3.49%", docsUrl: "https://www.mercadopago.com/developers" },
+    { id: "iyzico", name: "Iyzico", Icon: IyzicoIcon, regions: ["Turkey"], fee: "2.49%", docsUrl: "https://dev.iyzipay.com" },
+    { id: "paymob", name: "Paymob", Icon: PaymobIcon, regions: ["MENA, Pakistan"], fee: "2.5%", docsUrl: "https://docs.paymob.com" },
+    { id: "xendit", name: "Xendit", Icon: XenditIcon, regions: ["SEA"], fee: "2.9%", docsUrl: "https://docs.xendit.co" },
+    { id: "midtrans", name: "Midtrans", Icon: MidtransIcon, regions: ["Indonesia"], fee: "2.9%", docsUrl: "https://docs.midtrans.com" },
+    { id: "gcash", name: "GCash", Icon: GCashIcon, regions: ["Philippines"], fee: "2%", docsUrl: "https://developer.gcash.com" },
+    { id: "grabpay", name: "GrabPay", Icon: GrabPayIcon, regions: ["SEA"], fee: "2%", docsUrl: "https://developer.grab.com" },
+    { id: "opay", name: "OPay", Icon: OpayIcon, regions: ["Africa"], fee: "1.5%", docsUrl: "https://documentation.opayweb.com" },
+    { id: "moov", name: "Moov Money", Icon: MoovIcon, regions: ["West Africa"], fee: "1%", docsUrl: "https://moov.money" },
+    { id: "chipper", name: "Chipper Cash", Icon: ChipperIcon, regions: ["Africa"], fee: "1%", docsUrl: "https://developer.chipper.cash" },
+    { id: "paga", name: "Paga", Icon: PagaIcon, regions: ["Nigeria"], fee: "1.5%", docsUrl: "https://developer.mypaga.com" },
+    { id: "remita", name: "Remita", Icon: RemitaIcon, regions: ["Nigeria"], fee: "1.5%", docsUrl: "https://remita.net/developers" },
+    { id: "interswitch", name: "Interswitch", Icon: InterswitchIcon, regions: ["Nigeria"], fee: "1.5%", docsUrl: "https://developer.interswitchgroup.com" },
+    { id: "mtnmomo", name: "MTN MoMo", Icon: MTNMoMoIcon, regions: ["Africa"], fee: "1%", docsUrl: "https://momodeveloper.mtn.com" },
+    { id: "mpesa", name: "M-Pesa (Safaricom)", Icon: MPesaIcon, regions: ["East Africa"], fee: "1%", docsUrl: "https://developer.safaricom.co.ke" },
   ],
   ewallets: [
     { id: "skrill", name: "Skrill", Icon: SkrillIcon, regions: ["Worldwide"], fee: "1.9%", docsUrl: "https://developer.skrill.com" },
     { id: "perfectmoney", name: "Perfect Money", Icon: PerfectMoneyIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://perfectmoney.com/docs" },
     { id: "wise", name: "Wise", Icon: WiseIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://wise.com/developers" },
+    { id: "neteller", name: "Neteller", Icon: NetellerIcon, regions: ["Worldwide"], fee: "2.5%", docsUrl: "https://developer.paysafe.com/en/neteller" },
+    { id: "webmoney", name: "WebMoney", Icon: WebMoneyIcon, regions: ["CIS, Asia"], fee: "0.8%", docsUrl: "https://wiki.webmoney.ru/projects/webmoney" },
+    { id: "payoneer", name: "Payoneer", Icon: PayoneerIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://developer.payoneer.com" },
+    { id: "alipay", name: "Alipay", Icon: AlipayIcon, regions: ["China, Asia"], fee: "2.2%", docsUrl: "https://global.alipay.com/docs" },
+    { id: "wechatpay", name: "WeChat Pay", Icon: WeChatPayIcon, regions: ["China, Asia"], fee: "2%", docsUrl: "https://pay.weixin.qq.com/docs" },
+    { id: "revolut", name: "Revolut", Icon: RevolutIcon, regions: ["Europe, US, UK"], fee: "1%", docsUrl: "https://developer.revolut.com" },
+    { id: "venmo", name: "Venmo", Icon: VenmoIcon, regions: ["US"], fee: "1.9% + $0.10", docsUrl: "https://developer.paypal.com/docs/checkout/pay-with-venmo" },
+    { id: "zelle", name: "Zelle", Icon: ZelleIcon, regions: ["US"], fee: "0%", docsUrl: "https://www.zellepay.com" },
   ],
   bank: [
     { id: "ach", name: "ACH Transfer", Icon: StripeIcon, regions: ["US"], fee: "$0.25", docsUrl: "https://stripe.com/docs/ach" },
     { id: "sepa", name: "SEPA Transfer", Icon: StripeIcon, regions: ["Europe"], fee: "€0.35", docsUrl: "https://stripe.com/docs/sepa" },
+    { id: "wiretransfer", name: "Wire Transfer", Icon: WireTransferIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "" },
+    { id: "ideal", name: "iDEAL", Icon: IDealIcon, regions: ["Netherlands"], fee: "€0.29", docsUrl: "https://www.ideal.nl/en/developers" },
+    { id: "bancontact", name: "Bancontact", Icon: BancontactIcon, regions: ["Belgium"], fee: "€0.25", docsUrl: "https://www.bancontact.com" },
+    { id: "boleto", name: "Boleto Bancário", Icon: BoletoIcon, regions: ["Brazil"], fee: "R$3.49", docsUrl: "https://stripe.com/docs/payments/boleto" },
+    { id: "pix", name: "PIX", Icon: PIXIcon, regions: ["Brazil"], fee: "0.99%", docsUrl: "https://www.bcb.gov.br/estabilidadefinanceira/pix" },
   ],
   crypto: [
     { id: "coinbase", name: "Coinbase Commerce", Icon: CoinbaseIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://commerce.coinbase.com/docs" },
@@ -54,11 +98,50 @@ const paymentGateways = {
     { id: "nowpayments", name: "NowPayments", Icon: NowPaymentsIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://nowpayments.io/docs" },
     { id: "coingate", name: "CoinGate", Icon: CoinGateIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://developer.coingate.com" },
     { id: "binancepay", name: "Binance Pay", Icon: BinancePayIcon, regions: ["Worldwide"], fee: "0.9%", docsUrl: "https://developers.binance.com/docs/binance-pay" },
-    { id: "cryptomus", name: "Cryptomus", Icon: BitcoinIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://doc.cryptomus.com" },
+    { id: "cryptomus", name: "Cryptomus", Icon: CryptomusIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://doc.cryptomus.com" },
+    { id: "heleket", name: "Heleket", Icon: HeleketIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://heleket.com/docs" },
+    { id: "plisio", name: "Plisio", Icon: PlisioIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://plisio.net/documentation" },
+    { id: "coinpayments", name: "CoinPayments", Icon: CoinPaymentsIcon, regions: ["Worldwide"], fee: "0.5%", docsUrl: "https://www.coinpayments.net/apidoc" },
+    { id: "triplea", name: "TripleA", Icon: TripleAIcon, regions: ["Worldwide"], fee: "0.8%", docsUrl: "https://developers.triple-a.io" },
+    { id: "bitpay", name: "BitPay", Icon: BitPayIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://bitpay.com/docs" },
+    { id: "blockonomics", name: "Blockonomics", Icon: BlockonomicsIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://www.blockonomics.co/views/api.html" },
+    { id: "opennode", name: "OpenNode", Icon: OpenNodeIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://developers.opennode.com" },
+    { id: "mixpay", name: "MixPay", Icon: MixPayIcon, regions: ["Worldwide"], fee: "0%", docsUrl: "https://developers.mixpay.me" },
+    { id: "cryptocloud", name: "Cryptocloud", Icon: CryptocloudIcon, regions: ["Worldwide"], fee: "0.6%", docsUrl: "https://docs.cryptocloud.plus" },
+    { id: "oxapay", name: "Oxapay", Icon: OxapayIcon, regions: ["Worldwide"], fee: "0.4%", docsUrl: "https://docs.oxapay.com" },
+    { id: "spicepay", name: "SpicePay", Icon: SpicePayIcon, regions: ["Worldwide"], fee: "1%", docsUrl: "https://www.spicepay.com/docs" },
+  ],
+  bnpl: [
+    { id: "klarna", name: "Klarna", Icon: KlarnaIcon, regions: ["US, EU, UK, AU"], fee: "3.29% + $0.30", docsUrl: "https://docs.klarna.com" },
+    { id: "afterpay", name: "Afterpay / Clearpay", Icon: AfterpayIcon, regions: ["US, UK, AU, NZ"], fee: "4-6% + $0.30", docsUrl: "https://developers.afterpay.com" },
+    { id: "tabby", name: "Tabby", Icon: TabbyIcon, regions: ["MENA"], fee: "Variable", docsUrl: "https://docs.tabby.ai" },
+    { id: "tamara", name: "Tamara", Icon: TamaraIcon, regions: ["MENA"], fee: "Variable", docsUrl: "https://docs.tamara.co" },
+    { id: "sezzle", name: "Sezzle", Icon: SezzleIcon, regions: ["US, CA"], fee: "6% + $0.30", docsUrl: "https://docs.sezzle.com" },
   ],
 };
 
 type GatewayType = { id: string; name: string; Icon: React.FC<{ className?: string }>; regions: string[]; fee: string; docsUrl?: string };
+
+// Per-gateway field label customization
+const gatewayFieldLabels: Record<string, { field1Label: string; field1Placeholder: string; field2Label: string; field2Placeholder: string; field2Required: boolean }> = {
+  stripe: { field1Label: "Publishable Key", field1Placeholder: "pk_live_xxxx or pk_test_xxxx", field2Label: "Secret Key", field2Placeholder: "sk_live_xxxx or sk_test_xxxx", field2Required: true },
+  paypal: { field1Label: "Client ID", field1Placeholder: "Your PayPal Client ID", field2Label: "Client Secret", field2Placeholder: "Your PayPal Client Secret", field2Required: true },
+  coinbase: { field1Label: "API Key", field1Placeholder: "Your Coinbase Commerce API Key", field2Label: "Webhook Secret (optional)", field2Placeholder: "Webhook shared secret", field2Required: false },
+  razorpay: { field1Label: "Key ID", field1Placeholder: "rzp_live_xxxx", field2Label: "Key Secret", field2Placeholder: "Your Razorpay Key Secret", field2Required: true },
+  paystack: { field1Label: "Public Key", field1Placeholder: "pk_live_xxxx", field2Label: "Secret Key", field2Placeholder: "sk_live_xxxx", field2Required: true },
+  flutterwave: { field1Label: "Public Key", field1Placeholder: "FLWPUBK-xxxx", field2Label: "Secret Key", field2Placeholder: "FLWSECK-xxxx", field2Required: true },
+  korapay: { field1Label: "Public Key", field1Placeholder: "pk_live_xxxx", field2Label: "Secret Key", field2Placeholder: "sk_live_xxxx", field2Required: true },
+  heleket: { field1Label: "Merchant ID", field1Placeholder: "Your Heleket Merchant UUID", field2Label: "Payment API Key", field2Placeholder: "Your Heleket API Key", field2Required: true },
+  cryptomus: { field1Label: "Merchant UUID", field1Placeholder: "Your Cryptomus Merchant UUID", field2Label: "Payment API Key", field2Placeholder: "Your Cryptomus API Key", field2Required: true },
+  xendit: { field1Label: "Public Key", field1Placeholder: "xnd_public_xxxx", field2Label: "Secret Key", field2Placeholder: "xnd_xxxx", field2Required: true },
+  midtrans: { field1Label: "Client Key", field1Placeholder: "Your Midtrans Client Key", field2Label: "Server Key", field2Placeholder: "Your Midtrans Server Key", field2Required: true },
+  adyen: { field1Label: "API Key", field1Placeholder: "Your Adyen API Key", field2Label: "Merchant Account", field2Placeholder: "Your Merchant Account ID", field2Required: true },
+  mollie: { field1Label: "API Key", field1Placeholder: "live_xxxx or test_xxxx", field2Label: "Profile ID (optional)", field2Placeholder: "pfl_xxxx", field2Required: false },
+  bitpay: { field1Label: "API Token", field1Placeholder: "Your BitPay API Token", field2Label: "Pairing Code (optional)", field2Placeholder: "Pairing code", field2Required: false },
+  binancepay: { field1Label: "API Key", field1Placeholder: "Your Binance Pay API Key", field2Label: "API Secret", field2Placeholder: "Your Binance Pay Secret Key", field2Required: true },
+  square: { field1Label: "Application ID", field1Placeholder: "sq0idp-xxxx", field2Label: "Access Token", field2Placeholder: "Your Square Access Token", field2Required: true },
+  nowpayments: { field1Label: "API Key", field1Placeholder: "Your NowPayments API Key", field2Label: "IPN Secret (optional)", field2Placeholder: "Your IPN callback secret", field2Required: false },
+};
 
 const categoryIcons: Record<keyof typeof paymentGateways, React.ElementType> = {
   cards: CreditCard,
@@ -66,6 +149,7 @@ const categoryIcons: Record<keyof typeof paymentGateways, React.ElementType> = {
   ewallets: Wallet,
   bank: Building2,
   crypto: Bitcoin,
+  bnpl: Sparkles,
 };
 
 const categoryLabels: Record<keyof typeof paymentGateways, string> = {
@@ -74,6 +158,7 @@ const categoryLabels: Record<keyof typeof paymentGateways, string> = {
   ewallets: "E-Wallets",
   bank: "Bank Transfers",
   crypto: "Cryptocurrency",
+  bnpl: "Buy Now Pay Later",
 };
 
 // Manual Payment interface
@@ -764,24 +849,31 @@ const PaymentMethods = () => {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>API Key / Public Key</Label>
-              <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'pk_live_xxxx or pk_test_xxxx' : 'Your public/api key'} className="bg-background/50 font-mono text-sm" />
-              <p className="text-xs text-muted-foreground">
-                {selectedGateway?.id === 'stripe' && 'Starts with pk_live_ (production) or pk_test_ (sandbox)'}
-                {selectedGateway?.id === 'paypal' && 'Your PayPal Client ID from developer dashboard'}
-                {selectedGateway?.id === 'coinbase' && 'Your Coinbase Commerce API Key'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Secret Key</Label>
-              <div className="relative">
-                <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder={selectedGateway?.id === 'stripe' ? 'sk_live_xxxx or sk_test_xxxx' : 'Your secret key'} className="bg-background/50 font-mono text-sm pr-10" />
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowSecretKey(!showSecretKey)}>
-                  {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+            {(() => {
+              const labels = selectedGateway ? gatewayFieldLabels[selectedGateway.id] : undefined;
+              const f1Label = labels?.field1Label || "API Key / Public Key";
+              const f1Placeholder = labels?.field1Placeholder || "Your public/api key";
+              const f2Label = labels?.field2Label || "Secret Key";
+              const f2Placeholder = labels?.field2Placeholder || "Your secret key";
+              const f2Required = labels?.field2Required !== false;
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label>{f1Label}</Label>
+                    <Input value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} placeholder={f1Placeholder} className="bg-background/50 font-mono text-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{f2Label} {!f2Required && <span className="text-muted-foreground text-xs">(optional)</span>}</Label>
+                    <div className="relative">
+                      <Input type={showSecretKey ? "text" : "password"} value={formData.secretKey} onChange={(e) => setFormData({...formData, secretKey: e.target.value})} placeholder={f2Placeholder} className="bg-background/50 font-mono text-sm pr-10" />
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowSecretKey(!showSecretKey)}>
+                        {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
 
             {/* Webhook URL */}
             <div className="space-y-2">
