@@ -662,7 +662,7 @@ export const SOCIAL_ICONS_MAP: Record<string, {
   deviantart: { icon: GlobeWrapper, label: "DeviantArt", color: "#05CC47", bgColor: "bg-green-600" },
   flickr: { icon: CameraWrapper, label: "Flickr", color: "#FF0084", bgColor: "bg-pink-600" },
   "500px": { icon: CameraWrapper, label: "500px", color: "#0099E5", bgColor: "bg-blue-500" },
-  vero: { icon: GlobeWrapper, label: "Vero", color: "#000000", bgColor: "bg-black" },
+  vero: { icon: GlobeWrapper, label: "Vero", color: "#000000", bgColor: "bg-gray-800 dark:bg-black" },
   
   // Podcasts
   podcast: { icon: RadioWrapper, label: "Podcast", color: "#8B5CF6", bgColor: "bg-purple-600" },
