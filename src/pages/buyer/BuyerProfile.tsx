@@ -569,8 +569,8 @@ const BuyerProfile = () => {
               {/* Two-Factor Authentication */}
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-primary/10">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10">
-                    <Smartphone className="w-5 h-5 text-purple-500" />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Smartphone className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <p className="font-medium flex items-center gap-2">
@@ -589,29 +589,36 @@ const BuyerProfile = () => {
                     </p>
                   </div>
                 </div>
-                <Switch
-                  checked={mfaEnabled}
-                  disabled={mfaLoading}
-                  onCheckedChange={async (checked) => {
-                    setMfaLoading(true);
-                    try {
-                      // Simulate 2FA setup - in production this would integrate with TOTP/SMS
-                      await new Promise(resolve => setTimeout(resolve, 500));
-                      setMfaEnabled(checked);
-                      toast({
-                        title: checked ? "2FA Enabled" : "2FA Disabled",
-                        description: checked 
-                          ? "Your account is now protected with two-factor authentication" 
-                          : "Two-factor authentication has been disabled",
-                      });
-                    } catch (e) {
-                      toast({ title: "Failed to update 2FA settings", variant: "destructive" });
-                    } finally {
-                      setMfaLoading(false);
-                    }
-                  }}
-                />
+                <Button
+                  variant={mfaEnabled ? "outline" : "default"}
+                  size="sm"
+                  disabled={mfaLoading || (!mfaEnabled && !buyer?.is_active)}
+                  onClick={() => setShowMfaSetup(true)}
+                >
+                  {mfaEnabled ? 'Manage' : 'Enable'}
+                </Button>
               </div>
+              {!buyer?.is_active && !mfaEnabled && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 -mt-2 ml-1">
+                  Please verify your email before enabling 2FA.
+                </p>
+              )}
+
+              {buyer && (
+                <BuyerMfaSetupDialog
+                  open={showMfaSetup}
+                  onOpenChange={setShowMfaSetup}
+                  buyerId={buyer.id}
+                  panelId={buyer.panel_id}
+                  token={getToken() || ''}
+                  isEnabled={mfaEnabled}
+                  onEnabled={() => {
+                    setMfaEnabled(true);
+                    toast({ title: '2FA Enabled', description: 'Your account is now protected with two-factor authentication.' });
+                  }}
+                  onDisabled={() => setMfaEnabled(false)}
+                />
+              )}
 
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30">
                 <div className="flex items-center gap-3">
