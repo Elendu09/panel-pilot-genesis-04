@@ -353,7 +353,8 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
   }, [selectedCategory, categories, serviceSearch]);
   
   const selectedService = services.find(s => s.id === selectedServiceId);
-  const totalPrice = selectedService ? (selectedService.price * quantity) / 1000 : 0;
+  const effectivePrice = selectedService ? (selectedService.price || (selectedService as any).rate || 0) : 0;
+  const totalPrice = selectedService ? (effectivePrice * quantity) / 1000 : 0;
 
   // Quantity presets
   const quantityPresets = [100, 500, 1000, 5000, 10000];

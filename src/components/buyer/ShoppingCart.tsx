@@ -397,12 +397,13 @@ const ShoppingCart = ({
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       variant="outline" 
                       onClick={onClearCart}
                       disabled={checkoutLoading || syncing}
                       className="flex-1"
+                      size="sm"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       {t('cart.clear')}
@@ -411,6 +412,7 @@ const ShoppingCart = ({
                       onClick={handleBulkCheckout}
                       disabled={!hasEnoughBalance || checkoutLoading || syncing || cart.length === 0}
                       className="flex-1 gap-2"
+                      size="sm"
                     >
                       {checkoutLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

@@ -115,9 +115,7 @@ const BuyerDashboard = () => {
       if (fnError) throw fnError;
       const orders = fnData?.orders || fnData || [];
 
-      if (error) throw error;
-
-      const formattedOrders: Order[] = (orders || []).map(o => ({
+      const formattedOrders: Order[] = (orders || []).slice(0, 20).map((o: any) => ({
         id: o.id,
         order_number: o.order_number,
         target_url: o.target_url,
@@ -126,7 +124,7 @@ const BuyerDashboard = () => {
         status: o.status || 'pending',
         progress: o.progress || 0,
         created_at: o.created_at,
-        service: o.service,
+        service: o.service || { name: o.service_name || 'Service' },
       }));
 
       setRecentOrders(formattedOrders);
