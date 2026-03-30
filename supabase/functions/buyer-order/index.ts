@@ -142,7 +142,7 @@ serve(async (req) => {
     );
 
     const body: OrderRequest = await req.json();
-    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes, paymentType = 'balance' } = body;
+    const { panelId, buyerId, serviceId, quantity, targetUrl, price, promoCode, notes, paymentType = 'balance', runs, interval, delay, comments } = body;
 
     console.log(`[buyer-order] Creating order for buyer ${buyerId} on panel ${panelId}, paymentType: ${paymentType}`);
 
