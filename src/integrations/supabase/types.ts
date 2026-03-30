@@ -1028,6 +1028,9 @@ export type Database = {
           last_login_ip: string | null
           last_login_location: string | null
           low_balance_threshold: number | null
+          mfa_backup_codes: Json | null
+          mfa_secret: string | null
+          mfa_verified: boolean | null
           oauth_provider: string | null
           oauth_provider_id: string | null
           panel_id: string | null
@@ -1066,6 +1069,9 @@ export type Database = {
           last_login_ip?: string | null
           last_login_location?: string | null
           low_balance_threshold?: number | null
+          mfa_backup_codes?: Json | null
+          mfa_secret?: string | null
+          mfa_verified?: boolean | null
           oauth_provider?: string | null
           oauth_provider_id?: string | null
           panel_id?: string | null
@@ -1104,6 +1110,9 @@ export type Database = {
           last_login_ip?: string | null
           last_login_location?: string | null
           low_balance_threshold?: number | null
+          mfa_backup_codes?: Json | null
+          mfa_secret?: string | null
+          mfa_verified?: boolean | null
           oauth_provider?: string | null
           oauth_provider_id?: string | null
           panel_id?: string | null
@@ -4366,14 +4375,19 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string | null
+          invoice_address: string | null
           invoice_company_name: string | null
+          invoice_vat_id: string | null
           is_active: boolean | null
           is_banned: boolean | null
           is_vip: boolean | null
           last_login_at: string | null
           last_login_device: string | null
+          last_login_ip: string | null
           last_login_location: string | null
           low_balance_threshold: number | null
+          mfa_backup_codes: Json | null
+          mfa_verified: boolean | null
           oauth_provider: string | null
           panel_id: string | null
           preferred_language: string | null
@@ -4396,14 +4410,19 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string | null
+          invoice_address?: string | null
           invoice_company_name?: string | null
+          invoice_vat_id?: string | null
           is_active?: boolean | null
           is_banned?: boolean | null
           is_vip?: boolean | null
           last_login_at?: string | null
           last_login_device?: string | null
+          last_login_ip?: string | null
           last_login_location?: string | null
           low_balance_threshold?: number | null
+          mfa_backup_codes?: Json | null
+          mfa_verified?: boolean | null
           oauth_provider?: string | null
           panel_id?: string | null
           preferred_language?: string | null
@@ -4426,14 +4445,19 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string | null
+          invoice_address?: string | null
           invoice_company_name?: string | null
+          invoice_vat_id?: string | null
           is_active?: boolean | null
           is_banned?: boolean | null
           is_vip?: boolean | null
           last_login_at?: string | null
           last_login_device?: string | null
+          last_login_ip?: string | null
           last_login_location?: string | null
           low_balance_threshold?: number | null
+          mfa_backup_codes?: Json | null
+          mfa_verified?: boolean | null
           oauth_provider?: string | null
           panel_id?: string | null
           preferred_language?: string | null

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LanguageContext, Language } from '@/contexts/LanguageContext';
+import { BuyerMfaChallenge } from '@/components/buyer/BuyerMfaChallenge';
 
 interface BuyerUser {
   id: string;
@@ -63,6 +64,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
   const [buyer, setBuyer] = useState<BuyerUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<BuyerSession | null>(null);
+  const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
+  const [pendingMfaSession, setPendingMfaSession] = useState<{ buyerId: string; token: string } | null>(null);
   const { toast } = useToast();
   const languageContext = useContext(LanguageContext);
 
@@ -251,6 +254,13 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
         return { error: { message: 'Login failed. Please try again.' } };
       }
 
+      // Check if MFA is required
+      if (data.mfa_required) {
+        setPendingMfaSession({ buyerId: data.user.id, token: data.token });
+        setNeedsMfaChallenge(true);
+        return { error: null };
+      }
+
       // Calculate expiry time
       const expiresAt = Math.floor(Date.now() / 1000) + (data.expiresIn || 3600);
 
@@ -363,6 +373,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
   const signOut = () => {
     clearSession();
+    setNeedsMfaChallenge(false);
+    setPendingMfaSession(null);
     toast({ title: 'Signed out successfully' });
   };
 
@@ -372,9 +384,41 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
     return !result.error;
   };
 
+  const handleMfaVerified = () => {
+    if (!pendingMfaSession) return;
+    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
+    const newSession: BuyerSession = {
+      buyerId: pendingMfaSession.buyerId,
+      panelId,
+      token: pendingMfaSession.token,
+      expiresAt
+    };
+    localStorage.setItem(BUYER_STORAGE_KEY, JSON.stringify(newSession));
+    setSession(newSession);
+    setNeedsMfaChallenge(false);
+    // Fetch buyer data now
+    fetchBuyer(pendingMfaSession.buyerId, pendingMfaSession.token);
+    setPendingMfaSession(null);
+  };
+
+  const handleMfaCancelled = () => {
+    setNeedsMfaChallenge(false);
+    setPendingMfaSession(null);
+  };
+
   return (
     <BuyerAuthContext.Provider value={{ buyer, loading, panelId, signIn, signUp, signOut, refreshBuyer, login, getToken }}>
       {children}
+      {needsMfaChallenge && pendingMfaSession && (
+        <BuyerMfaChallenge
+          open={needsMfaChallenge}
+          buyerId={pendingMfaSession.buyerId}
+          panelId={panelId}
+          token={pendingMfaSession.token}
+          onVerified={handleMfaVerified}
+          onCancel={handleMfaCancelled}
+        />
+      )}
     </BuyerAuthContext.Provider>
   );
 }
