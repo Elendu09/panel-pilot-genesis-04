@@ -328,8 +328,15 @@ const BuyerSupport = () => {
 
   // Chat: send message via edge function (bypasses RLS)
   const handleSendChatMessage = async (sessionOverride?: ChatSession) => {
-    const activeSession = sessionOverride || selectedChat;
-    if (!chatInput.trim() || !activeSession || !buyer?.id) return;
+    let activeSession = sessionOverride || selectedChat;
+    if (!chatInput.trim() || !buyer?.id) return;
+    
+    // Auto-create session if none exists
+    if (!activeSession) {
+      activeSession = await handleStartChat();
+      if (!activeSession) return;
+    }
+    
     const msgContent = chatInput.trim();
     setChatInput("");
     

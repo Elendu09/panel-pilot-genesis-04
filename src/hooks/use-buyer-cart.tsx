@@ -17,12 +17,22 @@ interface UseBuyerCartOptions {
   getEffectivePrice: (service: any) => number;
 }
 
+// Route cart operations through buyer-api edge function to bypass RLS
+async function cartEdgeFn(action: string, payload: Record<string, any>) {
+  const { data, error } = await supabase.functions.invoke('buyer-api', {
+    body: { action, ...payload },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
 export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: UseBuyerCartOptions) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
 
-  // Fetch cart from Supabase
+  // Fetch cart from edge function
   const fetchCart = useCallback(async () => {
     if (!buyerId || !panelId) {
       setLoading(false);
@@ -30,16 +40,10 @@ export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: 
     }
 
     try {
-      const { data, error } = await supabase
-        .from('buyer_cart')
-        .select('*')
-        .eq('buyer_id', buyerId)
-        .eq('panel_id', panelId);
+      const data = await cartEdgeFn('cart-list', { buyerId, panelId });
+      const items = data?.items || [];
 
-      if (error) throw error;
-
-      // Map to CartItem format
-      const cartItems: CartItem[] = (data || []).map(item => {
+      const cartItems: CartItem[] = items.map((item: any) => {
         const service = services.find(s => s.id === item.service_id);
         if (!service) return null;
         return {
@@ -68,36 +72,26 @@ export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: 
 
     setSyncing(true);
     try {
-      // Check if item already exists
       const existingIndex = cart.findIndex(
         c => c.service.id === item.service.id && c.targetUrl === item.targetUrl
       );
 
       if (existingIndex >= 0) {
-        // Update quantity
         const newQuantity = cart[existingIndex].quantity + item.quantity;
-        await updateCartItem(cart[existingIndex].id!, { quantity: newQuantity });
+        await cartEdgeFn('cart-update', { buyerId, panelId, itemId: cart[existingIndex].id, quantity: newQuantity });
+        setCart(prev => prev.map((c, i) => i === existingIndex ? { ...c, quantity: newQuantity } : c));
         toast({ title: 'Cart updated', description: `Quantity updated to ${newQuantity}` });
       } else {
-        // Insert new item
-        const { data, error } = await supabase
-          .from('buyer_cart')
-          .insert({
-            buyer_id: buyerId,
-            panel_id: panelId,
-            service_id: item.service.id,
-            quantity: item.quantity,
-            target_url: item.targetUrl,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setCart(prev => [...prev, { ...item, id: data.id }]);
+        const data = await cartEdgeFn('cart-add', {
+          buyerId,
+          panelId,
+          serviceId: item.service.id,
+          quantity: item.quantity,
+          targetUrl: item.targetUrl,
+        });
+        setCart(prev => [...prev, { ...item, id: data?.id || data?.item?.id }]);
         toast({ title: 'Added to cart', description: item.service.name });
       }
-
       return true;
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -112,18 +106,8 @@ export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: 
   const updateCartItem = useCallback(async (itemId: string, updates: Partial<{ quantity: number; targetUrl: string }>) => {
     setSyncing(true);
     try {
-      const updateData: any = {};
-      if (updates.quantity !== undefined) updateData.quantity = updates.quantity;
-      if (updates.targetUrl !== undefined) updateData.target_url = updates.targetUrl;
-
-      const { error } = await supabase
-        .from('buyer_cart')
-        .update(updateData)
-        .eq('id', itemId);
-
-      if (error) throw error;
-
-      setCart(prev => prev.map(item => 
+      await cartEdgeFn('cart-update', { buyerId, panelId, itemId, ...updates });
+      setCart(prev => prev.map(item =>
         item.id === itemId ? { ...item, ...updates } : item
       ));
     } catch (error) {
@@ -132,19 +116,13 @@ export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: 
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [buyerId, panelId]);
 
   // Remove item from cart
   const removeFromCart = useCallback(async (itemId: string) => {
     setSyncing(true);
     try {
-      const { error } = await supabase
-        .from('buyer_cart')
-        .delete()
-        .eq('id', itemId);
-
-      if (error) throw error;
-
+      await cartEdgeFn('cart-remove', { buyerId, panelId, itemId });
       setCart(prev => prev.filter(item => item.id !== itemId));
       toast({ title: 'Removed from cart' });
     } catch (error) {
@@ -153,22 +131,14 @@ export const useBuyerCart = ({ buyerId, panelId, services, getEffectivePrice }: 
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [buyerId, panelId]);
 
   // Clear entire cart
   const clearCart = useCallback(async () => {
     if (!buyerId || !panelId) return;
-
     setSyncing(true);
     try {
-      const { error } = await supabase
-        .from('buyer_cart')
-        .delete()
-        .eq('buyer_id', buyerId)
-        .eq('panel_id', panelId);
-
-      if (error) throw error;
-
+      await cartEdgeFn('cart-clear', { buyerId, panelId });
       setCart([]);
       toast({ title: 'Cart cleared' });
     } catch (error) {
