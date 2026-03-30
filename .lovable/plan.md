@@ -1,72 +1,115 @@
 
 
-# Plan: Support Email Visibility, Service ID Stability, and 50+ Payment Methods
+# Plan: Payment Method Configuration Overhaul, Webhook URL Fix, Live Chat Panel ID Fix, Tenant API URL Fix, Service Types & Drip Feed Implementation
 
-## 1. Support Email Configuration for Contact Us Page
+## 1. Remove Test Mode & Add Per-Gateway Setup Instructions
 
-**Current state**: Panel owners CAN already configure their support email in General Settings (`supportEmail` field, saved to `panel_settings.contact_info.email`). The BuyerContact page reads it from `panel_settings_public.contact_info`. The hardcoded email was already removed.
+**Problems found**:
+- Line 907-913 in `PaymentMethods.tsx`: "Test Mode" toggle with `formData.testMode` — unnecessary, everything should be live/production.
+- Line 828-850: "Mode Detection" section that checks for "test"/"sandbox" in API key — misleading.
+- Webhook URL at line 881 uses `window.location.origin` which shows `lovable.app` instead of the tenant's subdomain/custom domain.
+- Many gateways (50+) lack per-gateway setup instructions in the config dialog.
+- `dripfeed` is hardcoded to `false` in `buyer-api/index.ts` line 208.
 
-**Issue**: The `contact_info` object in GeneralSettings only saves `{ email: settings.supportEmail }` — no phone, address, or website fields are exposed for panel owners to configure.
-
-**Fix**: Add phone, address, and website fields to the GeneralSettings contact section so panel owners can fully configure what appears on the tenant Contact Us page.
-
-**Files**: `src/pages/panel/GeneralSettings.tsx`
-
----
-
-## 2. Service ID (display_order) Stability Confirmation
-
-**Current state**: `display_order` is the stable service ID assigned at import time. `sort_order` (added recently) controls visual ordering for drag-and-drop. The tenant API (`buyer-api`) uses `display_order` as the service identifier.
-
-**Concern**: "Does sort_order/display_order spoil service IDs for providers?"
-
-**Answer**: No — `display_order` is never changed by drag-and-drop (that updates `sort_order`). When users add another provider, new services get `MAX(display_order) + 1` onwards. The tenant API (`/api/v2`) uses the database UUID `id` for order placement and `display_order` as the human-readable ID — both remain stable. No code changes needed here.
-
----
-
-## 3. Add 50+ Payment Gateways for Panel Owner Configuration
-
-**Current count**: 20 gateways across 5 categories. Target: 70+ gateways.
-
-**Approach**: Add gateways to the `paymentGateways` object in `PaymentMethods.tsx` and create corresponding icons in `PaymentIcons.tsx`. Each gateway needs: id, name, Icon component, regions, fee, docsUrl.
-
-### New gateways to add (50+ organized by category):
-
-**Cards & Global (add ~8)**:
-- Adyen, Checkout.com, Worldpay, Authorize.net, 2Checkout (Verifone), Mollie, dLocal, Rapyd
-
-**Regional (add ~15)**:
-- Mercado Pago (LATAM), Iyzico (Turkey), Paymob (MENA), Xendit (SEA), Midtrans (Indonesia), GCash (Philippines), GrabPay (SEA), Opay (Africa), Moov Money (Africa), Chipper Cash (Africa), Paga (Nigeria), Remita (Nigeria), Interswitch (Nigeria), MTN MoMo (Africa), Safaricom M-Pesa (East Africa)
-
-**E-Wallets (add ~8)**:
-- Neteller, WebMoney, Payoneer, Alipay, WeChat Pay, Revolut, Venmo, Zelle
-
-**Bank (add ~5)**:
-- Wire Transfer, iDEAL (Netherlands), Bancontact (Belgium), Boleto (Brazil), PIX (Brazil)
-
-**Crypto (add ~10)**:
-- Plisio, CoinPayments, TripleA, BitPay, Blockonomics, OpenNode, MixPay, Cryptocloud, Oxapay, SpicePay
-
-**BNPL / Alternative (new category, add ~5)**:
-- Klarna, Afterpay/Clearpay, Tabby (MENA), Tamara (MENA), Sezzle
-
-### Implementation:
-
-1. **PaymentIcons.tsx**: Add `GenericPaymentIcon`-based icons for each new gateway (use colored rectangles with initials — keeps file size manageable). Add all to `getPaymentIcon` map.
-
-2. **PaymentMethods.tsx**: Add new category `bnpl` and expand all existing categories with the new gateways. Each entry follows existing pattern:
+**Fix**:
+- Remove `testMode` from `formData` state and all references (lines 184, 344, 371, 907-913).
+- Remove the sandbox/test mode detection UI (lines 828-850).
+- Add a `gatewaySetupSteps` record with per-gateway step-by-step instructions on how to obtain live API keys, displayed in the config dialog. Example:
 ```typescript
-{ id: "adyen", name: "Adyen", Icon: AdyenIcon, regions: ["Worldwide"], fee: "Variable", docsUrl: "https://docs.adyen.com" }
+const gatewaySetupSteps: Record<string, string[]> = {
+  stripe: [
+    "1. Go to stripe.com/dashboard → Developers → API Keys",
+    "2. Copy your Publishable Key (pk_live_...)",
+    "3. Copy your Secret Key (sk_live_...)",
+    "4. Ensure you're in Live mode (not Test)"
+  ],
+  paypal: [
+    "1. Go to developer.paypal.com → My Apps",
+    "2. Select your Live app (or create one)",
+    "3. Copy Client ID and Secret from Live tab"
+  ],
+  // ... for all 70+ gateways
+};
+```
+- Display these steps in the config dialog between the key inputs and the webhook URL section.
+
+## 2. Fix Webhook URL to Use Tenant Domain
+
+**Problem**: Line 881 uses `window.location.origin` which resolves to the panel owner's dashboard URL, not the tenant-facing URL.
+
+**Fix**: Construct webhook URL from `panel.custom_domain` or `panel.subdomain`:
+```typescript
+const tenantWebhookBase = panel?.custom_domain 
+  ? `https://${panel.custom_domain}`
+  : panel?.subdomain 
+    ? `https://${panel.subdomain}.smmpilot.online`
+    : window.location.origin;
+// Display: `${tenantWebhookBase}/api/webhooks/${selectedGateway?.id}`
 ```
 
-3. **Configuration dialog**: Already works generically (API Key + Secret Key). No changes needed — all gateways use the same config dialog.
+## 3. Fix Tenant Live Chat "Missing Panel ID"
 
-4. **process-payment edge function**: No changes needed — buyer payment gateway resolution already reads from `panels.settings.payments.enabledMethods` dynamically. Any gateway the panel owner configures with API keys will be passed through.
+**Problem**: In `BuyerSupport.tsx`, `handleStartChat` (line 346) checks `panel?.id` and early returns with toast if missing. The `panel` comes from `useTenant()`. If the tenant hook hasn't resolved yet or fails, `panel?.id` is undefined.
 
-### Pre-existing bug fixes before adding:
+**Fix**:
+- Add a loading guard — don't render the chat UI until `panel` is resolved.
+- Add better error messaging when `panel` is still loading vs actually missing.
+- Ensure the `panelId` is passed correctly in `handleStartChat` body (line 352 already does this — but verify `panel` is not null at call time).
 
-- **Config dialog secret key handling**: Currently all gateways show "API Key" + "Secret Key". Some gateways need different field labels (e.g., Coinbase only needs API Key, Paystack needs Secret Key, Razorpay needs Key ID + Key Secret). Add per-gateway field label customization.
-- **Test connection**: Only supports stripe/paypal/coinbase. For unsupported gateways, it already shows "simulated" — this is acceptable.
+Also in `handleQuickReply` (line 384), `buyer?.id` might be undefined — add guard.
+
+## 4. Fix Tenant API URL Format
+
+**Problem**: `BuyerAPI.tsx` line 49 shows URL as `https://soc.smmpilot.online/api/v2/buyer-api`. The standard SMM panel API format should be just `https://domain.com/api/v2` — not `/api/v2/buyer-api`. The `/buyer-api` suffix is an internal edge function name, not part of the public API URL.
+
+**Fix**: Change the displayed URL to end at `/api/v2`:
+```typescript
+const apiBaseUrl = panel?.custom_domain 
+  ? `https://${panel.custom_domain}/api/v2`
+  : panel?.subdomain 
+    ? `https://${panel.subdomain}.${platformDomain}/api/v2`
+    : `https://yourpanel.${platformDomain}/api/v2`;
+```
+
+The actual routing (edge function `buyer-api`) happens server-side — the user-facing API documentation should show the clean `/api/v2` endpoint.
+
+## 5. Implement Service Types (Poll, Subscription, Drip Feed) in Tenant Orders
+
+**Problem**: The database has `service_type` column on `services` table (values: followers, likes, views, poll, subscriptions, drip_feed, etc.), but:
+- `BuyerNewOrder.tsx` and `FastOrderSection.tsx` don't show service-type-specific form fields (e.g., drip feed needs `runs` + `interval`; poll needs `answers`; subscription needs `expiry`).
+- `buyer-api/index.ts` line 208 hardcodes `dripfeed: false`.
+- The order creation doesn't pass drip feed parameters to the provider.
+
+**Fix**:
+
+### buyer-api/index.ts
+- Change line 208: read `dripfeed` from the service's actual data:
+```typescript
+dripfeed: s.dripfeed_available || false,
+```
+- In `handleAddOrder`, accept and forward `runs`, `interval`, `delay` parameters to the upstream provider when placing orders.
+
+### BuyerNewOrder.tsx
+- After service selection, check `service.service_type` or `service.dripfeed_available`:
+  - If drip feed available: show "Runs" and "Interval (minutes)" inputs
+  - Save these in order metadata and pass to `buyer-order`/`buyer-api`
+- For subscription-type services: show "Expiry" date picker
+- For poll-type services: show "Answers" textarea (comma-separated)
+
+### FastOrderSection.tsx
+- Same conditional fields for drip feed when service supports it
+
+### buyer-order edge function
+- Accept `runs`, `interval`, `delay`, `answers`, `expiry` params and forward to provider API
+
+### ServicesManagement.tsx
+- Show `service_type` and `dripfeed_available` columns in the service list so panel owners can see/verify what types their imported services have
+
+## 6. Ensure `dripfeed_available` is Read from Provider Import
+
+**Current state**: `sync-provider-services` and `import-provider-services` already read `dripfeed` from provider API responses and store in `provider_services.dripfeed_available`. But when creating the `services` table entry, this field may not be copied over.
+
+**Fix**: Ensure import logic copies `dripfeed_available` from `provider_services` to `services` table during import/sync.
 
 ---
 
@@ -74,7 +117,12 @@
 
 | File | Changes |
 |------|---------|
-| `src/pages/panel/GeneralSettings.tsx` | Add phone, address, website fields to contact section |
-| `src/components/payment/PaymentIcons.tsx` | Add 50+ new gateway icon components and update `getPaymentIcon` map |
-| `src/pages/panel/PaymentMethods.tsx` | Add 50+ gateways to categories, add `bnpl` category, add per-gateway field labels |
+| `src/pages/panel/PaymentMethods.tsx` | Remove test mode toggle/detection; add `gatewaySetupSteps` with live key instructions for all gateways; fix webhook URL to use tenant domain; display setup steps in config dialog |
+| `src/pages/buyer/BuyerAPI.tsx` | Fix API URL: remove `/buyer-api` suffix, show clean `/api/v2` |
+| `src/pages/buyer/BuyerSupport.tsx` | Add loading guard for panel ID in chat; improve error handling |
+| `src/pages/buyer/BuyerNewOrder.tsx` | Add drip feed fields (runs, interval) when service supports it; add poll/subscription fields |
+| `src/components/storefront/FastOrderSection.tsx` | Add drip feed fields when applicable |
+| `supabase/functions/buyer-api/index.ts` | Fix `dripfeed` to read from DB; accept/forward runs, interval, delay params |
+| `supabase/functions/buyer-order/index.ts` | Accept/forward drip feed and service-type-specific params |
+| `src/pages/panel/ServicesManagement.tsx` | Show service_type and dripfeed_available in service list |
 
