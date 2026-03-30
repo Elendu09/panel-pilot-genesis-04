@@ -135,7 +135,61 @@ async function logSecurityEvent(
   }
 }
 
-// Base64URL encoding for JWT
+// ========= TOTP FUNCTIONS FOR BUYER MFA =========
+function base32Encode(buffer: Uint8Array): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0, value = 0, output = '';
+  for (let i = 0; i < buffer.length; i++) {
+    value = (value << 8) | buffer[i];
+    bits += 8;
+    while (bits >= 5) { output += alphabet[(value >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  if (bits > 0) output += alphabet[(value << (5 - bits)) & 31];
+  return output;
+}
+
+function base32Decode(encoded: string): Uint8Array {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const cleanInput = encoded.replace(/=+$/, '').toUpperCase();
+  let bits = 0, value = 0;
+  const output: number[] = [];
+  for (let i = 0; i < cleanInput.length; i++) {
+    const idx = alphabet.indexOf(cleanInput[i]);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) { output.push((value >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  return new Uint8Array(output);
+}
+
+async function verifyTOTP(secret: string, token: string, window = 1): Promise<boolean> {
+  for (let i = -window; i <= window; i++) {
+    const epoch = Math.floor(Date.now() / 1000) + (i * 30);
+    const counter = Math.floor(epoch / 30);
+    const key = base32Decode(secret);
+    const counterBytes = new Uint8Array(8);
+    let tmp = counter;
+    for (let j = 7; j >= 0; j--) { counterBytes[j] = tmp & 0xff; tmp = Math.floor(tmp / 256); }
+    const cryptoKey = await crypto.subtle.importKey('raw', key.buffer as ArrayBuffer, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const signature = await crypto.subtle.sign('HMAC', cryptoKey, counterBytes.buffer as ArrayBuffer);
+    const hmac = new Uint8Array(signature);
+    const offset = hmac[hmac.length - 1] & 0x0f;
+    const code = ((hmac[offset] & 0x7f) << 24) | ((hmac[offset + 1] & 0xff) << 16) | ((hmac[offset + 2] & 0xff) << 8) | (hmac[offset + 3] & 0xff);
+    if (String(code % 1000000).padStart(6, '0') === token) return true;
+  }
+  return false;
+}
+
+function generateMfaBackupCodes(count = 10): string[] {
+  return Array.from({ length: count }, () => {
+    const bytes = new Uint8Array(5);
+    crypto.getRandomValues(bytes);
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex.substring(0, 4).toUpperCase() + '-' + hex.substring(4, 8).toUpperCase();
+  });
+}
+
 function base64UrlEncode(data: string): string {
   return btoa(data)
     .replace(/\+/g, '-')
