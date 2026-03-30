@@ -1901,7 +1901,10 @@ export default function DesignCustomization() {
                     <ImageUpload
                       value={customization.heroImageUrl || ''}
                       onChange={(url) => updateCustomization('heroImageUrl', url)}
+                      panelId={panelId || ''}
+                      folder="hero"
                       label="Hero Image"
+                      aspectRatio="wide"
                     />
                   </div>
                   <div>
