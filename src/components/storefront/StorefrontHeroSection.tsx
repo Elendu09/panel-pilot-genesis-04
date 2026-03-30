@@ -572,6 +572,22 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             </div>
           </motion.div>
         </motion.div>
+
+        {/* Hero Image - Right position */}
+        {enableHeroImage && heroImagePosition === 'right' && (
+          <motion.div
+            className="w-full lg:w-2/5 flex-shrink-0 order-last"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <img 
+              src={customization.heroImageUrl} 
+              alt="Hero" 
+              className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+            />
+          </motion.div>
+        )}
       </div>
     </section>
   );
