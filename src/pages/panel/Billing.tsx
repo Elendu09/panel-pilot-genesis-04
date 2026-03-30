@@ -708,7 +708,7 @@ const Billing = () => {
               <span className="text-sm">Next Billing</span>
             </div>
             <p className="text-2xl lg:text-3xl font-bold">
-              ${plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 0}
+              ${getPlanPrice(plans.find(p => p.name.toLowerCase() === currentPlan) || plans[0])}
             </p>
             <p className="text-xs text-muted-foreground">
               {subscription?.expires_at 
