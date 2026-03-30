@@ -169,7 +169,7 @@ const BuyerContact = () => {
       color: "text-orange-500",
       bgColor: "bg-orange-500/10",
     },
-  ].filter(m => m.value);
+  ].filter((m): m is NonNullable<typeof m> => m != null && !!m.value);
 
   const socialMethods = [
     {
