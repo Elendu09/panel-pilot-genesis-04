@@ -442,8 +442,8 @@ const ServicesManagement = () => {
             displayOrder: data.display_order || 0,
             description: data.description,
             imageUrl: data.image_url,
-            serviceType: data.service_type || 'Default',
-            dripfeedAvailable: data.dripfeed_available || false,
+            serviceType: (data as any).service_type || 'Default',
+            dripfeedAvailable: (data as any).dripfeed_available || false,
           };
           
           if (editId) {
@@ -523,8 +523,8 @@ const ServicesManagement = () => {
         displayOrder: data.display_order || 0,
         description: data.description,
         imageUrl: data.image_url,
-        serviceType: data.service_type || 'Default',
-        dripfeedAvailable: data.dripfeed_available || false,
+        serviceType: (data as any).service_type || 'Default',
+        dripfeedAvailable: (data as any).dripfeed_available || false,
       };
       
       openEditDialog(serviceItem);
@@ -665,8 +665,8 @@ const ServicesManagement = () => {
           displayOrder: s.display_order || index + 1,
           description: s.description,
           imageUrl: s.image_url,
-          serviceType: s.service_type || 'Default',
-          dripfeedAvailable: s.dripfeed_available || false,
+          serviceType: (s as any).service_type || 'Default',
+          dripfeedAvailable: (s as any).dripfeed_available || false,
         };
       });
 
