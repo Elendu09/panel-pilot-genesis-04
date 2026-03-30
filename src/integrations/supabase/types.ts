@@ -2210,11 +2210,13 @@ export type Database = {
       }
       panel_subscriptions: {
         Row: {
+          billing_cycle: string | null
           created_at: string
           expires_at: string | null
           id: string
           panel_id: string
           payment_id: string | null
+          pending_downgrade: string | null
           plan_type: Database["public"]["Enums"]["subscription_plan"]
           price: number
           started_at: string
@@ -2223,11 +2225,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_cycle?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           panel_id: string
           payment_id?: string | null
+          pending_downgrade?: string | null
           plan_type?: Database["public"]["Enums"]["subscription_plan"]
           price?: number
           started_at?: string
@@ -2236,11 +2240,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_cycle?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           panel_id?: string
           payment_id?: string | null
+          pending_downgrade?: string | null
           plan_type?: Database["public"]["Enums"]["subscription_plan"]
           price?: number
           started_at?: string
