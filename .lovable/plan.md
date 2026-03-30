@@ -1,39 +1,85 @@
 
 
+# Plan: Complete Missing Implementations — SMTP in Integrations, Drip Feed Toggle + Panel Visibility, Order Storage
 
-# Plan: Fix Tenant Auth (Username Forgot-Password, Email Delivery, Password Issues), Service Type UI, and Live Chat Panel ID
+## Audit Summary
 
-## COMPLETED
+### Confirmed Working
+- **Auth password fix**: `password_temp` stored separately, login checks both independently, `normalizedEmail` bug fixed
+- **Live chat panel ID**: Triple fallback implemented (`authPanelId || panel?.id || localStorage`)
+- **Support tickets**: All operations use `resolvedPanelId`
+- **SupportCenter**: Defaults to "livechat" tab, FAQ CRUD implemented
+- **SMTP config UI**: Present in GeneralSettings with all fields
+- **Drip feed forwarding**: `buyer-order` accepts `runs`/`interval`/`delay` and forwards to provider API
+- **Drip feed UI**: Present in both BuyerNewOrder and FastOrderSection
+- **Commission 5%**: Implemented in `buyer-order`
 
-### 1. Fixed Forgot-Password: No longer overwrites main password
-- Temp password stored in `password_temp` with `password_temp_expires_at` (24h default)
-- Main `password_hash` stays intact
-- Fixed `normalizedEmail` undefined variable bug
+### Gaps Found
 
-### 2. Fixed Login: Independent password_hash and password_temp checking
-- Login first checks `password_hash`, then independently checks `password_temp` (if not expired)
-- Both the real password AND temp password work during the temp window
-- Expired temp passwords are auto-cleared
+1. **SMTP not in Integrations page** — user wants an SMTP card in Integrations that links to General Settings
+2. **Drip feed auto-shows** instead of using a toggle — user expects a Switch toggle that reveals the fields when turned on
+3. **Orders table doesn't store drip feed params** — `runs`, `interval` are forwarded to provider but never saved on the order record, so panel owners can't see which orders are drip feed
+4. **OrdersManagement doesn't show drip feed info** — no badge or column indicating drip feed orders
 
-### 3. Database: Added `password_temp_expires_at` column to `client_users`
+---
 
-### 4. Fixed Live Chat "Missing Panel ID"
-- Added triple fallback: `authPanelId || panel?.id || localStorage.getItem('current_panel_id')`
-- All ticket/chat operations use `resolvedPanelId` instead of `panel?.id`
+## 1. Add SMTP Card to Integrations Page
 
-### 5. Fixed Support Ticket Creation
-- Ticket creation uses `resolvedPanelId` consistently
-- Notification also uses `resolvedPanelId`
+**File**: `src/pages/panel/Integrations.tsx`
 
-### 6. SupportCenter: Default tab changed to "livechat"
+Add an "Email / SMTP" card in the integrations list that:
+- Shows an email icon with description "Configure SMTP for sending tenant emails"
+- Has a "Configure" button that navigates to `/panel/settings` (General Settings)
+- Shows a "Connected" badge if SMTP host is already configured
 
-### 7. FAQ Management for Panel Owners
-- CRUD interface in Knowledge tab for managing tenant-facing FAQs
-- Saved to `panels.custom_branding.faqs`
-- Tenant BuyerSupport reads and displays these FAQs
+---
 
-### 8. SMTP Configuration UI
-- Added SMTP config fields in GeneralSettings (host, port, username, password, from email, from name)
-- Panel owners can configure SMTP for sending password reset emails
+## 2. Drip Feed Toggle in New Order & Fast Order
 
-### 9. Edge functions deployed: buyer-auth, panel-customers
+**Files**: `src/pages/buyer/BuyerNewOrder.tsx`, `src/components/storefront/FastOrderSection.tsx`
+
+Currently drip feed fields auto-show when `dripfeed_available` is true. Change to:
+- Add a `dripFeedEnabled` boolean state (default `false`)
+- When `dripfeed_available` is true, show a Switch toggle labeled "Enable Drip Feed"
+- Only show runs/interval inputs when toggle is ON
+- When toggle is OFF, don't send `runs`/`interval` params (current behavior when `dripFeedRuns <= 1`)
+- Reset toggle to OFF when service changes
+
+---
+
+## 3. Store Drip Feed Params on Orders
+
+**Database migration**: Add `drip_feed_runs` (integer, nullable) and `drip_feed_interval` (integer, nullable) columns to `orders` table.
+
+**File**: `supabase/functions/buyer-order/index.ts`
+- Save `runs` and `interval` to the order record in the insert payload as `drip_feed_runs` and `drip_feed_interval`
+
+**File**: `supabase/functions/buyer-api/index.ts`
+- Same: save drip feed params to order record
+
+---
+
+## 4. Show Drip Feed Info in Panel Owner Orders
+
+**File**: `src/pages/panel/OrdersManagement.tsx`
+- Add a "Drip Feed" badge on orders where `drip_feed_runs > 1`
+- Show tooltip or detail: "X runs every Y min"
+
+**File**: `src/components/team/TeamOrdersTab.tsx`
+- Same drip feed badge display
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/panel/Integrations.tsx` | Add SMTP integration card linking to General Settings |
+| `src/pages/buyer/BuyerNewOrder.tsx` | Add drip feed toggle Switch instead of auto-show |
+| `src/components/storefront/FastOrderSection.tsx` | Add drip feed toggle Switch instead of auto-show |
+| `supabase/functions/buyer-order/index.ts` | Store `drip_feed_runs`, `drip_feed_interval` on order |
+| `supabase/functions/buyer-api/index.ts` | Store drip feed params on order |
+| `src/pages/panel/OrdersManagement.tsx` | Show drip feed badge on orders |
+| `src/components/team/TeamOrdersTab.tsx` | Show drip feed badge on orders |
+| Database migration | Add `drip_feed_runs`, `drip_feed_interval` columns to `orders` |
+
