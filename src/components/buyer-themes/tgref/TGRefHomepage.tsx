@@ -211,123 +211,72 @@ export const TGRefHomepage = ({
             style={{ maxWidth: containerMax }}
             {...(enableAnimations ? { variants: containerVariants, initial: "hidden", animate: "visible" } : {})}
           >
-            <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="text-center max-w-4xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8"
-                style={{ backgroundColor: `${primary}1a`, border: `1px solid ${primary}4d` }}>
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
-                <span className="text-sm" style={{ color: primary }}>system.status: online</span>
-              </div>
-
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
-                <span style={{ color: mutedColor }}>&gt; </span>
-                {(() => {
-                  const position = customization.heroAnimatedTextPosition || 'last';
-                  const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
-                  const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('tgref');
-                  return (
-                    <>
-                      {before && (
-                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          {before}{' '}
-                        </span>
-                      )}
-                      <AnimatedHeroText 
-                        text={animatedWord}
-                        animationStyle={effectiveAnimStyle}
-                        primaryColor={primary}
-                        secondaryColor={secondary}
-                        enableAnimations={enableAnimations}
-                      />
-                      {after && (
-                        <span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                          {' '}{after}
-                        </span>
-                      )}
-                    </>
-                  );
-                })()}
-                <span className="animate-pulse" style={{ color: primary }}>_</span>
-              </h1>
-
-              <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>
-                <span style={{ color: secondary }}>$</span> {heroSubtitle}
-              </p>
-
-              {/* Dynamic CTA based on enableFastOrder - Default: Get Started + Fast Order */}
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                {enableFastOrder ? (
-                  // When enableFastOrder is ON: Fast Order primary + View Services secondary
-                  <>
-                    <Button 
-                      size="lg" 
-                      onClick={() => navigate('/fast-order')}
-                      className="font-bold font-mono text-lg px-8 hover:opacity-90" 
-                      style={primaryButtonStyle}
-                    >
-                      <Zap className="w-5 h-5 mr-2" />
-                      ./fast-order --now
-                    </Button>
-                    <Button size="lg" variant="outline" asChild className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}>
-                      <Link to="/services" className="flex items-center gap-2">
-                        <Terminal className="w-5 h-5" />
-                        ./view-services
-                      </Link>
-                    </Button>
-                  </>
-                ) : (
-                  // Default (enableFastOrder OFF): Get Started (login-aware) + Fast Order
-                  <>
-                    <Button 
-                      size="lg" 
-                      onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')}
-                      className="font-bold font-mono text-lg px-8 hover:opacity-90" 
-                      style={primaryButtonStyle}
-                    >
-                      <Play className="w-5 h-5 mr-2" />
-                      {buyer ? './dashboard' : './get-started'}
-                    </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline" 
-                      onClick={() => navigate('/fast-order')}
-                      className="font-mono" 
-                      style={{ borderColor: `${accent}80`, color: accent }}
-                    >
-                      <Zap className="w-5 h-5 mr-2" />
-                      ./fast-order
-                    </Button>
-                  </>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Code Block Preview */}
-            <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="mt-16 max-w-2xl mx-auto">
-              <div className="rounded-lg overflow-hidden" style={{ backgroundColor: surfaceColor, border: `1px solid ${primary}33` }}>
-                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${primary}33` }}>
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="ml-2 text-xs text-gray-500">order.sh</span>
-                </div>
-                <div className="p-4 font-mono text-sm">
-                  <div className="text-gray-500"># Quick order example</div>
-                  <div className="mt-2">
-                    <span style={{ color: accent }}>$</span>
-                    <span> smm order </span>
-                    <span style={{ color: primary }}>--service</span>
-                    <span className="text-yellow-400"> "Instagram Followers"</span>
+            {customization.enableHeroImage && customization.heroImageUrl ? (
+              <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="flex-1 text-left">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ backgroundColor: `${primary}1a`, border: `1px solid ${primary}4d` }}>
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
+                    <span className="text-sm" style={{ color: primary }}>system.status: online</span>
                   </div>
-                  <div>
-                    <span style={{ color: accent }}>$</span>
-                    <span> smm order </span>
-                    <span style={{ color: primary }}>--quantity</span>
-                    <span style={{ color: secondary }}> 1000</span>
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+                    <span style={{ color: mutedColor }}>&gt; </span>
+                    {(() => {
+                      const position = customization.heroAnimatedTextPosition || 'last';
+                      const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
+                      const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('tgref');
+                      return (<>{before && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{before}{' '}</span>)}<AnimatedHeroText text={animatedWord} animationStyle={effectiveAnimStyle} primaryColor={primary} secondaryColor={secondary} enableAnimations={enableAnimations} />{after && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{' '}{after}</span>)}</>);
+                    })()}
+                    <span className="animate-pulse" style={{ color: primary }}>_</span>
+                  </h1>
+                  <p className="text-lg md:text-xl mb-8 max-w-2xl" style={{ color: mutedColor }}><span style={{ color: secondary }}>$</span> {heroSubtitle}</p>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    {enableFastOrder ? (<><Button size="lg" onClick={() => navigate('/fast-order')} className="font-bold font-mono text-lg px-8 hover:opacity-90" style={primaryButtonStyle}><Zap className="w-5 h-5 mr-2" />./fast-order --now</Button><Button size="lg" variant="outline" asChild className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}><Link to="/services" className="flex items-center gap-2"><Terminal className="w-5 h-5" />./view-services</Link></Button></>) : (<><Button size="lg" onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')} className="font-bold font-mono text-lg px-8 hover:opacity-90" style={primaryButtonStyle}><Play className="w-5 h-5 mr-2" />{buyer ? './dashboard' : './get-started'}</Button><Button size="lg" variant="outline" onClick={() => navigate('/fast-order')} className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}><Zap className="w-5 h-5 mr-2" />./fast-order</Button></>)}
                   </div>
-                  <div className="mt-2 text-green-400">✓ Order placed successfully! ID: #SMM-28491</div>
-                </div>
+                </motion.div>
+                <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="w-full lg:w-2/5 flex-shrink-0">
+                  <img src={customization.heroImageUrl} alt="Hero" className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl" loading="eager" />
+                </motion.div>
               </div>
-            </motion.div>
+            ) : (
+              <>
+                <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="text-center max-w-4xl mx-auto">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style={{ backgroundColor: `${primary}1a`, border: `1px solid ${primary}4d` }}>
+                    <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
+                    <span className="text-sm" style={{ color: primary }}>system.status: online</span>
+                  </div>
+                  <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
+                    <span style={{ color: mutedColor }}>&gt; </span>
+                    {(() => {
+                      const position = customization.heroAnimatedTextPosition || 'last';
+                      const { before, animatedWord, after } = getAnimatedWordFromTitle(heroTitle, position);
+                      const effectiveAnimStyle = customization.heroAnimatedTextStyle || getThemeDefaultAnimationStyle('tgref');
+                      return (<>{before && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{before}{' '}</span>)}<AnimatedHeroText text={animatedWord} animationStyle={effectiveAnimStyle} primaryColor={primary} secondaryColor={secondary} enableAnimations={enableAnimations} />{after && (<span style={{ background: `linear-gradient(to right, ${primary}, ${secondary}, ${accent})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{' '}{after}</span>)}</>);
+                    })()}
+                    <span className="animate-pulse" style={{ color: primary }}>_</span>
+                  </h1>
+                  <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}><span style={{ color: secondary }}>$</span> {heroSubtitle}</p>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    {enableFastOrder ? (<><Button size="lg" onClick={() => navigate('/fast-order')} className="font-bold font-mono text-lg px-8 hover:opacity-90" style={primaryButtonStyle}><Zap className="w-5 h-5 mr-2" />./fast-order --now</Button><Button size="lg" variant="outline" asChild className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}><Link to="/services" className="flex items-center gap-2"><Terminal className="w-5 h-5" />./view-services</Link></Button></>) : (<><Button size="lg" onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')} className="font-bold font-mono text-lg px-8 hover:opacity-90" style={primaryButtonStyle}><Play className="w-5 h-5 mr-2" />{buyer ? './dashboard' : './get-started'}</Button><Button size="lg" variant="outline" onClick={() => navigate('/fast-order')} className="font-mono" style={{ borderColor: `${accent}80`, color: accent }}><Zap className="w-5 h-5 mr-2" />./fast-order</Button></>)}
+                  </div>
+                </motion.div>
+                <motion.div {...(enableAnimations ? { variants: itemVariants } : {})} className="mt-16 max-w-2xl mx-auto">
+                  <div className="rounded-lg overflow-hidden" style={{ backgroundColor: surfaceColor, border: `1px solid ${primary}33` }}>
+                    <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: `1px solid ${primary}33` }}>
+                      <div className="w-3 h-3 rounded-full bg-red-500" />
+                      <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                      <div className="w-3 h-3 rounded-full bg-green-500" />
+                      <span className="ml-2 text-xs text-gray-500">order.sh</span>
+                    </div>
+                    <div className="p-4 font-mono text-sm">
+                      <div className="text-gray-500"># Quick order example</div>
+                      <div className="mt-2"><span style={{ color: accent }}>$</span><span> smm order </span><span style={{ color: primary }}>--service</span><span className="text-yellow-400"> "Instagram Followers"</span></div>
+                      <div><span style={{ color: accent }}>$</span><span> smm order </span><span style={{ color: primary }}>--quantity</span><span style={{ color: secondary }}> 1000</span></div>
+                      <div className="mt-2 text-green-400">✓ Order placed successfully! ID: #SMM-28491</div>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
           </motion.div>
         </section>
 

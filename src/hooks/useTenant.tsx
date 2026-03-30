@@ -330,7 +330,7 @@ export function useTenant(): TenantDetectionResult {
         // Panel query selection - uses panels_public view (excludes sensitive financial data)
         const panelFields = `
           id, name, subdomain, custom_domain, theme_type, primary_color,
-          secondary_color, logo_url, status, custom_branding, settings
+          secondary_color, logo_url, status, custom_branding, settings, buyer_theme
         `;
 
         // PRIORITY 0: Try full hostname as custom_domain first (for any custom domain)

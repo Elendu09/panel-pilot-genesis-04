@@ -70,6 +70,8 @@ const AdminOverview = () => {
     activePanels: 0,
     suspendedPanels: 0
   });
+  const [planDistribution, setPlanDistribution] = useState({ free: 0, basic: 0, pro: 0 });
+  const [recentSignups, setRecentSignups] = useState<{ id: string; email: string; full_name: string; created_at: string }[]>([]);
   const [statsChanges, setStatsChanges] = useState<{
     panels: { value: string; trend: 'up' | 'down' | 'neutral' };
     users: { value: string; trend: 'up' | 'down' | 'neutral' };
@@ -101,11 +103,12 @@ const AdminOverview = () => {
       }
 
       // Fetch all data directly from Supabase tables
-      const [panelsRes, profilesRes, txRes, auditRes] = await Promise.all([
+      const [panelsRes, profilesRes, txRes, auditRes, subsRes] = await Promise.all([
         supabase.from('panels').select('*, owner:profiles!panels_owner_id_fkey(email, full_name)').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('id, created_at', { count: 'exact', head: false }),
+        supabase.from('profiles').select('id, email, full_name, created_at', { count: 'exact', head: false }).order('created_at', { ascending: false }),
         supabase.from('transactions').select('id, amount, payment_method, created_at, status, panel_id').eq('type', 'deposit').order('created_at', { ascending: false }).limit(10),
         supabase.from('audit_logs').select('id, action, resource_type, created_at, details').order('created_at', { ascending: false }).limit(10),
+        supabase.from('panel_subscriptions').select('plan_type'),
       ]);
 
       const allPanels = (panelsRes.data || []) as Panel[];
@@ -114,6 +117,19 @@ const AdminOverview = () => {
       const pendingPanels = allPanels.filter(p => p.status === 'pending').length;
       const suspendedPanels = allPanels.filter(p => p.status === 'suspended').length;
       const platformRevenue = (txRes.data || []).filter((t: any) => t.status === 'completed').reduce((s: number, t: any) => s + (t.amount || 0), 0);
+
+      // Plan distribution
+      const subs = subsRes.data || [];
+      setPlanDistribution({
+        free: subs.filter((s: any) => s.plan_type === 'free').length,
+        basic: subs.filter((s: any) => s.plan_type === 'basic').length,
+        pro: subs.filter((s: any) => s.plan_type === 'pro').length,
+      });
+
+      // Recent signups (last 5)
+      setRecentSignups((profilesRes.data || []).slice(0, 5).map((p: any) => ({
+        id: p.id, email: p.email || '', full_name: p.full_name || '', created_at: p.created_at
+      })));
 
       setStats({
         totalPanels,
@@ -425,6 +441,87 @@ const AdminOverview = () => {
             );
           })}
         </div>
+      </motion.div>
+
+      {/* Plan Distribution & Recent Signups */}
+      <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md bg-violet-500/10 dark:bg-violet-500/20">
+                <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              Plan Distribution
+            </CardTitle>
+            <CardDescription>Subscriptions by plan tier</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : (
+              <div className="space-y-3">
+                {[
+                  { label: 'Free', count: planDistribution.free, color: 'bg-slate-500', bgLight: 'bg-slate-500/10' },
+                  { label: 'Basic', count: planDistribution.basic, color: 'bg-blue-500', bgLight: 'bg-blue-500/10' },
+                  { label: 'Pro', count: planDistribution.pro, color: 'bg-amber-500', bgLight: 'bg-amber-500/10' },
+                ].map(plan => {
+                  const total = planDistribution.free + planDistribution.basic + planDistribution.pro;
+                  const pct = total > 0 ? (plan.count / total) * 100 : 0;
+                  return (
+                    <div key={plan.label} className="flex items-center gap-3">
+                      <span className="text-sm font-medium w-12">{plan.label}</span>
+                      <div className="flex-1 h-8 rounded-md overflow-hidden bg-muted/50">
+                        <div className={`h-full ${plan.color} rounded-md flex items-center px-2 transition-all`} style={{ width: `${Math.max(pct, 8)}%` }}>
+                          <span className="text-xs font-semibold text-white">{plan.count}</span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <div className="p-1.5 rounded-md bg-blue-500/10 dark:bg-blue-500/20">
+                <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              Recent Signups
+            </CardTitle>
+            <CardDescription>Latest platform registrations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : recentSignups.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No recent signups</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {recentSignups.map(user => (
+                  <div key={user.id} className="flex items-center justify-between gap-3 p-2.5 rounded-md hover-elevate">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{user.full_name || 'No name'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Button variant="outline" size="sm" className="w-full mt-4" asChild>
+              <Link to="/admin/users">View All Users</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

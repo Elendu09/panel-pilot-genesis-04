@@ -276,6 +276,19 @@ export const FlySMMHomepage = ({
                 </div>
               </motion.div>
 
+              {customization.enableHeroImage && customization.heroImageUrl ? (
+                <motion.div
+                  {...(enableAnimations ? { initial: { opacity: 0, x: 50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6, delay: 0.2 } } : {})}
+                  className="relative"
+                >
+                  <img 
+                    src={customization.heroImageUrl} 
+                    alt="Hero" 
+                    className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+                    loading="eager"
+                  />
+                </motion.div>
+              ) : (
               <motion.div
                 {...(enableAnimations ? { initial: { opacity: 0, x: 50 }, animate: { opacity: 1, x: 0 }, transition: { duration: 0.6, delay: 0.2 } } : {})}
                 className="relative hidden lg:block"
@@ -320,6 +333,7 @@ export const FlySMMHomepage = ({
                   </motion.div>
                 </div>
               </motion.div>
+              )}
             </div>
           </div>
         </section>
