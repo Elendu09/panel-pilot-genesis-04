@@ -1,97 +1,59 @@
 
 
-# Plan: Fix Drip Feed Visibility, Service Types in Management, Dashboard Stats, Fast Order Price/ID, Cart Mobile, Mass Order, and Add 130+ Payment Methods
+# Plan: Fix Payment Methods Review, Wire Transfer, Icons, and Verify Previous Implementations
 
-## Issues Identified
+## Issues Found
 
-1. **Drip feed toggle not visible**: In both `BuyerNewOrder.tsx` (line 779) and `FastOrderSection.tsx` (line 1321), the drip feed section is wrapped in `{selectedService && (selectedService as any).dripfeed_available && (...)}`. Most services don't have `dripfeed_available = true` in the database, so the toggle never shows. The toggle itself exists and works — the condition gate is too strict.
-2. **Service types not visible in ServicesManagement**: `serviceType` and `dripfeedAvailable` are fetched (lines 668-669) but never displayed in the service list/table UI.
-3. **Dashboard shows 0 orders**: `BuyerDashboard.tsx` queries `supabase.from('orders')` directly (line 109-117) with `buyer_id` filter. Tenant buyers use custom auth (not Supabase auth), so there's no `auth.uid()` — RLS blocks the query silently returning 0 rows. Must use `buyer-api` edge function instead.
-4. **Fast order service ID shows "—"**: Line 1197 shows `service.display_order || service.displayOrder || '—'`. The services loaded from `useUnifiedServices` may not include `display_order`. Need to ensure it's included.
-5. **Fast order price stays at $0.00**: `totalPrice` (line 356) depends on `selectedService.price` being set. If `price` is 0 or missing from the service object, it stays 0.
-6. **Cart not mobile responsive**: The `SheetContent` is `w-full sm:max-w-lg` which is fine, but the inner checkout button row and bulk tabs may overflow on 420px.
-7. **Mass order**: Already exists at `/bulk-order` with `BuyerBulkOrder.tsx` and has `BulkAddForm` in cart. User says they can't see it — likely needs better navigation visibility. The cart's "Bulk Add" tab IS the mass order feature.
-8. **Payment methods**: Currently 70 gateways. Need 130+ more to reach 200+.
+### 1. Wire Transfer Should Be Manual, Not API-Based
+- **Problem**: `wiretransfer` is in the `bank` category (line 174) which shows API key fields when configuring. The setup steps say "No API keys needed" but the config dialog still shows API Key/Secret Key inputs.
+- **Fix**: Remove `wiretransfer` from the `bank` array entirely. It belongs as a pre-built manual payment template. Add a "Wire Transfer" quick-add button in the Manual Methods section that pre-fills the manual form with wire transfer defaults.
 
----
+### 2. Payment Icons Are All Generic Letter-Based (Not Official)
+- **Problem**: All 130+ icons in `PaymentIconsExtended.tsx` use `createBrandIcon()` which renders colored rectangles with 2-letter initials (e.g., "AD" for Adyen, "KL" for Klarna). These are not official payment brand icons.
+- **Fix**: Replace generic icons with proper SVG path-based icons for the most recognizable gateways. For gateways where official SVGs are impractical to embed, improve the visual quality with better styling (rounded logos, gradient fills, proper brand colors). For the top ~30 most-used gateways (Klarna, Affirm, Alipay, WeChat Pay, Apple Pay, Google Pay, etc.), create proper SVG icons with recognizable brand marks.
 
-## 1. Fix Dashboard Order Stats — Use Edge Function
+### 3. Gateways Missing Setup Steps and Field Labels
+- **Problem**: Many gateways in the list (e.g., `benefit`, `stcpay`, `accept_paymob`, `cellulant`, `dpo_group`, `hubtel`, `flywire`, `boku`, `moov`, `chipper`, `paga`, `remita`, `interswitch`, `gcash`, `grabpay`, `opay`, `dana`, `ovo`, `shopeepay`, `truemoney`, `promptpay`, `kakaopay`, `aupay`, `momo_vn`, `zalopay`, `linepay`, `konbini`, `paypay`, most e-wallets, most BNPL, some crypto) have NO entry in `gatewayFieldLabels` or `gatewaySetupSteps`. When opened, they show generic "API Key / Public Key" and "Secret Key" with no setup guidance.
+- **Fix**: Add proper `gatewayFieldLabels` and `gatewaySetupSteps` entries for ALL gateways that are missing them. Gateways like Zelle, UPI, PromptPay, Konbini that don't use traditional API keys should either be moved to manual or have their config dialog adapted (no API key required, just account details).
 
-**File**: `src/pages/buyer/BuyerDashboard.tsx`
+### 4. Non-API Gateways Wrongly Requiring API Keys
+Several payment methods don't have merchant APIs and shouldn't require API keys:
+- **Zelle** — P2P, no merchant API
+- **Venmo** — uses PayPal SDK (should reference PayPal config)
+- **UPI** — varies by aggregator; should note "Configure via Razorpay/PayU"
+- **PromptPay** — QR-based, no direct API
+- **Konbini** — convenience store, uses Stripe
+- **Apple Pay / Google Pay / Samsung Pay** — use underlying gateway (Stripe/Adyen)
 
-Replace direct Supabase query (lines 109-117) with `buyer-api` edge function call using `action: 'orders'` with `buyerId` + `panelId` verification. This bypasses RLS and returns actual orders. Calculate stats from the response.
+**Fix**: For pass-through methods (Apple Pay, Google Pay, Samsung Pay, Konbini, Venmo), update setup steps to clearly state "Requires Stripe/PayPal/Adyen — configure the underlying gateway first." For truly manual methods (Zelle, UPI direct), move to manual category or mark field2 as optional with a note.
 
----
+### 5. Orders Management Bulk Select Mobile Issue (from images)
+- **Problem**: The screenshots show orders selected with an "Action..." dropdown overlapping on mobile. The bulk action bar needs the same `overflow-x-auto scrollbar-hide` treatment as customer management.
+- **Fix**: Already addressed in the previous plan's implementation — verify it's working. If the orders management bulk bar still overflows, apply same horizontal scroll fix.
 
-## 2. Fix Drip Feed Visibility — Always Show Toggle When Service Selected
-
-**Files**: `src/pages/buyer/BuyerNewOrder.tsx`, `src/components/storefront/FastOrderSection.tsx`
-
-Change the condition from `(selectedService as any).dripfeed_available` to always show the toggle when a service is selected. The toggle is already gated by `dripFeedEnabled` state. If the provider doesn't support drip feed, the order will simply not include drip feed params (runs <= 1 is already handled).
-
----
-
-## 3. Show Service Type & Drip Feed in ServicesManagement
-
-**File**: `src/pages/panel/ServicesManagement.tsx`
-
-Add `serviceType` and `dripfeedAvailable` as visible columns/badges in the service table. Show service type as a badge (e.g., "Poll", "Subscription", "Default") and a drip feed icon when `dripfeedAvailable` is true.
+### 6. Customer Management Bulk Select Mobile (from images)
+- Screenshots show the bulk select still potentially overflowing. Verify the `overflow-x-auto` fix was applied correctly.
 
 ---
 
-## 4. Fix Fast Order Service ID Display
+## Implementation Details
 
-**File**: `src/components/storefront/FastOrderSection.tsx`
+### File: `src/pages/panel/PaymentMethods.tsx`
 
-The service cards show `service.display_order || service.displayOrder || '—'`. Ensure the `useUnifiedServices` hook returns `display_order` and that the Service interface includes it. If the field is coming as `displayOrder` from the hook, normalize it.
+1. **Remove `wiretransfer` from `bank` array** (line 174). Add a "Wire Transfer" quick-template button in the Manual Methods section.
 
----
+2. **Add missing `gatewayFieldLabels`** for ~40 gateways that currently lack them: `benefit`, `stcpay`, `thawani`, `accept_paymob`, `ipay_africa`, `cellulant`, `dpo_group`, `hubtel`, `aza_finance`, `flywire`, `boku`, `gcash`, `grabpay`, `opay`, `moov`, `chipper`, `paga`, `remita`, `interswitch`, `dana`, `ovo`, `shopeepay`, `truemoney`, `promptpay`, `aupay`, `momo_vn`, `zalopay`, `linepay`, `konbini`, `paypay`, `alipay`, `wechatpay`, `revolut`, `payoneer`, `webmoney`, `paysera`, `paysafecard`, `cashapp`, `applepay`, `googlepay`, `samsungpay`, `amazonpay`, `shoppay`, `afterpay`, `sezzle`, `zip`, `splitit`, `laybuy`, `openpay_bnpl`, `atome`, `hoolah`, `pace`, `blockonomics`, `opennode`, `mixpay`, `cryptocloud`, `spicepay`, `confirmo`, `speed`, `gourl`, `b2binpay`, `coinremitter`, `spectrocoin`, `simplex`, `ramp`, `sardine`.
 
-## 5. Fix Fast Order Price at $0.00
+3. **Add missing `gatewaySetupSteps`** for the same ~40 gateways.
 
-**File**: `src/components/storefront/FastOrderSection.tsx`
+4. **Mark pass-through gateways** (Apple Pay, Google Pay, Samsung Pay, Shop Pay) with a special note in their setup steps: "This method requires an underlying gateway (Stripe, Adyen, etc.) to be configured first."
 
-The `totalPrice` calculation at line 356 uses `selectedService.price`. The services from `useUnifiedServices` may have the price field correctly. Debug: ensure the `Service` interface's `price` field is populated from the query. Add a fallback: if `selectedService.price` is 0, check `selectedService.rate` or calculate from the effective buyer price.
+### File: `src/components/payment/PaymentIconsExtended.tsx`
 
----
+Replace the top ~30 most-used generic letter icons with proper SVG path icons for recognizable brands: Apple Pay, Google Pay, Klarna, Alipay, WeChat Pay, Revolut, Venmo, Cash App, Samsung Pay, Amazon Pay, Shop Pay, Affirm, Afterpay, PIX, iDEAL, Bancontact, Boleto, BitPay, and others where simple recognizable SVG paths exist.
 
-## 6. Fix Cart Mobile Responsiveness
-
-**File**: `src/components/buyer/ShoppingCart.tsx`
-
-- The TabsList `grid-cols-3` at 420px can be tight — reduce text size on mobile
-- The checkout button row (lines 400-422) with Clear + Checkout buttons should stack vertically on very small screens
-- Add `overflow-x-auto` to any overflowing containers
-
----
-
-## 7. Mass Order Navigation
-
-Mass order exists at `/bulk-order` and in the cart's "Bulk Add" tab. The user says they can't find it. Add a "Mass Order" link/button in the tenant sidebar navigation if not present. Rename cart's "Bulk Add" tab to "Mass Order" for clarity.
-
----
-
-## 8. Add 130+ Payment Methods
-
-**File**: `src/pages/panel/PaymentMethods.tsx`
-
-Currently has 70 gateways. Add 130+ more across categories to reach 200+:
-- **Cards/Global**: Braintree, PayU, Paytm, CCAvenue, Paddle, Gumroad, FastSpring, Recurly, Chargebee, 2C2P, PayGate, Ebanx, PagSeguro, SafeCharge, Nuvei, BlueSnap, Cybersource, PayFast, Thawani, Tap, Moyasar, HyperPay, Benefit, STC Pay, Fawry, Kashier, Accept (Paymob), iPay Africa, Yoco, Cellulant, DPO Group, Pesapal, Hubtel, AZA Finance, Flywire, Ayden, Boku
-- **Regional**: ToyyibPay, Billplz (Malaysia), PayHere (Sri Lanka), Bkash (Bangladesh), SSLCommerz (Bangladesh), eSewa (Nepal), Khalti (Nepal), JazzCash (Pakistan), Easypaisa (Pakistan), Flouci (Tunisia), CinetPay (West Africa), PayDunya (West Africa), Campay (Cameroon), NotchPay (Africa), Wave (West Africa), TigoMoney, Airtel Money, UPI (India), PhonePe (India), Paytm (India), DANA (Indonesia), OVO (Indonesia), ShopeePay (SEA), TrueMoney (Thailand), PromptPay (Thailand), KakaoPay (Korea), Toss Payments (Korea), LINE Pay (Japan/Taiwan), Konbini (Japan), PayPay (Japan), Au PAY (Japan), VNPAY (Vietnam), MoMo (Vietnam), ZaloPay (Vietnam)
-- **Crypto**: Utrust, Confirmo, Speed, GoURL, B2BinPay, Coinremitter, NOWNodes, Trocador, Changelly, PayBear, GloBee, CoinsPaid, Spectrocoin, Paybis, Transak, MoonPay, Simplex, Wyre, Ramp, Sardine
-- **E-wallets**: PaySera, Skrill 1-Tap, Paysafecard, CashApp, Apple Pay, Google Pay, Samsung Pay, Amazon Pay, Shop Pay
-- **Bank**: Trustly, Sofort, Giropay, EPS (Austria), Przelewy24 (Poland), MultiBanco (Portugal), OXXO (Mexico), SPEI (Mexico)
-- **BNPL**: Affirm, Zip (QuadPay), PayBright, Splitit, Laybuy, Openpay, Atome, hoolah, Pace
-
-Each gateway entry needs: id, name, Icon component, regions, fee, docsUrl. Add corresponding field labels in `gatewayFieldLabels` for gateways that have specific credential names. Create placeholder icons using `GenericPaymentIcon` where no custom icon exists, but add the gateway's branded initial/abbreviation.
-
-**File**: `src/components/payment/PaymentIconsExtended.tsx`
-
-Add new icon components for the 130+ gateways. Use the existing pattern of colored SVG circle + text abbreviation for each.
-
-**File**: `src/components/storefront/FastOrderSection.tsx`
-
-Update `allPaymentGateways` map to include the new gateways so they render correctly in the tenant checkout flow.
+### File: `src/pages/panel/OrdersManagement.tsx`
+- Verify mobile bulk action bar responsiveness; apply `overflow-x-auto` if not already done.
 
 ---
 
@@ -99,11 +61,7 @@ Update `allPaymentGateways` map to include the new gateways so they render corre
 
 | File | Changes |
 |------|---------|
-| `src/pages/buyer/BuyerDashboard.tsx` | Use buyer-api edge function for order stats instead of direct query |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Show drip feed toggle for all services, not just dripfeed_available |
-| `src/components/storefront/FastOrderSection.tsx` | Fix service ID display, price calculation, drip feed toggle, add new payment gateways |
-| `src/pages/panel/ServicesManagement.tsx` | Show service_type badge and dripfeed indicator in service list |
-| `src/components/buyer/ShoppingCart.tsx` | Mobile responsive fixes, rename "Bulk Add" to "Mass Order" |
-| `src/pages/panel/PaymentMethods.tsx` | Add 130+ payment gateways with field labels |
-| `src/components/payment/PaymentIconsExtended.tsx` | Add icon components for new gateways |
+| `src/pages/panel/PaymentMethods.tsx` | Remove wiretransfer from bank array; add Wire Transfer manual template; add ~40 missing gatewayFieldLabels and gatewaySetupSteps entries; mark pass-through gateways |
+| `src/components/payment/PaymentIconsExtended.tsx` | Replace top ~30 generic letter icons with proper SVG brand icons |
+| `src/pages/panel/OrdersManagement.tsx` | Verify/fix mobile bulk action overflow |
 
