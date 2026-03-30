@@ -1,28 +1,44 @@
 
 
-# Plan: Fix Social Icon Fill Colors in Light Mode, Fix Bulk Action Mobile Responsiveness
+# Plan: Enhance Admin Pages, Enable Team Member Invites, Fix Hero Image Across All Themes
 
-## Issues
+## 1. Admin Page Enhancements
 
-### 1. Previous Plans Verification
-All 10 previously discussed plans appear to have been implemented based on code analysis. The key changes (promo code server validation, mass order textarea rewrite, service ID display fix, dashboard panelId fix, SEO meta cleanup, cart edge function routing, theme isolation) are all present in the codebase.
+### Current State
+The admin pages (Overview, Panel Management, User Management, Subscription Management, Revenue Analytics) are functional but could be more polished. The Overview shows a kanban view of panels by status, stats cards, recent activity, and top panels. Panel Management has list/kanban views with edit/suspend capabilities.
 
-### 2. Social Icon SVG Fill in Light Mode
-**Problem**: The icons use `fill="currentColor"` which inherits from the CSS `color` property. The render sites (BuyerNewOrder, FastOrderSection, BuyerServices, ServicesManagement) already pass `className="text-white"` to the icon components. However, in `BuyerServices.tsx` line 496, when a category pill is **active**, the icon gets `text-current` instead of `text-white` — on a `bg-primary` background with `text-primary-foreground`, this might render correctly. 
+### Enhancements
+- **AdminOverview**: Add quick-action buttons (approve panel, view user), improve the "Top Panels" section with sparkline mini-charts, add a "Recent Signups" section, and show plan distribution summary (Free/Basic/Pro counts)
+- **PanelManagement**: Add bulk actions (approve/suspend multiple), add filtering by plan tier, show tenant user count per panel, add export functionality
+- **UserManagement**: Add user activity indicators (last login), add inline balance adjustment, add bulk email capability, improve search with filters (by role, activity status, plan tier)
+- **SubscriptionManagement**: Add plan migration stats, add upcoming renewal alerts, show churn rate metric
+- **RevenueAnalytics**: Add date range picker, add comparison with previous period, add revenue breakdown by payment method
 
-The real issue is likely in places where the icon is rendered **without** `text-white` on a colored background. Looking at the network pill rendering and service list items — the icon sits inside a colored `bgColor` container but in some cases inherits `text-foreground` (which is black in light mode) instead of `text-white`. Need to audit all icon render sites and ensure every icon inside a colored background div has explicit `text-white`.
+## 2. Team Management — Remove "Coming Soon", Enable Actual Invites
 
-**Fix**: Search all buyer/storefront pages for icon renders that lack `text-white` when placed on colored backgrounds. The main suspects are category pills in service lists and any icon that uses `fill="currentColor"` without explicit white text class.
+### Current State
+The team invite dialog (lines 396-410 of `TeamManagement.tsx`) has a **hardcoded "Coming Soon" notice** and the submit button is **permanently disabled** (`disabled={true}`). The entire invite infrastructure exists (edge function `team-auth` with `create-member` action, `panel_team_members` table, custom JWT auth) — it's just blocked by the UI.
 
-### 3. Customer Management Bulk Toolbar — Mobile Overflow (Screenshot 1)
-**Problem**: `BulkActionToolbar.tsx` uses `max-w-fit` which on a 420px screen causes the toolbar to extend beyond viewport despite `w-[calc(100vw-1.5rem)]`. The `overflow-x-auto scrollbar-hide` should allow horizontal scrolling, but the container itself may be too wide and the page stretches.
+### Fix
+- Remove the "Coming Soon" div (lines 396-402) and the disabled `Coming Soon!` button (lines 403-409)
+- Replace with an actual "Add Member" button that calls `handleInvite()` — the function already exists and works (line 286-299)
+- Add email validation before submit
+- Show loading state while `isInviting` is true
 
-**Fix**: Change the outer container to use `max-w-[calc(100vw-2rem)]` instead of `max-w-fit`, ensuring it never exceeds screen width. Reduce button sizes on mobile (`h-7 w-7` instead of `h-8 w-8`), reduce gaps and padding further. This forces scrolling within the toolbar rather than page overflow.
+## 3. Hero Image Not Showing in Any Theme
 
-### 4. Orders Management Bulk Bar — Mobile Layout (Screenshot 2)  
-**Problem**: The orders bulk bar at line 665 uses `max-w-lg` (32rem = 512px) which exceeds 420px viewport. The `flex-col sm:flex-row` layout works but the inner content with Select + Button + Close is too wide on mobile.
+### Root Cause Analysis
+**Standard themes (ThemeOne–ThemeFive)**: These pass `customization` to `StorefrontHeroSection`, which reads `customization.enableHeroImage` and `customization.heroImageUrl` (line 129). The `fullCustomization` in `Storefront.tsx` spreads `...design` (which is `panel?.custom_branding`), so these values should be present IF:
+1. Panel owner saved them via DesignCustomization (confirmed — saves to `custom_branding` JSON)
+2. `useTenant.tsx` fetches `custom_branding` (confirmed — it's in `panelFields`)
 
-**Fix**: Change `max-w-lg` to `max-w-[calc(100vw-2rem)]`. The Select dropdown should take full width on mobile. Reduce padding from `p-3` to `p-2` on mobile.
+The issue is likely that `buyer_theme` is **missing from `panelFields`** in `useTenant.tsx` (line 331-334). Without `buyer_theme`, the theme selection in `Storefront.tsx` falls back to `theme_type` which may select a different theme than intended, causing a mismatch.
+
+**Premium themes (AliPanel, TGRef, FlySMM, SMMStay, SMMVisit)**: These do NOT use `StorefrontHeroSection`. They have custom hero implementations in `src/components/buyer-themes/*/` that completely ignore `enableHeroImage` and `heroImageUrl`. The hero image feature was never propagated to these themes.
+
+### Fix
+1. **Add `buyer_theme` to `panelFields`** in `useTenant.tsx` so the correct theme is selected on tenant storefronts
+2. **Add hero image support to all premium themes**: Read `customization.enableHeroImage` and `customization.heroImageUrl` in each premium theme's homepage component and render the image alongside hero text (matching the 2-column layout from `StorefrontHeroSection`)
 
 ---
 
@@ -30,10 +46,16 @@ The real issue is likely in places where the icon is rendered **without** `text-
 
 | File | Changes |
 |------|---------|
-| `src/components/customers/BulkActionToolbar.tsx` | Change `max-w-fit` → `max-w-[calc(100vw-2rem)]`; reduce mobile button sizes to `h-7 w-7`; reduce padding |
-| `src/pages/panel/OrdersManagement.tsx` | Change bulk bar `max-w-lg` → `max-w-[calc(100vw-2rem)]`; reduce mobile padding |
-| `src/pages/buyer/BuyerServices.tsx` | Ensure all icon renders on colored backgrounds use `text-white` explicitly |
-| `src/components/storefront/FastOrderSection.tsx` | Audit and fix any icon renders missing `text-white` on colored backgrounds |
-| `src/pages/buyer/BuyerNewOrder.tsx` | Audit and fix any icon renders missing `text-white` on colored backgrounds |
-| `src/pages/panel/ServicesManagement.tsx` | Fix line 2537 where category icon in sidebar lacks `text-white` |
+| `src/hooks/useTenant.tsx` | Add `buyer_theme` to `panelFields` query string (line 331-334) |
+| `src/pages/panel/TeamManagement.tsx` | Remove "Coming Soon" block (lines 396-410); replace with functional "Add Member" button calling `handleInvite()` |
+| `src/pages/admin/AdminOverview.tsx` | Add plan distribution summary, quick actions, recent signups section |
+| `src/pages/admin/PanelManagement.tsx` | Add bulk actions, plan tier filter, tenant count per panel |
+| `src/pages/admin/UserManagement.tsx` | Add last-login indicator, improved search filters |
+| `src/pages/admin/SubscriptionManagement.tsx` | Add churn rate, renewal alerts |
+| `src/pages/admin/RevenueAnalytics.tsx` | Add date range picker, period comparison |
+| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Add hero image rendering from customization |
+| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Add hero image rendering |
+| `src/components/buyer-themes/flysmm/` | Add hero image rendering |
+| `src/components/buyer-themes/smmstay/` | Add hero image rendering |
+| `src/components/buyer-themes/smmvisit/` | Add hero image rendering |
 
