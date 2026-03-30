@@ -535,6 +535,18 @@ serve(async (req) => {
         return await handleSendChatMessage(supabaseAdmin, body);
       case 'create-support-ticket':
         return await handleCreateSupportTicket(supabaseAdmin, body);
+      case 'mfa-enroll':
+        return await handleMfaEnroll(supabaseAdmin, body);
+      case 'mfa-verify':
+        return await handleMfaVerify(supabaseAdmin, body);
+      case 'mfa-validate':
+        return await handleMfaValidate(supabaseAdmin, body);
+      case 'mfa-backup':
+        return await handleMfaBackup(supabaseAdmin, body);
+      case 'mfa-disable':
+        return await handleMfaDisable(supabaseAdmin, body);
+      case 'mfa-status':
+        return await handleMfaStatus(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
