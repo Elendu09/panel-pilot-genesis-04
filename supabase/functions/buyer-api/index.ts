@@ -161,6 +161,22 @@ serve(async (req) => {
       case 'get-order':
         response = await handleGetOrder(supabase, panelId, buyerId, params);
         break;
+      // Cart operations
+      case 'cart-list':
+        response = await handleCartList(supabase, panelId, buyerId);
+        break;
+      case 'cart-add':
+        response = await handleCartAdd(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-update':
+        response = await handleCartUpdate(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-remove':
+        response = await handleCartRemove(supabase, panelId, buyerId, params);
+        break;
+      case 'cart-clear':
+        response = await handleCartClear(supabase, panelId, buyerId);
+        break;
       default:
         response = errorResponse(`Unknown action: ${action}`);
     }
