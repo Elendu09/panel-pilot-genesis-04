@@ -64,6 +64,8 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
   const [buyer, setBuyer] = useState<BuyerUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<BuyerSession | null>(null);
+  const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
+  const [pendingMfaSession, setPendingMfaSession] = useState<{ buyerId: string; token: string } | null>(null);
   const { toast } = useToast();
   const languageContext = useContext(LanguageContext);
 
