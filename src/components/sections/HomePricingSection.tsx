@@ -23,7 +23,7 @@ const plans = [
     period: "/month",
     description: "For growing businesses",
     icon: Zap,
-    features: ["2 Panels", "Custom Domain", "No Commission", "Priority Support"],
+    features: ["3 Panels", "Custom Domain", "No Commission", "Priority Support"],
     gradient: "from-primary/20 to-primary/5",
     popular: false,
   },

@@ -118,7 +118,7 @@ const Terms = () => {
                 </p>
                 <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                   <li><strong>Free Plan</strong> — 1 panel, basic features, subdomain only</li>
-                  <li><strong>Basic Plan ($5/mo)</strong> — Up to 2 panels, custom domain, full analytics, API access</li>
+                  <li><strong>Basic Plan ($5/mo)</strong> — Up to 3 panels, custom domain, full analytics, API access</li>
                   <li><strong>Pro Plan ($15/mo)</strong> — Up to 5 panels, advanced features, priority support, white-label branding</li>
                 </ul>
                 <p className="text-muted-foreground leading-relaxed mt-4">
