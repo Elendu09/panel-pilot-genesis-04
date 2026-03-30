@@ -929,7 +929,7 @@ const Billing = () => {
               ) : (
                 <Wallet className="w-4 h-4 mr-2" />
               )}
-              Use Balance (${pendingUpgradePlan?.price})
+              Use Balance (${pendingUpgradePlan ? getPlanPrice(pendingUpgradePlan) : 0})
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
