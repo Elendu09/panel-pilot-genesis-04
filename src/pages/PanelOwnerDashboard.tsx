@@ -23,7 +23,8 @@ import {
   Zap,
   Loader2,
   Menu,
-  X
+  X,
+  DollarSign
 } from "lucide-react";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,7 @@ const PanelOwnerDashboard = () => {
   const settingsNavigation = [
     { name: 'Providers', href: '/panel/providers', icon: Plug, tourId: 'providers' },
     { name: 'Payments', href: '/panel/payments', icon: CreditCard, tourId: 'payments' },
+    { name: 'Billing', href: '/panel/billing', icon: DollarSign, tourId: 'billing' },
     { name: 'Integrations', href: '/panel/integrations', icon: Zap, tourId: 'integrations' },
     { name: 'Team', href: '/panel/team', icon: Users, tourId: 'team' },
     { name: 'API', href: '/panel/api', icon: Code, tourId: 'api' },

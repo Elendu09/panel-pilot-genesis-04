@@ -411,7 +411,7 @@ serve(async (req) => {
       gatewayConfig = {
         id: adminProvider.provider_name,
         enabled: true,
-        secretKey: config.secret_key || config.secretKey,
+        secretKey: config.secret_key || config.secretKey || config.api_secret || config.apiSecret,
         // Many providers store the primary API key under publicKey (e.g. Coinbase, NOWPayments)
         apiKey: config.api_key || config.apiKey || resolvedPublicKey,
         publicKey: resolvedPublicKey,
@@ -421,7 +421,7 @@ serve(async (req) => {
         merchantId: config.merchant_id || config.merchantId,
       };
       
-      console.log('[process-payment] Using admin gateway config for:', gateway);
+      console.log('[process-payment] Using admin gateway config for:', gateway, 'Config keys:', Object.keys(config).filter(k => config[k]));
     } else {
       // For buyer/tenant payments, use panel-configured gateways
       const panelSettings = panel.settings as Record<string, any> || {};
@@ -1661,8 +1661,13 @@ serve(async (req) => {
           );
         }
         
+        const supportedList = 'Stripe, PayPal, Flutterwave, Paystack, Korapay, Razorpay, Coinbase, Cryptomus, Heleket, Monnify, NOWPayments, CoinGate, Binance Pay, Skrill, Perfect Money, Square, Braintree, BTCPay';
+        console.error(`[process-payment] Unsupported gateway: ${gateway}. Supported: ${supportedList}`);
         return new Response(
-          JSON.stringify({ success: false, error: `Unsupported gateway: ${gateway}` }),
+          JSON.stringify({ 
+            success: false, 
+            error: `Payment gateway "${gateway}" is configured but payment processing is not yet implemented for it. Please use one of the supported gateways: ${supportedList}.` 
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

@@ -39,6 +39,7 @@ import {
 import { CommissionTracker } from '@/components/billing/CommissionTracker';
 import { QuickDeposit } from '@/components/billing/QuickDeposit';
 import { TrialExpiryBanner } from '@/components/billing/TrialExpiryBanner';
+import { GatewaySelectDialog } from '@/components/billing/GatewaySelectDialog';
 import { usePanel } from '@/hooks/usePanel';
 import { useAdminPaymentGateways } from '@/hooks/useAdminPaymentGateways';
 
@@ -140,10 +141,23 @@ const Billing = () => {
   const [pendingUpgradePlan, setPendingUpgradePlan] = useState<typeof plans[0] | null>(null);
   const [balancePaymentLoading, setBalancePaymentLoading] = useState(false);
 
+  // Gateway selection dialog state
+  const [gatewayDialogOpen, setGatewayDialogOpen] = useState(false);
+  const [pendingGatewayPlan, setPendingGatewayPlan] = useState<typeof plans[0] | null>(null);
+
   // Use admin-controlled payment gateways for panel owner billing (not panel-configured buyer gateways)
   const { gateways: availableGateways, loading: gatewaysLoading } = useAdminPaymentGateways();
 
-  const defaultGateway = availableGateways[0]?.id;
+  // Supported gateways that have backend processing in process-payment edge function
+  const SUPPORTED_GATEWAYS = new Set([
+    'stripe', 'paypal', 'coinbase', 'flutterwave', 'paystack', 'korapay',
+    'heleket', 'razorpay', 'monnify', 'nowpayments', 'coingate', 'binancepay',
+    'cryptomus', 'skrill', 'perfectmoney', 'square', 'braintree', 'ach',
+    'sepa', 'btcpay', 'wise', 'manual_transfer'
+  ]);
+
+  // Filter to only gateways supported by the backend
+  const supportedGateways = availableGateways.filter(g => SUPPORTED_GATEWAYS.has(g.id) || g.id.startsWith('manual_'));
 
   // Helper to get plan price based on billing cycle
   const getPlanPrice = (plan: typeof plans[0]) => {
@@ -393,8 +407,13 @@ const Billing = () => {
       return;
     }
 
-    // Not enough balance — go directly to payment gateway
-    await proceedWithGatewayPayment(plan);
+    // Not enough balance — show gateway selector
+    if (supportedGateways.length === 1) {
+      await proceedWithGatewayPayment(plan, supportedGateways[0].id);
+    } else {
+      setPendingGatewayPlan(plan);
+      setGatewayDialogOpen(true);
+    }
   };
 
   const handleBalanceUpgrade = async () => {
@@ -427,10 +446,11 @@ const Billing = () => {
     }
   };
 
-  const proceedWithGatewayPayment = async (plan: typeof plans[0]) => {
+  const proceedWithGatewayPayment = async (plan: typeof plans[0], selectedGateway?: string) => {
     if (!panel?.id || !profile?.id) return;
 
-    if (!defaultGateway) {
+    const gatewayToUse = selectedGateway || supportedGateways[0]?.id;
+    if (!gatewayToUse) {
       toast({
         variant: 'destructive',
         title: 'Payment Methods Unavailable',
@@ -442,7 +462,7 @@ const Billing = () => {
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: defaultGateway,
+          gateway: gatewayToUse,
           amount: getPlanPrice(plan),
           panelId: panel.id,
           buyerId: profile.id,
@@ -543,7 +563,8 @@ const Billing = () => {
   const handlePayCommission = async () => {
     if (!panel?.id || !profile?.id || commissionData.pendingCommission <= 0) return;
 
-    if (!defaultGateway) {
+    const gatewayToUse = supportedGateways[0]?.id;
+    if (!gatewayToUse) {
       toast({
         variant: 'destructive',
         title: 'Payment Methods Unavailable',
@@ -555,7 +576,7 @@ const Billing = () => {
     try {
       const { data, error } = await supabase.functions.invoke('process-payment', {
         body: {
-          gateway: defaultGateway,
+          gateway: gatewayToUse,
           amount: commissionData.pendingCommission,
           panelId: panel.id,
           buyerId: profile.id,
@@ -949,7 +970,14 @@ const Billing = () => {
               variant="outline"
               onClick={() => {
                 setBalanceDialogOpen(false);
-                if (pendingUpgradePlan) proceedWithGatewayPayment(pendingUpgradePlan);
+                if (pendingUpgradePlan) {
+                  if (supportedGateways.length === 1) {
+                    proceedWithGatewayPayment(pendingUpgradePlan, supportedGateways[0].id);
+                  } else {
+                    setPendingGatewayPlan(pendingUpgradePlan);
+                    setGatewayDialogOpen(true);
+                  }
+                }
               }}
               disabled={balancePaymentLoading}
             >
@@ -971,6 +999,21 @@ const Billing = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <GatewaySelectDialog
+        open={gatewayDialogOpen}
+        onOpenChange={setGatewayDialogOpen}
+        gateways={supportedGateways}
+        loading={upgradeLoading !== null}
+        title="Select Payment Gateway"
+        description="Choose how you'd like to pay for your subscription"
+        onSelect={async (gatewayId) => {
+          setGatewayDialogOpen(false);
+          if (pendingGatewayPlan) {
+            await proceedWithGatewayPayment(pendingGatewayPlan, gatewayId);
+            setPendingGatewayPlan(null);
+          }
+        }}
+      />
     </motion.div>
   );
 };
