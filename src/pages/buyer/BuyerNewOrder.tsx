@@ -116,6 +116,10 @@ const BuyerNewOrder = () => {
   const [dripFeedRuns, setDripFeedRuns] = useState<number>(1);
   const [dripFeedInterval, setDripFeedInterval] = useState<number>(60);
   
+  // Poll & subscription state
+  const [pollAnswers, setPollAnswers] = useState<string>("");
+  const [subscriptionExpiry, setSubscriptionExpiry] = useState<string>("");
+  
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
