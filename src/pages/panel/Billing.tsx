@@ -632,7 +632,7 @@ const Billing = () => {
             Your <span className="font-semibold capitalize">{currentPlan}</span> plan has expired. 
             Please renew your subscription to regain full access to your panel features.
           </p>
-          {panelBalance >= (plans.find(p => p.name.toLowerCase() === currentPlan)?.price || 999) && (
+          {panelBalance >= (plans.find(p => p.name.toLowerCase() === currentPlan)?.monthlyPrice || 999) && (
             <Badge className="bg-emerald-500/20 text-emerald-500 text-sm">
               You have ${panelBalance.toFixed(2)} — enough to renew!
             </Badge>
