@@ -646,13 +646,13 @@ const SupportCenter = () => {
       <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSelectedTicket(null); }}>
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:w-full sm:max-w-2xl sm:grid sm:grid-cols-4">
-            <TabsTrigger value="knowledge" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
-              <Book className="w-4 h-4 hidden sm:block" />
-              Knowledge
-            </TabsTrigger>
             <TabsTrigger value="livechat" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
               <MessagesSquare className="w-4 h-4 hidden sm:block" />
               Live Chat
+            </TabsTrigger>
+            <TabsTrigger value="knowledge" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
+              <Book className="w-4 h-4 hidden sm:block" />
+              Knowledge
             </TabsTrigger>
             <TabsTrigger value="customer" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
               <Users className="w-4 h-4 hidden sm:block" />
