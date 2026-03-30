@@ -826,7 +826,7 @@ async function handleFetch(supabaseAdmin: any, body: any) {
   console.log('Fetch successful for user:', user.id);
 
   // Return user data (exclude sensitive fields)
-  const { password_hash, password_temp, api_key: _ak2, ...safeUser } = user;
+  const { password_hash, password_temp, api_key: _ak2, mfa_secret: _ms, ...safeUser } = user;
   
   return jsonResponse({ 
     success: true, 
