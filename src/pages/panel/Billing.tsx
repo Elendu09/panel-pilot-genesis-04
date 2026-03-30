@@ -446,10 +446,11 @@ const Billing = () => {
     }
   };
 
-  const proceedWithGatewayPayment = async (plan: typeof plans[0]) => {
+  const proceedWithGatewayPayment = async (plan: typeof plans[0], selectedGateway?: string) => {
     if (!panel?.id || !profile?.id) return;
 
-    if (!defaultGateway) {
+    const gatewayToUse = selectedGateway || supportedGateways[0]?.id;
+    if (!gatewayToUse) {
       toast({
         variant: 'destructive',
         title: 'Payment Methods Unavailable',
