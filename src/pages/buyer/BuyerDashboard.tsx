@@ -127,11 +127,28 @@ const BuyerDashboard = () => {
     try {
       // Use buyer-api edge function to bypass RLS (tenant buyers use custom auth, not Supabase auth)
       const panelId = panel?.id || buyer.panel_id || localStorage.getItem('current_panel_id') || '';
+      if (!panelId) {
+        // No panel ID available - use cached data if present, otherwise show empty
+        setLoading(false);
+        return;
+      }
+      
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-api', {
         body: { action: 'orders', buyerId: buyer.id, panelId }
       });
       
-      if (fnError) throw fnError;
+      // Handle edge function errors gracefully - use cached data as fallback
+      if (fnError) {
+        console.warn('Edge function error, using cached data:', fnError);
+        // If we have cached data, don't show error
+        const cachedStats = localStorage.getItem('tenant_dashboard_stats');
+        if (cachedStats) {
+          setLoading(false);
+          return;
+        }
+        throw fnError;
+      }
+      
       const orders = fnData?.orders || fnData || [];
 
       const formattedOrders: Order[] = (orders || []).slice(0, 20).map((o: any) => ({
@@ -156,22 +173,32 @@ const BuyerDashboard = () => {
       const completedOrders = allOrders.filter((o: any) => o.status === 'completed').length;
       const totalSpent = buyer.total_spent || allOrders.reduce((sum: number, o: any) => sum + (o.price || 0), 0);
 
-      setStats({
+      const newStats = {
         totalOrders,
         pendingOrders,
         inProgressOrders,
         completedOrders,
         totalSpent,
-      });
+      };
+      
+      setStats(newStats);
+      
+      // Cache stats and recent orders for instant load next time
+      try {
+        localStorage.setItem('tenant_dashboard_stats', JSON.stringify(newStats));
+        localStorage.setItem('tenant_dashboard_orders', JSON.stringify(formattedOrders));
+      } catch {}
     } catch (error: any) {
       console.error('Error fetching buyer data:', error);
-      setError('We had trouble loading your dashboard. Please try again.');
+      // Only show error if no cached data
+      const cachedStats = localStorage.getItem('tenant_dashboard_stats');
+      if (!cachedStats) {
+        setError('We had trouble loading your dashboard. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const handleSendVerification = async () => {
     if (!buyer?.email || !panel?.id) return;
     try {
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
