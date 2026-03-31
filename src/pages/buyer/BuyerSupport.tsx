@@ -340,6 +340,17 @@ const BuyerSupport = () => {
     const msgContent = chatInput.trim();
     setChatInput("");
     
+    // Optimistic update: show message immediately in UI
+    const optimisticMsg: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      session_id: activeSession.id,
+      sender_type: 'visitor',
+      content: msgContent,
+      created_at: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, optimisticMsg]);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    
     const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
     const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
       body: {
@@ -353,6 +364,11 @@ const BuyerSupport = () => {
     if (fnError || fnData?.error) {
       toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
       setChatInput(msgContent); // restore on failure
+      // Remove optimistic message
+      setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+    } else if (fnData?.message) {
+      // Replace optimistic message with real one from server
+      setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
     }
   };
 
