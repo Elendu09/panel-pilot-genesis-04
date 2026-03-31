@@ -535,6 +535,12 @@ serve(async (req) => {
         return await handleSendChatMessage(supabaseAdmin, body);
       case 'create-support-ticket':
         return await handleCreateSupportTicket(supabaseAdmin, body);
+      case 'list-tickets':
+        return await handleListTickets(supabaseAdmin, body);
+      case 'list-chat-sessions':
+        return await handleListChatSessions(supabaseAdmin, body);
+      case 'list-chat-messages':
+        return await handleListChatMessages(supabaseAdmin, body);
       case 'mfa-enroll':
         return await handleMfaEnroll(supabaseAdmin, body);
       case 'mfa-verify':
@@ -1764,4 +1770,82 @@ async function handleMfaStatus(supabaseAdmin: any, body: any) {
     has_secret: !!user.mfa_secret,
     backup_codes_remaining: ((user.mfa_backup_codes as any[]) || []).filter((c: any) => !c.used).length
   });
+}
+
+// Handle listing tickets for a buyer (bypasses RLS)
+async function handleListTickets(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId } = body;
+  if (!panelId || !buyerId) {
+    return jsonResponse({ error: 'Missing panelId or buyerId' });
+  }
+
+  const { data: tickets, error } = await supabaseAdmin
+    .from('support_tickets')
+    .select('*')
+    .eq('panel_id', panelId)
+    .eq('user_id', buyerId)
+    .eq('ticket_type', 'user_to_panel')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Failed to list tickets:', error);
+    return jsonResponse({ tickets: [] });
+  }
+
+  return jsonResponse({ tickets: tickets || [] });
+}
+
+// Handle listing chat sessions for a buyer (bypasses RLS)
+async function handleListChatSessions(supabaseAdmin: any, body: any) {
+  const { panelId, buyerId } = body;
+  if (!panelId || !buyerId) {
+    return jsonResponse({ sessions: [] });
+  }
+
+  const { data: sessions, error } = await supabaseAdmin
+    .from('chat_sessions')
+    .select('*')
+    .eq('panel_id', panelId)
+    .eq('visitor_id', buyerId)
+    .order('last_message_at', { ascending: false, nullsFirst: false });
+
+  if (error) {
+    console.error('Failed to list chat sessions:', error);
+    return jsonResponse({ sessions: [] });
+  }
+
+  return jsonResponse({ sessions: sessions || [] });
+}
+
+// Handle listing chat messages for a session (bypasses RLS)
+async function handleListChatMessages(supabaseAdmin: any, body: any) {
+  const { sessionId, buyerId } = body;
+  if (!sessionId || !buyerId) {
+    return jsonResponse({ messages: [] });
+  }
+
+  // Verify session belongs to buyer
+  const { data: session } = await supabaseAdmin
+    .from('chat_sessions')
+    .select('id')
+    .eq('id', sessionId)
+    .eq('visitor_id', buyerId)
+    .single();
+
+  if (!session) {
+    return jsonResponse({ error: 'Invalid session', messages: [] });
+  }
+
+  const { data: messages, error } = await supabaseAdmin
+    .from('chat_messages')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Failed to list chat messages:', error);
+    return jsonResponse({ messages: [] });
+  }
+
+  return jsonResponse({ messages: messages || [] });
 }

@@ -79,7 +79,7 @@ const BuyerDashboard = () => {
     return [];
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
   
   // Cache panel name to prevent flicker
@@ -123,7 +123,6 @@ const BuyerDashboard = () => {
     if (!buyer?.id) return;
 
     setLoading(true);
-    setError(null);
     try {
       // Use buyer-api edge function to bypass RLS (tenant buyers use custom auth, not Supabase auth)
       const panelId = panel?.id || buyer.panel_id || localStorage.getItem('current_panel_id') || '';
@@ -188,13 +187,9 @@ const BuyerDashboard = () => {
         localStorage.setItem('tenant_dashboard_stats', JSON.stringify(newStats));
         localStorage.setItem('tenant_dashboard_orders', JSON.stringify(formattedOrders));
       } catch {}
-    } catch (error: any) {
-      console.error('Error fetching buyer data:', error);
-      // Only show error if no cached data
-      const cachedStats = localStorage.getItem('tenant_dashboard_stats');
-      if (!cachedStats) {
-        setError('We had trouble loading your dashboard. Please try again.');
-      }
+    } catch (err: any) {
+      console.error('Error fetching buyer data:', err);
+      // Never show error UI - stats default to zero from cache/initial state
     } finally {
       setLoading(false);
     }
@@ -336,23 +331,7 @@ const BuyerDashboard = () => {
     );
   }
 
-  // Show error state if data fetch failed
-  if (error) {
-    return (
-      <BuyerLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-amber-500" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">{t('error.dashboard_unavailable')}</h2>
-          <p className="text-muted-foreground mb-4 text-sm max-w-md">{error}</p>
-          <Button onClick={fetchBuyerData}>
-            {t('common.retry')}
-          </Button>
-        </div>
-      </BuyerLayout>
-    );
-  }
+  // Never show error state - just use zero defaults (balance always loads independently)
 
   return (
     <BuyerLayout>

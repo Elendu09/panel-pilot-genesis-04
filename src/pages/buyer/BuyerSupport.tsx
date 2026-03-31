@@ -172,82 +172,60 @@ const BuyerSupport = () => {
     if (!buyer?.id || !resolvedPanelId) return;
     const fetchChats = async () => {
       setChatLoading(true);
-      const { data } = await supabase
-        .from('chat_sessions')
-        .select('*')
-        .eq('panel_id', resolvedPanelId)
-        .eq('visitor_id', buyer.id)
-        .order('last_message_at', { ascending: false, nullsFirst: false });
-      setChatSessions(data || []);
+      // Use edge function to bypass RLS (custom auth buyers can't use direct queries)
+      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'list-chat-sessions', panelId: resolvedPanelId, buyerId: buyer.id }
+      });
+      setChatSessions(fnData?.sessions || []);
       setChatLoading(false);
     };
     fetchChats();
 
-    // Realtime subscription for chat sessions
-    const channel = supabase
-      .channel('buyer-chat-sessions')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'chat_sessions',
-        filter: `visitor_id=eq.${buyer.id}`
-      }, () => { fetchChats(); })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    // Poll for new sessions every 15s (realtime won't work with custom auth)
+    const interval = setInterval(fetchChats, 15000);
+    return () => clearInterval(interval);
   }, [buyer?.id, resolvedPanelId]);
 
-  // Fetch messages for selected chat & subscribe to realtime
+  // Fetch messages for selected chat & poll for new ones
   useEffect(() => {
     if (!selectedChat) { setChatMessages([]); return; }
     
     const fetchMessages = async () => {
-      const { data } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('session_id', selectedChat.id)
-        .order('created_at', { ascending: true });
-      setChatMessages(data || []);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      // Use edge function to bypass RLS
+      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'list-chat-messages', sessionId: selectedChat.id, buyerId: buyer?.id }
+      });
+      if (fnData?.messages) {
+        setChatMessages(fnData.messages);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+      }
     };
     fetchMessages();
 
-    const channel = supabase
-      .channel(`buyer-chat-${selectedChat.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `session_id=eq.${selectedChat.id}`
-      }, (payload) => {
-        setChatMessages(prev => [...prev, payload.new as ChatMessage]);
-        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [selectedChat?.id]);
+    // Poll for new messages every 5s (realtime won't work with custom auth RLS)
+    const interval = setInterval(fetchMessages, 5000);
+    return () => clearInterval(interval);
+  }, [selectedChat?.id, buyer?.id]);
 
   const fetchTickets = async () => {
     if (!buyer?.id || !resolvedPanelId) return;
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('panel_id', resolvedPanelId)
-        .eq('user_id', buyer.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      const transformedTickets = (data || []).map(ticket => ({
+      // Route through edge function to bypass RLS (custom auth buyers don't have Supabase JWT claims)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'list-tickets', panelId: resolvedPanelId, buyerId: buyer.id }
+      });
+      if (fnError) throw fnError;
+      const transformedTickets = (fnData?.tickets || []).map((ticket: any) => ({
         ...ticket,
         messages: Array.isArray(ticket.messages) ? ticket.messages : []
       })) as Ticket[];
       setTickets(transformedTickets);
     } catch (error: any) {
       console.error('Error fetching tickets:', error);
-      setError('Failed to load your support tickets. Please try again.');
+      // Don't block with error - just show empty
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -340,6 +318,17 @@ const BuyerSupport = () => {
     const msgContent = chatInput.trim();
     setChatInput("");
     
+    // Optimistic update: show message immediately in UI
+    const optimisticMsg: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      session_id: activeSession.id,
+      sender_type: 'visitor',
+      content: msgContent,
+      created_at: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, optimisticMsg]);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    
     const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
     const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
       body: {
@@ -353,6 +342,11 @@ const BuyerSupport = () => {
     if (fnError || fnData?.error) {
       toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
       setChatInput(msgContent); // restore on failure
+      // Remove optimistic message
+      setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+    } else if (fnData?.message) {
+      // Replace optimistic message with real one from server
+      setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
     }
   };
 
@@ -407,14 +401,27 @@ const BuyerSupport = () => {
       session = await handleStartChat();
     }
     if (session) {
-      const tempInput = text;
       setChatInput("");
+      // Optimistic update
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: session.id,
+        sender_type: 'visitor',
+        content: text,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
       const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
       const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: tempInput }
+        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: text }
       });
       if (fnData?.error) {
         toast({ variant: "destructive", title: fnData.error });
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else if (fnData?.message) {
+        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
       }
     }
   };
