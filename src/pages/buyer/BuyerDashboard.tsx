@@ -79,7 +79,7 @@ const BuyerDashboard = () => {
     return [];
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
   
   // Cache panel name to prevent flicker
