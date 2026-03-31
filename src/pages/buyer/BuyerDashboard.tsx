@@ -123,7 +123,6 @@ const BuyerDashboard = () => {
     if (!buyer?.id) return;
 
     setLoading(true);
-    setError(null);
     try {
       // Use buyer-api edge function to bypass RLS (tenant buyers use custom auth, not Supabase auth)
       const panelId = panel?.id || buyer.panel_id || localStorage.getItem('current_panel_id') || '';
