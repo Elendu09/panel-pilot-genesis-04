@@ -57,14 +57,27 @@ const BuyerDashboard = () => {
   const { services, loading: servicesLoading } = useTenantServices(panel?.id);
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    pendingOrders: 0,
-    inProgressOrders: 0,
-    completedOrders: 0,
-    totalSpent: 0,
+  const [stats, setStats] = useState(() => {
+    // Try to restore cached stats from localStorage
+    try {
+      const cached = localStorage.getItem('tenant_dashboard_stats');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return {
+      totalOrders: 0,
+      pendingOrders: 0,
+      inProgressOrders: 0,
+      completedOrders: 0,
+      totalSpent: 0,
+    };
   });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>(() => {
+    try {
+      const cached = localStorage.getItem('tenant_dashboard_orders');
+      if (cached) return JSON.parse(cached);
+    } catch {}
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showVerifyBanner, setShowVerifyBanner] = useState(false);
@@ -85,8 +98,14 @@ const BuyerDashboard = () => {
   }, [panel?.name]);
 
   useEffect(() => {
-    if (buyer?.id && panel?.id) {
-      fetchBuyerData();
+    if (buyer?.id) {
+      const panelId = panel?.id || buyer.panel_id || localStorage.getItem('current_panel_id') || '';
+      if (panelId) {
+        fetchBuyerData();
+      } else {
+        // No panelId yet but have buyer - show cached data, don't error
+        setLoading(false);
+      }
     } else if (!authLoading && !panelLoading) {
       setLoading(false);
     }
