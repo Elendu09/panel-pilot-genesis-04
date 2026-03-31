@@ -187,13 +187,9 @@ const BuyerDashboard = () => {
         localStorage.setItem('tenant_dashboard_stats', JSON.stringify(newStats));
         localStorage.setItem('tenant_dashboard_orders', JSON.stringify(formattedOrders));
       } catch {}
-    } catch (error: any) {
-      console.error('Error fetching buyer data:', error);
-      // Only show error if no cached data
-      const cachedStats = localStorage.getItem('tenant_dashboard_stats');
-      if (!cachedStats) {
-        setError('We had trouble loading your dashboard. Please try again.');
-      }
+    } catch (err: any) {
+      console.error('Error fetching buyer data:', err);
+      // Never show error UI - stats default to zero from cache/initial state
     } finally {
       setLoading(false);
     }
