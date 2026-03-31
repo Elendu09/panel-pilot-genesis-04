@@ -423,14 +423,27 @@ const BuyerSupport = () => {
       session = await handleStartChat();
     }
     if (session) {
-      const tempInput = text;
       setChatInput("");
+      // Optimistic update
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: session.id,
+        sender_type: 'visitor',
+        content: text,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
       const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
       const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: tempInput }
+        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: text }
       });
       if (fnData?.error) {
         toast({ variant: "destructive", title: fnData.error });
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else if (fnData?.message) {
+        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
       }
     }
   };
