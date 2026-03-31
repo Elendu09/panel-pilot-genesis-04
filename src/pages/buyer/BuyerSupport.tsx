@@ -340,9 +340,11 @@ const BuyerSupport = () => {
     const msgContent = chatInput.trim();
     setChatInput("");
     
+    const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
     const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
       body: {
         action: 'send-chat-message',
+        panelId: pId,
         sessionId: activeSession.id,
         buyerId: buyer.id,
         content: msgContent,
