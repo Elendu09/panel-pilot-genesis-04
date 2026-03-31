@@ -199,6 +199,8 @@ const BuyerDashboard = () => {
       setLoading(false);
     }
   };
+
+  const handleSendVerification = async () => {
     if (!buyer?.email || !panel?.id) return;
     try {
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
