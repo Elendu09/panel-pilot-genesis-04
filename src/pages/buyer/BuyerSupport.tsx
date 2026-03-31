@@ -409,8 +409,9 @@ const BuyerSupport = () => {
     if (session) {
       const tempInput = text;
       setChatInput("");
+      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
       const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'send-chat-message', sessionId: session.id, buyerId: buyer?.id, content: tempInput }
+        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: tempInput }
       });
       if (fnData?.error) {
         toast({ variant: "destructive", title: fnData.error });
