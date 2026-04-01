@@ -541,6 +541,14 @@ serve(async (req) => {
         return await handleListChatSessions(supabaseAdmin, body);
       case 'list-chat-messages':
         return await handleListChatMessages(supabaseAdmin, body);
+      case 'reply-ticket':
+        return await handleReplyTicket(supabaseAdmin, body);
+      case 'close-ticket':
+        return await handleCloseTicket(supabaseAdmin, body);
+      case 'end-chat':
+        return await handleEndChat(supabaseAdmin, body);
+      case 'rate-chat':
+        return await handleRateChat(supabaseAdmin, body);
       case 'mfa-enroll':
         return await handleMfaEnroll(supabaseAdmin, body);
       case 'mfa-verify':
