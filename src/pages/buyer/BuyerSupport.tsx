@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import { Star } from "lucide-react";
+import {
   MessageSquare, 
   Plus, 
   Clock, 
@@ -134,6 +135,8 @@ const BuyerSupport = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [chatRating, setChatRating] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // FAQ state
@@ -279,19 +282,65 @@ const BuyerSupport = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
+    if (!newMessage.trim() || !selectedTicket || !buyer?.id) return;
     setSubmitting(true);
     try {
-      const newMsg: Message = { sender: 'buyer', content: newMessage, timestamp: new Date().toISOString() };
-      const updatedMessages = [...(selectedTicket.messages || []), newMsg];
-      const { error } = await supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', selectedTicket.id);
-      if (error) throw error;
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'reply-ticket',
+          panelId: resolvedPanelId || '',
+          buyerId: buyer.id,
+          ticketId: selectedTicket.id,
+          content: newMessage.trim(),
+        }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to send reply');
+      const updatedMessages = fnData.messages || [...(selectedTicket.messages || []), { sender: 'buyer', content: newMessage.trim(), timestamp: new Date().toISOString() }];
       setSelectedTicket({ ...selectedTicket, messages: updatedMessages });
       setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t));
       setNewMessage("");
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to send message" });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to send message" });
     } finally { setSubmitting(false); }
+  };
+
+  const handleCloseTicket = async (ticketId: string) => {
+    if (!buyer?.id) return;
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to close ticket');
+      toast({ title: "Ticket closed" });
+      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'closed' });
+      fetchTickets();
+    } catch { toast({ variant: "destructive", title: "Failed to close ticket" }); }
+  };
+
+  const handleEndChat = async () => {
+    if (!buyer?.id || !selectedChat) return;
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'end-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to end chat');
+      setSelectedChat({ ...selectedChat, status: 'closed' });
+      setChatSessions(prev => prev.map(s => s.id === selectedChat.id ? { ...s, status: 'closed' } : s));
+      setShowRating(true);
+      toast({ title: "Conversation ended" });
+    } catch { toast({ variant: "destructive", title: "Failed to end conversation" }); }
+  };
+
+  const handleRateChat = async (rating: number) => {
+    if (!buyer?.id || !selectedChat) return;
+    try {
+      await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'rate-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id, rating }
+      });
+      toast({ title: "Thanks for your feedback!" });
+      setShowRating(false);
+      setChatRating(0);
+    } catch { toast({ variant: "destructive", title: "Failed to submit rating" }); }
   };
 
   const handleResolveTicket = async (ticketId: string) => {
@@ -705,9 +754,9 @@ const BuyerSupport = () => {
                             </div>
                           </motion.div>
                         ))}
-                        {/* Continue with AI button when chat has messages but no recent reply */}
-                        {chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.sender_type === 'visitor' && (
-                          <div className="flex justify-center pt-3">
+                        {/* End conversation + Continue with AI */}
+                        {chatMessages.length > 0 && selectedChat?.status !== 'closed' && (
+                          <div className="flex justify-center gap-2 pt-3">
                             <Button
                               variant="outline"
                               size="sm"
@@ -716,7 +765,41 @@ const BuyerSupport = () => {
                             >
                               🤖 Continue with AI
                             </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="text-xs gap-1.5 rounded-full"
+                              onClick={handleEndChat}
+                            >
+                              <XCircle className="w-3 h-3" /> End Conversation
+                            </Button>
                           </div>
+                        )}
+                        {/* Rating UI after ending */}
+                        {showRating && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center gap-3 py-6"
+                          >
+                            <p className="text-sm font-medium">How was your experience?</p>
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <button
+                                  key={star}
+                                  onClick={() => { setChatRating(star); handleRateChat(star); }}
+                                  className="p-1 hover:scale-110 transition-transform"
+                                >
+                                  <Star
+                                    className={cn("w-7 h-7", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowRating(false)}>
+                              Skip
+                            </Button>
+                          </motion.div>
                         )}
                         <div ref={chatEndRef} />
                       </>
@@ -871,14 +954,19 @@ const BuyerSupport = () => {
             <DialogHeader>
               <div className="space-y-1">
                 <DialogTitle className="pr-8">{selectedTicket?.subject}</DialogTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>{statusConfig[selectedTicket?.status || 'open'].label}</Badge>
                   <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>{selectedTicket?.priority}</Badge>
-                  {selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress' ? (
-                    <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
-                      <CheckCircle className="w-3 h-3" />Resolve
-                    </Button>
-                  ) : null}
+                  {(selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress') && (
+                    <>
+                      <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
+                        <CheckCircle className="w-3 h-3" />Resolve
+                      </Button>
+                      <Button size="sm" variant="destructive" className="text-xs gap-1" onClick={() => selectedTicket && handleCloseTicket(selectedTicket.id)}>
+                        <XCircle className="w-3 h-3" />Close
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </DialogHeader>

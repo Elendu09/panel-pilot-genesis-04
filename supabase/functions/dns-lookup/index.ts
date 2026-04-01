@@ -258,8 +258,8 @@ serve(async (req) => {
     // Extract unique values found
     const uniqueARecords = [...new Set(
       processedResults
-        .filter(r => r.status === "resolved" && r.value)
-        .map(r => r.value)
+        .filter((r: any) => r.status === "resolved" && r.value)
+        .map((r: any) => r.value)
     )];
 
     const uniqueCnameRecords = [...new Set(

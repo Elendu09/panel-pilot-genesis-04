@@ -393,15 +393,27 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   }, [messages]);
 
   // Broadcast typing status
+  const typingChannelRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!selectedSession) {
+      typingChannelRef.current = null;
+      return;
+    }
+    const ch = supabase.channel(`typing-${selectedSession.id}`);
+    ch.subscribe();
+    typingChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); };
+  }, [selectedSession?.id]);
+
   const broadcastTyping = useCallback(() => {
-    if (!selectedSession) return;
-    
-    supabase.channel(`typing-${selectedSession.id}`).send({
+    if (!typingChannelRef.current) return;
+    typingChannelRef.current.send({
       type: 'broadcast',
       event: 'typing',
       payload: { sender_type: 'owner' }
     });
-  }, [selectedSession]);
+  }, []);
 
   const sendMessage = async (content?: string) => {
     const messageContent = content || newMessage.trim();

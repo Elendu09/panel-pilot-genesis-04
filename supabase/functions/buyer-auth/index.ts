@@ -541,6 +541,14 @@ serve(async (req) => {
         return await handleListChatSessions(supabaseAdmin, body);
       case 'list-chat-messages':
         return await handleListChatMessages(supabaseAdmin, body);
+      case 'reply-ticket':
+        return await handleReplyTicket(supabaseAdmin, body);
+      case 'close-ticket':
+        return await handleCloseTicket(supabaseAdmin, body);
+      case 'end-chat':
+        return await handleEndChat(supabaseAdmin, body);
+      case 'rate-chat':
+        return await handleRateChat(supabaseAdmin, body);
       case 'mfa-enroll':
         return await handleMfaEnroll(supabaseAdmin, body);
       case 'mfa-verify':
@@ -1848,4 +1856,106 @@ async function handleListChatMessages(supabaseAdmin: any, body: any) {
   }
 
   return jsonResponse({ messages: messages || [] });
+}
+
+// Handle reply to ticket (buyer appends message)
+async function handleReplyTicket(supabaseAdmin: any, body: any) {
+  const { buyerId, ticketId, content } = body;
+  if (!buyerId || !ticketId || !content) {
+    return jsonResponse({ error: 'Missing required fields' });
+  }
+
+  // Fetch current ticket
+  const { data: ticket, error: fetchErr } = await supabaseAdmin
+    .from('support_tickets')
+    .select('*')
+    .eq('id', ticketId)
+    .eq('user_id', buyerId)
+    .single();
+
+  if (fetchErr || !ticket) {
+    return jsonResponse({ error: 'Ticket not found' });
+  }
+
+  const newMsg = { sender: 'buyer', content, timestamp: new Date().toISOString() };
+  const updatedMessages = [...(ticket.messages || []), newMsg];
+
+  const { error: updateErr } = await supabaseAdmin
+    .from('support_tickets')
+    .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
+    .eq('id', ticketId);
+
+  if (updateErr) {
+    console.error('Failed to reply to ticket:', updateErr);
+    return jsonResponse({ error: 'Failed to send reply' });
+  }
+
+  return jsonResponse({ success: true, messages: updatedMessages });
+}
+
+// Handle close ticket
+async function handleCloseTicket(supabaseAdmin: any, body: any) {
+  const { buyerId, ticketId } = body;
+  if (!buyerId || !ticketId) {
+    return jsonResponse({ error: 'Missing required fields' });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('support_tickets')
+    .update({ status: 'closed', updated_at: new Date().toISOString() })
+    .eq('id', ticketId)
+    .eq('user_id', buyerId);
+
+  if (error) {
+    console.error('Failed to close ticket:', error);
+    return jsonResponse({ error: 'Failed to close ticket' });
+  }
+
+  return jsonResponse({ success: true });
+}
+
+// Handle end chat session
+async function handleEndChat(supabaseAdmin: any, body: any) {
+  const { buyerId, sessionId } = body;
+  if (!buyerId || !sessionId) {
+    return jsonResponse({ error: 'Missing required fields' });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('chat_sessions')
+    .update({ status: 'closed', updated_at: new Date().toISOString() })
+    .eq('id', sessionId)
+    .eq('visitor_id', buyerId);
+
+  if (error) {
+    console.error('Failed to end chat:', error);
+    return jsonResponse({ error: 'Failed to end conversation' });
+  }
+
+  return jsonResponse({ success: true });
+}
+
+// Handle rate chat session
+async function handleRateChat(supabaseAdmin: any, body: any) {
+  const { buyerId, sessionId, rating } = body;
+  if (!buyerId || !sessionId || !rating) {
+    return jsonResponse({ error: 'Missing required fields' });
+  }
+
+  if (rating < 1 || rating > 5) {
+    return jsonResponse({ error: 'Rating must be between 1 and 5' });
+  }
+
+  const { error } = await supabaseAdmin
+    .from('chat_sessions')
+    .update({ rating, updated_at: new Date().toISOString() })
+    .eq('id', sessionId)
+    .eq('visitor_id', buyerId);
+
+  if (error) {
+    console.error('Failed to rate chat:', error);
+    return jsonResponse({ error: 'Failed to submit rating' });
+  }
+
+  return jsonResponse({ success: true });
 }
