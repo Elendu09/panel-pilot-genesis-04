@@ -282,19 +282,65 @@ const BuyerSupport = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
+    if (!newMessage.trim() || !selectedTicket || !buyer?.id) return;
     setSubmitting(true);
     try {
-      const newMsg: Message = { sender: 'buyer', content: newMessage, timestamp: new Date().toISOString() };
-      const updatedMessages = [...(selectedTicket.messages || []), newMsg];
-      const { error } = await supabase.from('support_tickets').update({ messages: updatedMessages, updated_at: new Date().toISOString() }).eq('id', selectedTicket.id);
-      if (error) throw error;
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'reply-ticket',
+          panelId: resolvedPanelId || '',
+          buyerId: buyer.id,
+          ticketId: selectedTicket.id,
+          content: newMessage.trim(),
+        }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to send reply');
+      const updatedMessages = fnData.messages || [...(selectedTicket.messages || []), { sender: 'buyer', content: newMessage.trim(), timestamp: new Date().toISOString() }];
       setSelectedTicket({ ...selectedTicket, messages: updatedMessages });
       setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t));
       setNewMessage("");
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to send message" });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to send message" });
     } finally { setSubmitting(false); }
+  };
+
+  const handleCloseTicket = async (ticketId: string) => {
+    if (!buyer?.id) return;
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to close ticket');
+      toast({ title: "Ticket closed" });
+      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'closed' });
+      fetchTickets();
+    } catch { toast({ variant: "destructive", title: "Failed to close ticket" }); }
+  };
+
+  const handleEndChat = async () => {
+    if (!buyer?.id || !selectedChat) return;
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'end-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to end chat');
+      setSelectedChat({ ...selectedChat, status: 'closed' });
+      setChatSessions(prev => prev.map(s => s.id === selectedChat.id ? { ...s, status: 'closed' } : s));
+      setShowRating(true);
+      toast({ title: "Conversation ended" });
+    } catch { toast({ variant: "destructive", title: "Failed to end conversation" }); }
+  };
+
+  const handleRateChat = async (rating: number) => {
+    if (!buyer?.id || !selectedChat) return;
+    try {
+      await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'rate-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id, rating }
+      });
+      toast({ title: "Thanks for your feedback!" });
+      setShowRating(false);
+      setChatRating(0);
+    } catch { toast({ variant: "destructive", title: "Failed to submit rating" }); }
   };
 
   const handleResolveTicket = async (ticketId: string) => {
