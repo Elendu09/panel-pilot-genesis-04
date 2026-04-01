@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- EARLY TENANT DETECTION: Runs BEFORE any content renders -->
+    <!-- EARLY TENANT DETECTION: Runs BEFORE any content renders to guarantee zero flash of platform branding -->
     <script>
       (function() {
         var h = location.hostname.toLowerCase().replace(/^www\./, '');
@@ -12,41 +12,48 @@
         var isDev = h.includes('lovable.app') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1' || h.includes('replit.dev') || h.includes('repl.co') || h.includes('replit.app');
 
         if (!isPlatform && !isDev) {
-          // TENANT DOMAIN - Neutralize all platform branding immediately
+          // TENANT DOMAIN – neutralize all platform branding immediately
           document.title = 'Loading...';
-
-          // Mark as tenant for later use
           window.__IS_TENANT_DOMAIN__ = true;
 
-          // Hide document until React loads to prevent any flash
+          // Hide document until React loads to prevent *any* FOUC
           document.documentElement.style.visibility = 'hidden';
           document.documentElement.style.opacity = '0';
 
-          // AGGRESSIVE: Remove ALL existing favicons immediately (before they load)
-          var existingFavicons = document.querySelectorAll('link[rel*="icon"]');
-          for (var i = 0; i < existingFavicons.length; i++) {
-            existingFavicons[i].parentNode.removeChild(existingFavicons[i]);
-          }
+          // Aggressively remove all existing favicons immediately (before the browser requests them)
+          document.querySelectorAll('link[rel*="icon"]').forEach(function(el) {
+            el.remove();
+          });
         }
       })();
     </script>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZ58P3VNKL"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
 
-            gtag('config', 'G-HZ58P3VNKL');
+    <!-- Google Analytics: loads ONLY on platform domains (prevents tenant-domain tracking and data pollution) -->
+    <script>
+      (function() {
+        if (window.__IS_TENANT_DOMAIN__) return;
+
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-HZ58P3VNKL';
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function(){ dataLayer.push(arguments); };
+
+        gtag('js', new Date());
+        gtag('config', 'G-HZ58P3VNKL');
+      })();
     </script>
 
-    <!-- Platform-only meta tags (will be removed for tenants by cleanup script) -->
+    <!-- PLATFORM-ONLY META TAGS (will be removed for tenants via cleanup script) -->
     <title data-platform-only>HOME OF SMM: Create and Manage Your Own SMM Panel</title>
     <meta
       name="description"
       content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue."
       data-platform-only
     />
+
     <!-- ===== OPEN GRAPH ===== -->
     <meta property="og:type" content="website" data-platform-only />
     <meta property="og:site_name" content="HOME OF SMM" data-platform-only />
@@ -57,6 +64,15 @@
       data-platform-only
     />
     <meta property="og:url" content="https://homeofsmm.com/" data-platform-only />
+    <meta property="og:locale" content="en_US" data-platform-only />
+    <meta
+      property="og:image"
+      content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png"
+      data-platform-only
+    />
+    <meta property="og:image:width" content="1200" data-platform-only />
+    <meta property="og:image:height" content="630" data-platform-only />
+    <meta property="og:image:alt" content="HOME OF SMM - SMM Panel Platform" data-platform-only />
 
     <!-- ===== TWITTER ===== -->
     <meta name="twitter:card" content="summary_large_image" data-platform-only />
@@ -66,20 +82,27 @@
       content="Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways, and real-time analytics to grow revenue."
       data-platform-only
     />
+    <meta name="twitter:site" content="@homeofsmm" data-platform-only />
+    <meta name="twitter:creator" content="@homeofsmm" data-platform-only />
+    <meta
+      name="twitter:image"
+      content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png"
+      data-platform-only
+    />
     <meta
       name="keywords"
       content="HOME OF SMM, SMM Panel, Perfert SMM panel, SMM panel script, create SMM panel, best SMM panel, SMM reseller panel, SMM panel software, social media marketing panel, white label SMM panel, cheapest SMM panel"
       data-platform-only
     />
 
-    <!-- Preconnect for Performance - Critical third-party origins -->
+    <!-- Preconnect for Performance – critical third-party origins -->
     <link rel="preconnect" href="https://tooudgubuhxjbbvzjcgx.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://tooudgubuhxjbbvzjcgx.supabase.co" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
 
-    <!-- Critical inline styles for initial render - prevents FOUC and improves FCP -->
+    <!-- Critical inline styles for initial render: prevent FOUC and improve FCP -->
     <style>
       :root{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:217.2 91.2% 59.8%}
       body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:hsl(var(--background));color:hsl(var(--foreground))}
@@ -88,20 +111,21 @@
       .animate-spin{animation:spin 1s linear infinite}
     </style>
 
-    <!-- Google Fonts - Non-render blocking -->
+    <!-- Google Fonts – non-render blocking -->
     <link
       rel="preload"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap"
       as="style"
       onload="this.onload=null;this.rel='stylesheet'"
     />
-    <noscript
-      ><link
+    <noscript>
+      <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
-    /></noscript>
+      />
+    </noscript>
 
-    <!-- Secondary fonts loaded async after initial render -->
+    <!-- Secondary fonts loaded asynchronously after initial render -->
     <script>
       (function() {
         var secondaryFonts = document.createElement('link');
@@ -115,15 +139,19 @@
       })();
     </script>
 
-    <!-- Author & Publisher (platform-only, replaced for tenants) -->
+    <!-- Author & Publisher (platform-only) -->
     <meta name="author" content="HOME OF SMM" data-platform-only />
     <meta name="publisher" content="HOME OF SMM" data-platform-only />
     <meta name="copyright" content="HOME OF SMM" data-platform-only />
 
-    <!-- Robots & Indexing -->
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow" />
-    <meta name="bingbot" content="index, follow" />
+    <!-- Robots & Indexing (platform-only; tenants will receive safe defaults in cleanup) -->
+    <meta
+      name="robots"
+      content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+      data-platform-only
+    />
+    <meta name="googlebot" content="index, follow" data-platform-only />
+    <meta name="bingbot" content="index, follow" data-platform-only />
 
     <!-- Language & Distribution -->
     <meta name="language" content="English" />
@@ -135,116 +163,130 @@
     <meta name="geo.region" content="US" />
     <meta name="geo.placename" content="United States" />
 
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#6366F1" />
-    <meta name="msapplication-TileColor" content="#6366F1" />
-    <meta name="msapplication-navbutton-color" content="#6366F1" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- Theme Color (platform-only: prevents purple browser UI on tenant domains) -->
+    <meta name="theme-color" content="#6366F1" data-platform-only />
+    <meta name="msapplication-TileColor" content="#6366F1" data-platform-only />
+    <meta name="msapplication-navbutton-color" content="#6366F1" data-platform-only />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" data-platform-only />
 
-    <!-- Mobile Web App (platform-only, replaced for tenants) -->
+    <!-- Mobile Web App (platform-only where applicable) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="HOME OF SMM" data-platform-only />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
 
-    <!-- Open Graph (platform-only, replaced for tenants) -->
-    <meta property="og:locale" content="en_US" data-platform-only />
-
-    <meta
-      property="og:image"
-      content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png"
-      data-platform-only
-    />
-    <meta property="og:image:width" content="1200" data-platform-only />
-    <meta property="og:image:height" content="630" data-platform-only />
-    <meta property="og:image:alt" content="HOME OF SMM - SMM Panel Platform" data-platform-only />
-
-    <!-- Twitter Card (platform-only, replaced for tenants) -->
-    <meta name="twitter:site" content="@homeofsmm" data-platform-only />
-    <meta name="twitter:creator" content="@homeofsmm" data-platform-only />
-
-    <meta
-      name="twitter:image"
-      content="https://storage.googleapis.com/gpt-engineer-file-uploads/a8nFu1Vlx5VQr6NAikq0H0XDcv42/social-images/social-1767449564584-HOME OF SMM SCREENSHOT.png"
-      data-platform-only
-    />
-
-    <!-- Favicon handling: Conditional based on domain type -->
-    <script>
-      (function() {
-        if (window.__IS_TENANT_DOMAIN__) {
-          // For tenants: Insert .ico favicon for Google crawler compatibility
-          var link = document.createElement('link');
-          link.rel = 'icon';
-          link.type = 'image/x-icon';
-          link.href = '/default-tenant-favicon.ico';
-          document.head.appendChild(link);
-
-          // Also add shortcut icon (legacy support)
-          var shortcut = document.createElement('link');
-          shortcut.rel = 'shortcut icon';
-          shortcut.type = 'image/x-icon';
-          shortcut.href = '/default-tenant-favicon.ico';
-          document.head.appendChild(shortcut);
-
-          // Add apple touch icon
-          var apple = document.createElement('link');
-          apple.rel = 'apple-touch-icon';
-          apple.sizes = '180x180';
-          apple.href = '/default-panel-apple-touch-icon.png';
-          document.head.appendChild(apple);
-        }
-      })();
-    </script>
-
-    <!-- Platform favicon links (these will be removed for tenants) -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <!-- Platform favicon links: explicitly marked platform-only (prevents tenant flash / race issues) -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" data-platform-only />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" data-platform-only />
     <link rel="icon" type="image/x-icon" sizes="32x32" href="/favicon.ico" data-platform-only />
     <link rel="icon" type="image/x-icon" sizes="16x16" href="/favicon.ico" data-platform-only />
 
-    <!-- Sitemap -->
-    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
-
-    <!-- Canonical URL (platform-only, replaced for tenants) -->
+    <!-- Sitemap (platform-only) -->
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" data-platform-only />
+    <!-- Canonical URL (platform-only; tenants should manage canonicality via SEO framework of choice) -->
     <link rel="canonical" href="https://homeofsmm.com/" data-platform-only />
 
-    <!-- CLEANUP SCRIPT: Runs after favicon links are declared -->
+    <!-- TENANT CLEANUP & INJECTION SCRIPT: removes platform branding and adds tenant defaults exactly once -->
     <script>
       (function() {
-        if (window.__IS_TENANT_DOMAIN__) {
-          // Remove all platform-only meta tags and links
-          var platformOnly = document.querySelectorAll('[data-platform-only]');
-          for (var i = 0; i < platformOnly.length; i++) {
-            platformOnly[i].parentNode.removeChild(platformOnly[i]);
-          }
+        // If not a tenant domain, do nothing extra (platform experience remains)
+        if (!window.__IS_TENANT_DOMAIN__) return;
 
-          // Ensure tenant favicon.ico exists
-          var hasTenantFavicon = document.querySelector('link[href*="default-tenant-favicon.ico"]');
-          if (!hasTenantFavicon) {
-            var link = document.createElement('link');
-            link.rel = 'icon';
-            link.type = 'image/x-icon';
-            link.href = '/default-tenant-favicon.ico';
-            document.head.insertBefore(link, document.head.firstChild);
-          }
+        // Remove all platform-only meta tags, links, and elements that shouldn’t persist on tenants
+        document.querySelectorAll('[data-platform-only]').forEach(function(el) {
+          el.remove();
+        });
+
+        // Ensure no stray favicons remain (this is a safety belt against timing issues in browsers)
+        document.querySelectorAll('link[rel*="icon"]').forEach(function(el) {
+          el.remove();
+        });
+
+        // Insert tenant favicon(s) — ICO viewed best by search crawlers historically
+        var favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.type = 'image/x-icon';
+        favicon.href = '/default-tenant-favicon.ico';
+        document.head.appendChild(favicon);
+
+        var shortcut = document.createElement('link');
+        shortcut.rel = 'shortcut icon';
+        shortcut.type = 'image/x-icon';
+        shortcut.href = '/default-tenant-favicon.ico';
+        document.head.appendChild(shortcut);
+
+        var apple = document.createElement('link');
+        apple.rel = 'apple-touch-icon';
+        apple.sizes = '180x180';
+        apple.href = '/default-panel-apple-touch-icon.png';
+        document.head.appendChild(apple);
+
+        // SAFE SEO DEFAULTS FOR TENANTS: prevent inadvertent indexing of tenant sites with platform content.
+        // Tenants can (and should) adjust robots, theme color, canonical, title, social meta, etc.
+        // through their app logic (React Helmet, custom config, edge renderer, or server-side rendering).
+        var robots = document.createElement('meta');
+        robots.name = 'robots';
+        robots.content = 'noindex, nofollow';
+        document.head.appendChild(robots);
+
+        // Neutral theme color to avoid platform purple bleeding into browser chrome
+        var theme = document.querySelector('meta[name="theme-color"]') || document.createElement('meta');
+        theme.name = 'theme-color';
+        theme.content = '#111827';
+        document.head.appendChild(theme);
+
+        // Optional: remove platform canonical if it lingered (precautionary)
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) {
+          canonical.remove();
         }
       })();
     </script>
   </head>
+
   <body>
     <div id="root"></div>
 
-    <!-- SEO fallback (non-JS crawlers) -->
+    <!-- Neutral noscript fallback: completely tenant-agnostic and zero branding leak (critical for non-JS crawlers) -->
     <noscript>
-      <h1>HOME OF SMM: Create and Manage Your Own SMM Panel</h1>
-      <p>
-        Launch your own SMM panel with Home of SMM. Get custom branding, automated orders, multiple payment gateways,
-        and real-time analytics to grow revenue.
-      </p>
+      <div style="text-align:center;padding:4rem 1rem;font-family:system-ui,-apple-system,sans-serif;color:#111;">
+        <h1 style="font-size:1.5rem;margin:0 0 0.5rem;">JavaScript Required</h1>
+        <p style="opacity:0.7;margin:0;">
+          This application requires JavaScript to run. Please enable it in your browser settings.
+        </p>
+      </div>
     </noscript>
 
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- IMPORTANT: Ensure the hidden HTML is made visible when React has rendered (prevents infinite hidden screen if hydration fails) -->
+    <script>
+      (function() {
+        // Only relevant for tenants (platform users can see immediately)
+        if (!window.__IS_TENANT_DOMAIN__) return;
+
+        // Callback that un-hides the document when the app finishes rendering
+        function showApp() {
+          document.documentElement.style.visibility = 'visible';
+          document.documentElement.style.opacity = '1';
+          document.documentElement.style.transition = 'opacity 0.15s ease';
+        }
+
+        // Try to respond to the React DOM being present (this uses a simple and reliable timing pattern).
+        // A more robust alternative is emitting a DOM event from your React bootstrap (e.g., window.__APP_READY = true)
+        var checkInterval = setInterval(function() {
+          if (document.getElementById('root') && document.getElementById('root').children.length > 0) {
+            clearInterval(checkInterval);
+            showApp();
+          }
+        }, 5);
+        // Fallback: if the app takes longer than 5 seconds for some reason, recover anyway
+        setTimeout(function() {
+          clearInterval(checkInterval);
+          showApp();
+        }, 5000);
+      })();
+    </script>
   </body>
 </html>
