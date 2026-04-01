@@ -923,12 +923,20 @@ const BuyerSupport = () => {
                 <div className="flex items-center gap-2">
                   <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>{statusConfig[selectedTicket?.status || 'open'].label}</Badge>
                   <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>{selectedTicket?.priority}</Badge>
-                  {selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress' ? (
-                    <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
-                      <CheckCircle className="w-3 h-3" />Resolve
-                    </Button>
-                  ) : null}
-                </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>{statusConfig[selectedTicket?.status || 'open'].label}</Badge>
+                    <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>{selectedTicket?.priority}</Badge>
+                    {(selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress') && (
+                      <>
+                        <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
+                          <CheckCircle className="w-3 h-3" />Resolve
+                        </Button>
+                        <Button size="sm" variant="destructive" className="text-xs gap-1" onClick={() => selectedTicket && handleCloseTicket(selectedTicket.id)}>
+                          <XCircle className="w-3 h-3" />Close
+                        </Button>
+                      </>
+                    )}
+                  </div>
               </div>
             </DialogHeader>
             <ScrollArea className="flex-1 pr-4">
