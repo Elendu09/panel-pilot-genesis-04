@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import { Star } from "lucide-react";
+import {
   MessageSquare, 
   Plus, 
   Clock, 
