@@ -135,6 +135,8 @@ const BuyerSupport = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showRating, setShowRating] = useState(false);
+  const [chatRating, setChatRating] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // FAQ state
