@@ -754,9 +754,9 @@ const BuyerSupport = () => {
                             </div>
                           </motion.div>
                         ))}
-                        {/* Continue with AI button when chat has messages but no recent reply */}
-                        {chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.sender_type === 'visitor' && (
-                          <div className="flex justify-center pt-3">
+                        {/* End conversation + Continue with AI */}
+                        {chatMessages.length > 0 && selectedChat?.status !== 'closed' && (
+                          <div className="flex justify-center gap-2 pt-3">
                             <Button
                               variant="outline"
                               size="sm"
@@ -765,7 +765,41 @@ const BuyerSupport = () => {
                             >
                               🤖 Continue with AI
                             </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="text-xs gap-1.5 rounded-full"
+                              onClick={handleEndChat}
+                            >
+                              <XCircle className="w-3 h-3" /> End Conversation
+                            </Button>
                           </div>
+                        )}
+                        {/* Rating UI after ending */}
+                        {showRating && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex flex-col items-center gap-3 py-6"
+                          >
+                            <p className="text-sm font-medium">How was your experience?</p>
+                            <div className="flex gap-1">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <button
+                                  key={star}
+                                  onClick={() => { setChatRating(star); handleRateChat(star); }}
+                                  className="p-1 hover:scale-110 transition-transform"
+                                >
+                                  <Star
+                                    className={cn("w-7 h-7", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowRating(false)}>
+                              Skip
+                            </Button>
+                          </motion.div>
                         )}
                         <div ref={chatEndRef} />
                       </>
