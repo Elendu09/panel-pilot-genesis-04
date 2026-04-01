@@ -884,6 +884,7 @@ export type Database = {
           id: string
           last_message_at: string | null
           panel_id: string | null
+          rating: number | null
           status: string
           updated_at: string
           visitor_email: string | null
@@ -895,6 +896,7 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           panel_id?: string | null
+          rating?: number | null
           status?: string
           updated_at?: string
           visitor_email?: string | null
@@ -906,6 +908,7 @@ export type Database = {
           id?: string
           last_message_at?: string | null
           panel_id?: string | null
+          rating?: number | null
           status?: string
           updated_at?: string
           visitor_email?: string | null
