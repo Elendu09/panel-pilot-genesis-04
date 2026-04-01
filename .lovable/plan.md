@@ -1,44 +1,52 @@
 
 
-# Plan: Enhance Admin Pages, Enable Team Member Invites, Fix Hero Image Across All Themes
+# Plan: Fix Panel Owner Chat Send, Tenant Ticket Flow, Add Conversation Rating/End, Fix Build Error
 
-## 1. Admin Page Enhancements
+## Issues
 
-### Current State
-The admin pages (Overview, Panel Management, User Management, Subscription Management, Revenue Analytics) are functional but could be more polished. The Overview shows a kanban view of panels by status, stats cards, recent activity, and top panels. Panel Management has list/kanban views with edit/suspend capabilities.
+### 1. Panel Owner Cannot Send Chat Messages (RLS Block)
+**Root cause**: `chat_messages` INSERT policy is `TO service_role` only (migration `20260212`). Panel owner's `ChatInbox.sendMessage()` (line 414) uses the anon/authenticated Supabase client directly — this gets rejected by RLS.
 
-### Enhancements
-- **AdminOverview**: Add quick-action buttons (approve panel, view user), improve the "Top Panels" section with sparkline mini-charts, add a "Recent Signups" section, and show plan distribution summary (Free/Basic/Pro counts)
-- **PanelManagement**: Add bulk actions (approve/suspend multiple), add filtering by plan tier, show tenant user count per panel, add export functionality
-- **UserManagement**: Add user activity indicators (last login), add inline balance adjustment, add bulk email capability, improve search with filters (by role, activity status, plan tier)
-- **SubscriptionManagement**: Add plan migration stats, add upcoming renewal alerts, show churn rate metric
-- **RevenueAnalytics**: Add date range picker, add comparison with previous period, add revenue breakdown by payment method
+**Fix**: Add an RLS policy allowing authenticated panel owners to insert chat messages into sessions they own. Also add UPDATE policy for mark-as-read.
 
-## 2. Team Management — Remove "Coming Soon", Enable Actual Invites
+```sql
+CREATE POLICY "Panel owners can insert chat messages"
+ON public.chat_messages FOR INSERT TO authenticated
+WITH CHECK (session_id IN (SELECT id FROM public.chat_sessions WHERE public.is_panel_owner(panel_id)));
 
-### Current State
-The team invite dialog (lines 396-410 of `TeamManagement.tsx`) has a **hardcoded "Coming Soon" notice** and the submit button is **permanently disabled** (`disabled={true}`). The entire invite infrastructure exists (edge function `team-auth` with `create-member` action, `panel_team_members` table, custom JWT auth) — it's just blocked by the UI.
+CREATE POLICY "Panel owners can update chat messages"
+ON public.chat_messages FOR UPDATE TO authenticated
+USING (session_id IN (SELECT id FROM public.chat_sessions WHERE public.is_panel_owner(panel_id)));
 
-### Fix
-- Remove the "Coming Soon" div (lines 396-402) and the disabled `Coming Soon!` button (lines 403-409)
-- Replace with an actual "Add Member" button that calls `handleInvite()` — the function already exists and works (line 286-299)
-- Add email validation before submit
-- Show loading state while `isInviting` is true
+CREATE POLICY "Panel owners can update chat sessions"
+ON public.chat_sessions FOR UPDATE TO authenticated
+USING (public.is_panel_owner(panel_id));
+```
 
-## 3. Hero Image Not Showing in Any Theme
+### 2. Tenant Ticket Reply Uses Direct Supabase (RLS Block)
+**Root cause**: `BuyerSupport.handleSendMessage()` (line 287) calls `supabase.from('support_tickets').update()` directly. Tenant buyers use custom auth (no Supabase JWT), so this fails silently or errors.
 
-### Root Cause Analysis
-**Standard themes (ThemeOne–ThemeFive)**: These pass `customization` to `StorefrontHeroSection`, which reads `customization.enableHeroImage` and `customization.heroImageUrl` (line 129). The `fullCustomization` in `Storefront.tsx` spreads `...design` (which is `panel?.custom_branding`), so these values should be present IF:
-1. Panel owner saved them via DesignCustomization (confirmed — saves to `custom_branding` JSON)
-2. `useTenant.tsx` fetches `custom_branding` (confirmed — it's in `panelFields`)
+**Fix**: Route ticket reply through `buyer-auth` edge function. Add a `reply-ticket` action that appends the message to the ticket's `messages` JSONB array using the service role.
 
-The issue is likely that `buyer_theme` is **missing from `panelFields`** in `useTenant.tsx` (line 331-334). Without `buyer_theme`, the theme selection in `Storefront.tsx` falls back to `theme_type` which may select a different theme than intended, causing a mismatch.
+### 3. Tenant Cannot End/Close Ticket
+**Fix**: Add `close-ticket` action to `buyer-auth` edge function. Update ticket status to `closed`. Add "Close Ticket" button in BuyerSupport ticket view dialog.
 
-**Premium themes (AliPanel, TGRef, FlySMM, SMMStay, SMMVisit)**: These do NOT use `StorefrontHeroSection`. They have custom hero implementations in `src/components/buyer-themes/*/` that completely ignore `enableHeroImage` and `heroImageUrl`. The hero image feature was never propagated to these themes.
+### 4. Conversation Rating and End Chat
+**Fix**: 
+- Add `end-chat` and `rate-chat` actions to `buyer-auth` edge function
+- `end-chat`: Updates `chat_sessions.status` to `closed`
+- `rate-chat`: Adds rating to a `metadata` JSONB column or a separate field
+- In BuyerSupport chat UI: Add "End Conversation" button and a 1-5 star rating prompt when conversation ends
 
-### Fix
-1. **Add `buyer_theme` to `panelFields`** in `useTenant.tsx` so the correct theme is selected on tenant storefronts
-2. **Add hero image support to all premium themes**: Read `customization.enableHeroImage` and `customization.heroImageUrl` in each premium theme's homepage component and render the image alongside hero text (matching the 2-column layout from `StorefrontHeroSection`)
+### 5. Panel Owner Typing Indicator Error
+**Root cause**: `ChatInbox.broadcastTyping()` (line 399) calls `supabase.channel().send()` on a channel that may not be subscribed yet. The channel is only subscribed in the `useEffect` for the selected session, but `broadcastTyping` creates a new channel reference.
+
+**Fix**: Store the typing channel ref and reuse it, or subscribe to the typing channel before broadcasting.
+
+### 6. Build Error in `dns-lookup/index.ts`
+**Root cause**: TypeScript union type — `processedResults` items can be either resolved (with `value`) or error (without `value`). Line 261 accesses `.value` without narrowing.
+
+**Fix**: Add explicit type narrowing: `.filter(r => r.status === "resolved" && 'value' in r && r.value)` and cast appropriately.
 
 ---
 
@@ -46,16 +54,9 @@ The issue is likely that `buyer_theme` is **missing from `panelFields`** in `use
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useTenant.tsx` | Add `buyer_theme` to `panelFields` query string (line 331-334) |
-| `src/pages/panel/TeamManagement.tsx` | Remove "Coming Soon" block (lines 396-410); replace with functional "Add Member" button calling `handleInvite()` |
-| `src/pages/admin/AdminOverview.tsx` | Add plan distribution summary, quick actions, recent signups section |
-| `src/pages/admin/PanelManagement.tsx` | Add bulk actions, plan tier filter, tenant count per panel |
-| `src/pages/admin/UserManagement.tsx` | Add last-login indicator, improved search filters |
-| `src/pages/admin/SubscriptionManagement.tsx` | Add churn rate, renewal alerts |
-| `src/pages/admin/RevenueAnalytics.tsx` | Add date range picker, period comparison |
-| `src/components/buyer-themes/alipanel/AliPanelHomepage.tsx` | Add hero image rendering from customization |
-| `src/components/buyer-themes/tgref/TGRefHomepage.tsx` | Add hero image rendering |
-| `src/components/buyer-themes/flysmm/` | Add hero image rendering |
-| `src/components/buyer-themes/smmstay/` | Add hero image rendering |
-| `src/components/buyer-themes/smmvisit/` | Add hero image rendering |
+| Database migration | Add INSERT/UPDATE policies for panel owners on `chat_messages` and `chat_sessions`; add `rating` column to `chat_sessions` |
+| `supabase/functions/buyer-auth/index.ts` | Add `reply-ticket`, `close-ticket`, `end-chat`, `rate-chat` actions |
+| `src/pages/buyer/BuyerSupport.tsx` | Route ticket replies through edge function; add End Conversation button with rating UI; add Close Ticket button |
+| `src/pages/panel/ChatInbox.tsx` | Fix typing broadcast channel reference; ensure send uses subscribed channel |
+| `supabase/functions/dns-lookup/index.ts` | Fix TypeScript union type narrowing on lines 261-262 |
 
