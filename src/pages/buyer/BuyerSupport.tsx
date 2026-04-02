@@ -205,8 +205,8 @@ const BuyerSupport = () => {
     };
     fetchMessages();
 
-    // Poll for new messages every 5s (realtime won't work with custom auth RLS)
-    const interval = setInterval(fetchMessages, 5000);
+    // Poll for new messages every 2s for fast sync (realtime won't work with custom auth RLS)
+    const interval = setInterval(fetchMessages, 2000);
     return () => clearInterval(interval);
   }, [selectedChat?.id, buyer?.id]);
 

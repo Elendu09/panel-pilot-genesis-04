@@ -187,6 +187,7 @@ export function useUnifiedServices({ panelId, enabled = true }: UseUnifiedServic
         description: svc.description || '',
         isActive: svc.is_active ?? true,
         displayOrder: svc.display_order || 0,
+        display_order: svc.display_order || 0,
         refillAvailable: svc.refill_available || false,
         cancelAvailable: svc.cancel_available || false,
         averageTime: svc.average_time || '',
