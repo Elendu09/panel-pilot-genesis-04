@@ -781,7 +781,6 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
           onKeyDown={handleKeyPress}
           placeholder="Type a reply... (/ for shortcuts)"
           className="flex-1 min-h-[44px] max-h-32 resize-none"
-          disabled={sending}
           rows={1}
         />
         <Button
