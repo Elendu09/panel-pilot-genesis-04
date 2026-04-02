@@ -324,7 +324,7 @@ const BuyerSupport = () => {
         body: { action: 'end-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id }
       });
       if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to end chat');
-      setSelectedChat({ ...selectedChat, status: 'closed' });
+      // Update local state — mark session as closed so it moves to archived
       setChatSessions(prev => prev.map(s => s.id === selectedChat.id ? { ...s, status: 'closed' } : s));
       setShowRating(true);
       toast({ title: "Conversation ended" });
