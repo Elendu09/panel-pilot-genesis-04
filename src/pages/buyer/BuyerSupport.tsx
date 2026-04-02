@@ -409,6 +409,14 @@ const BuyerSupport = () => {
       toast({ variant: "destructive", title: "Unable to connect", description: "Panel ID not found. Please refresh the page and try again." });
       return null;
     }
+    // Prevent creating a new chat if an active one exists
+    const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+    if (hasActive) {
+      const active = chatSessions.find(s => s.status === 'active' || s.status === 'open')!;
+      setSelectedChat(active);
+      toast({ title: "Active chat exists", description: "Please end your current conversation before starting a new one." });
+      return active;
+    }
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
         body: {
