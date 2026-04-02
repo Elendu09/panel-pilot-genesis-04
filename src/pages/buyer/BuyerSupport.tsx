@@ -324,7 +324,7 @@ const BuyerSupport = () => {
         body: { action: 'end-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id }
       });
       if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to end chat');
-      setSelectedChat({ ...selectedChat, status: 'closed' });
+      // Update local state — mark session as closed so it moves to archived
       setChatSessions(prev => prev.map(s => s.id === selectedChat.id ? { ...s, status: 'closed' } : s));
       setShowRating(true);
       toast({ title: "Conversation ended" });
@@ -340,6 +340,7 @@ const BuyerSupport = () => {
       toast({ title: "Thanks for your feedback!" });
       setShowRating(false);
       setChatRating(0);
+      setSelectedChat(null); // Clear so user can start a new chat
     } catch { toast({ variant: "destructive", title: "Failed to submit rating" }); }
   };
 
@@ -408,6 +409,14 @@ const BuyerSupport = () => {
     if (!resolvedPanelId) {
       toast({ variant: "destructive", title: "Unable to connect", description: "Panel ID not found. Please refresh the page and try again." });
       return null;
+    }
+    // Prevent creating a new chat if an active one exists
+    const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+    if (hasActive) {
+      const active = chatSessions.find(s => s.status === 'active' || s.status === 'open')!;
+      setSelectedChat(active);
+      toast({ title: "Active chat exists", description: "Please end your current conversation before starting a new one." });
+      return active;
     }
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
@@ -616,7 +625,7 @@ const BuyerSupport = () => {
             )}
           </TabsContent>
 
-          {/* ===== LIVE CHAT TAB (Twitter-style unified) ===== */}
+          {/* ===== LIVE CHAT TAB ===== */}
           <TabsContent value="chat" className="mt-4">
             <Card className="glass-card overflow-hidden">
             <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
@@ -633,37 +642,19 @@ const BuyerSupport = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {/* Filter: Active / Archived */}
                     <Button
                       variant={chatFilter === 'active' ? 'default' : 'ghost'}
                       size="sm"
                       className="text-xs h-7 px-2"
-                      onClick={() => setChatFilter('active')}
+                      onClick={() => { setChatFilter('active'); setSelectedChat(null); }}
                     >Active</Button>
                     <Button
                       variant={chatFilter === 'archived' ? 'default' : 'ghost'}
                       size="sm"
                       className="text-xs h-7 px-2"
-                      onClick={() => setChatFilter('archived')}
+                      onClick={() => { setChatFilter('archived'); setSelectedChat(null); }}
                     >Archived</Button>
-                    {/* New Chat */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7 px-2 gap-1"
-                      onClick={async () => {
-                        const session = await handleStartChat();
-                        if (session) setChatFilter('active');
-                      }}
-                    >
-                      <Plus className="w-3 h-3" />New
-                    </Button>
                   </div>
-                  {selectedChat && (
-                    <Badge variant={selectedChat.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">
-                      {selectedChat.status}
-                    </Badge>
-                  )}
                 </div>
 
                 {/* Messages Area */}
@@ -671,144 +662,206 @@ const BuyerSupport = () => {
                   <div className="space-y-3 py-4">
                     {chatLoading ? (
                       <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                    ) : !selectedChat && chatSessions.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                          <MessagesSquare className="w-8 h-8 text-primary" />
+                    ) : chatFilter === 'archived' ? (
+                      /* ===== ARCHIVED VIEW: List of closed chats for preview ===== */
+                      !selectedChat ? (
+                        <div className="space-y-2">
+                          {chatSessions
+                            .filter(s => s.status === 'closed' || s.status === 'archived')
+                            .length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <Clock className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
+                              <h3 className="font-semibold mb-1">No Chat History</h3>
+                              <p className="text-sm text-muted-foreground">Your previous conversations will appear here</p>
+                            </div>
+                          ) : (
+                            chatSessions
+                              .filter(s => s.status === 'closed' || s.status === 'archived')
+                              .map(session => (
+                                <motion.div
+                                  key={session.id}
+                                  initial={{ opacity: 0, y: 5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="p-3 rounded-xl bg-muted/40 hover:bg-muted/60 cursor-pointer transition-colors"
+                                  onClick={() => setSelectedChat(session)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium">Chat #{session.id.slice(0, 6)}</p>
+                                    <Badge variant="secondary" className="text-[10px]">Ended</Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
+                                  </p>
+                                </motion.div>
+                              ))
+                          )}
                         </div>
-                        <h3 className="font-semibold mb-1">Start a Conversation</h3>
-                        <p className="text-sm text-muted-foreground mb-4">Type a message below or tap a quick reply to chat with support</p>
-                      </div>
-                    ) : !selectedChat ? (
-                      /* Session List */
-                      <div className="space-y-2">
-                        {chatSessions
-                          .filter(s => chatFilter === 'archived' 
-                            ? (s.status === 'closed' || s.status === 'archived')
-                            : (s.status === 'active' || s.status === 'open'))
-                          .map(session => (
+                      ) : (
+                        /* Viewing an archived chat (read-only) */
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs gap-1 mb-2"
+                            onClick={() => setSelectedChat(null)}
+                          >
+                            ← Back to history
+                          </Button>
+                          <div className="flex items-center justify-center mb-3">
+                            <Badge variant="secondary" className="text-xs gap-1">
+                              <Clock className="w-3 h-3" /> Conversation ended
+                            </Badge>
+                          </div>
+                          {chatMessages.map(msg => (
                             <motion.div
-                              key={session.id}
-                              initial={{ opacity: 0, y: 5 }}
+                              key={msg.id}
+                              initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="p-3 rounded-xl bg-muted/40 hover:bg-muted/60 cursor-pointer transition-colors"
-                              onClick={() => setSelectedChat(session)}
+                              className={cn(
+                                "flex gap-2",
+                                msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
+                              )}
                             >
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-medium">Chat #{session.id.slice(0, 6)}</p>
-                                <Badge variant={session.status === 'active' ? 'default' : 'secondary'} className="text-[10px]">{session.status}</Badge>
+                              <div className={cn(
+                                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                              )}>
+                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
                               </div>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
-                              </p>
+                              <div className={cn(
+                                "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
+                                msg.sender_type === 'visitor'
+                                  ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : "bg-muted rounded-bl-sm"
+                              )}>
+                                <p>{msg.content}</p>
+                                <p className={cn(
+                                  "text-[10px] mt-1",
+                                  msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
+                                )}>
+                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
                             </motion.div>
                           ))}
-                        {chatSessions.filter(s => chatFilter === 'archived' 
-                          ? (s.status === 'closed' || s.status === 'archived')
-                          : (s.status === 'active' || s.status === 'open')).length === 0 && (
-                          <div className="text-center py-8 text-sm text-muted-foreground">
-                            No {chatFilter} conversations
-                          </div>
-                        )}
-                      </div>
+                          <div ref={chatEndRef} />
+                        </>
+                      )
                     ) : (
-                      <>
-                        {/* Back button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs gap-1 mb-2"
-                          onClick={() => setSelectedChat(null)}
-                        >
-                          ← Back to chats
-                        </Button>
-                        {chatMessages.map(msg => (
-                          <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className={cn(
-                              "flex gap-2",
-                              msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
-                            )}
-                          >
-                            <div className={cn(
-                              "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                              msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                            )}>
-                              {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
+                      /* ===== ACTIVE VIEW: Show current active chat directly (no list) ===== */
+                      (() => {
+                        const activeSession = chatSessions.find(s => s.status === 'active' || s.status === 'open');
+                        const currentChat = selectedChat || activeSession;
+                        
+                        if (!currentChat) {
+                          // No active chat — show start prompt
+                          return (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                <MessagesSquare className="w-8 h-8 text-primary" />
+                              </div>
+                              <h3 className="font-semibold mb-1">Start a Conversation</h3>
+                              <p className="text-sm text-muted-foreground mb-4">Type a message below or tap a quick reply to chat with support</p>
                             </div>
-                            <div className={cn(
-                              "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
-                              msg.sender_type === 'visitor'
-                                ? "bg-primary text-primary-foreground rounded-br-sm"
-                                : "bg-muted rounded-bl-sm"
-                            )}>
-                              <p>{msg.content}</p>
-                              <p className={cn(
-                                "text-[10px] mt-1",
-                                msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
-                              )}>
-                                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
-                          </motion.div>
-                        ))}
-                        {/* End conversation + Continue with AI */}
-                        {chatMessages.length > 0 && selectedChat?.status !== 'closed' && (
-                          <div className="flex justify-center gap-2 pt-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs gap-1.5 rounded-full"
-                              onClick={() => setShowAIChat(true)}
-                            >
-                              🤖 Continue with AI
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="text-xs gap-1.5 rounded-full"
-                              onClick={handleEndChat}
-                            >
-                              <XCircle className="w-3 h-3" /> End Conversation
-                            </Button>
-                          </div>
-                        )}
-                        {/* Rating UI after ending */}
-                        {showRating && (
-                          <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="flex flex-col items-center gap-3 py-6"
-                          >
-                            <p className="text-sm font-medium">How was your experience?</p>
-                            <div className="flex gap-1">
-                              {[1, 2, 3, 4, 5].map(star => (
-                                <button
-                                  key={star}
-                                  onClick={() => { setChatRating(star); handleRateChat(star); }}
-                                  className="p-1 hover:scale-110 transition-transform"
+                          );
+                        }
+                        
+                        // Auto-select active session if not already selected
+                        if (!selectedChat && activeSession) {
+                          setTimeout(() => setSelectedChat(activeSession), 0);
+                        }
+                        
+                        return (
+                          <>
+                            {chatMessages.map(msg => (
+                              <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={cn(
+                                  "flex gap-2",
+                                  msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
+                                )}
+                              >
+                                <div className={cn(
+                                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                                  msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                )}>
+                                  {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
+                                </div>
+                                <div className={cn(
+                                  "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
+                                  msg.sender_type === 'visitor'
+                                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                                    : "bg-muted rounded-bl-sm"
+                                )}>
+                                  <p>{msg.content}</p>
+                                  <p className={cn(
+                                    "text-[10px] mt-1",
+                                    msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
+                                  )}>
+                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
+                              </motion.div>
+                            ))}
+                            {/* End conversation + Continue with AI */}
+                            {chatMessages.length > 0 && currentChat.status !== 'closed' && (
+                              <div className="flex justify-center gap-2 pt-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs gap-1.5 rounded-full"
+                                  onClick={() => setShowAIChat(true)}
                                 >
-                                  <Star
-                                    className={cn("w-7 h-7", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowRating(false)}>
-                              Skip
-                            </Button>
-                          </motion.div>
-                        )}
-                        <div ref={chatEndRef} />
-                      </>
+                                  🤖 Continue with AI
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="text-xs gap-1.5 rounded-full"
+                                  onClick={handleEndChat}
+                                >
+                                  <XCircle className="w-3 h-3" /> End Chat
+                                </Button>
+                              </div>
+                            )}
+                            {/* Rating UI after ending */}
+                            {showRating && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="flex flex-col items-center gap-3 py-6"
+                              >
+                                <p className="text-sm font-medium">How was your experience?</p>
+                                <div className="flex gap-1">
+                                  {[1, 2, 3, 4, 5].map(star => (
+                                    <button
+                                      key={star}
+                                      onClick={() => { setChatRating(star); handleRateChat(star); }}
+                                      className="p-1 hover:scale-110 transition-transform"
+                                    >
+                                      <Star
+                                        className={cn("w-7 h-7", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setShowRating(false); setSelectedChat(null); }}>
+                                  Skip
+                                </Button>
+                              </motion.div>
+                            )}
+                            <div ref={chatEndRef} />
+                          </>
+                        );
+                      })()
                     )}
                   </div>
                 </ScrollArea>
 
-                {/* Quick Replies */}
-                {chatMessages.length === 0 && !selectedChat && (
+                {/* Quick Replies — only when no active chat and in active filter */}
+                {chatFilter === 'active' && !chatSessions.find(s => s.status === 'active' || s.status === 'open') && (
                   <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-border/30">
                     {quickReplies.map((qr, i) => (
                       <Button
@@ -824,43 +877,50 @@ const BuyerSupport = () => {
                   </div>
                 )}
 
-                {/* Input Area */}
-                <div className="px-4 py-3 border-t border-border/50 bg-card/80">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Type a message..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={async (e) => {
-                        if (e.key === 'Enter' && chatInput.trim()) {
+                {/* Input Area — hidden for archived view or closed chats */}
+                {chatFilter === 'active' && (!selectedChat || selectedChat.status !== 'closed') && (
+                  <div className="px-4 py-3 border-t border-border/50 bg-card/80">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Type a message..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter' && chatInput.trim()) {
+                            // Check if there's already an active session
+                            const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+                            let session = selectedChat;
+                            if (!session && !hasActive) {
+                              session = await handleStartChat();
+                            } else if (!session && hasActive) {
+                              const active = chatSessions.find(s => s.status === 'active' || s.status === 'open');
+                              if (active) { setSelectedChat(active); session = active; }
+                            }
+                            if (session) handleSendChatMessage(session);
+                          }
+                        }}
+                        className="bg-muted/50 border-0"
+                      />
+                      <Button
+                        size="icon"
+                        disabled={!chatInput.trim()}
+                        onClick={async () => {
+                          const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
                           let session = selectedChat;
-                          if (!session) {
+                          if (!session && !hasActive) {
                             session = await handleStartChat();
+                          } else if (!session && hasActive) {
+                            const active = chatSessions.find(s => s.status === 'active' || s.status === 'open');
+                            if (active) { setSelectedChat(active); session = active; }
                           }
-                          if (session) {
-                            handleSendChatMessage(session);
-                          }
-                        }
-                      }}
-                      className="bg-muted/50 border-0"
-                    />
-                    <Button
-                      size="icon"
-                      disabled={!chatInput.trim()}
-                      onClick={async () => {
-                        let session = selectedChat;
-                        if (!session) {
-                          session = await handleStartChat();
-                        }
-                        if (session) {
-                          handleSendChatMessage(session);
-                        }
-                      }}
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
+                          if (session) handleSendChatMessage(session);
+                        }}
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
