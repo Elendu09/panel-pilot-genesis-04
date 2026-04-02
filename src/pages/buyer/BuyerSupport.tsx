@@ -340,6 +340,7 @@ const BuyerSupport = () => {
       toast({ title: "Thanks for your feedback!" });
       setShowRating(false);
       setChatRating(0);
+      setSelectedChat(null); // Clear so user can start a new chat
     } catch { toast({ variant: "destructive", title: "Failed to submit rating" }); }
   };
 
