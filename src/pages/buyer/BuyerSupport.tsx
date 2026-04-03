@@ -764,17 +764,26 @@ const BuyerSupport = () => {
                             >
                               <div className={cn(
                                 "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" 
+                                  : msg.sender_type === 'ai' ? "bg-violet-500 text-white"
+                                  : "bg-muted text-muted-foreground"
                               )}>
-                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
+                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') 
+                                  : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" /> 
+                                  : 'S'}
                               </div>
                               <div className={cn(
                                 "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
                                 msg.sender_type === 'visitor'
                                   ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : msg.sender_type === 'ai'
+                                  ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
                                   : "bg-muted rounded-bl-sm"
                               )}>
-                                <p>{msg.content}</p>
+                                {msg.sender_type === 'ai' && (
+                                  <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
+                                )}
+                                <p className="whitespace-pre-wrap">{msg.content}</p>
                                 <p className={cn(
                                   "text-[10px] mt-1",
                                   msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
