@@ -127,7 +127,6 @@ const defaultFAQs = [
 const BuyerSupport = () => {
   const { buyer, loading: authLoading, panelId: authPanelId } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
-  // Triple fallback for panel ID: auth context -> tenant hook -> localStorage
   const resolvedPanelId =
     authPanelId || panel?.id || (typeof window !== "undefined" ? localStorage.getItem("current_panel_id") : null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -149,9 +148,17 @@ const BuyerSupport = () => {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatFilter, setChatFilter] = useState<"active" | "archived">("active");
   const [aiMode, setAiMode] = useState(false);
-  const [showRating, setShowRating] = useState(false);
-  const [chatRating, setChatRating] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // New Dialog States
+  const [isEndChatDialogOpen, setIsEndChatDialogOpen] = useState(false);
+  const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
+  const [chatRating, setChatRating] = useState(0);
+
+  // Refs for smart polling
+  const isFirstLoad = useRef(true);
+  const isTabVisible = useRef(true);
+  const prevSessionsRef = useRef<string>("");
 
   // FAQ state
   const [faqs, setFaqs] = useState(defaultFAQs);
@@ -162,6 +169,15 @@ const BuyerSupport = () => {
     priority: "medium",
     message: "",
   });
+
+  // Visibility tracking to pause polling when tab is hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isTabVisible.current = document.visibilityState === "visible";
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
 
   // Fetch panel FAQs from custom_branding
   useEffect(() => {
@@ -184,20 +200,36 @@ const BuyerSupport = () => {
     fetchTickets();
   }, [buyer?.id, resolvedPanelId]);
 
-  // Fetch chat sessions - Extracted function for reuse
-  const fetchChats = async () => {
+  // Fetch chat sessions - Smart polling without UI interruption
+  const fetchChats = async (silent = false) => {
     if (!buyer?.id || !resolvedPanelId) return;
-    setChatLoading(true);
+
+    // Only show loading on first load, not on background refreshes
+    if (!silent && isFirstLoad.current) {
+      setChatLoading(true);
+    }
+
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: { action: "list-chat-sessions", panelId: resolvedPanelId, buyerId: buyer.id },
       });
       if (fnError) throw fnError;
-      setChatSessions(fnData?.sessions || []);
+
+      const newSessions = fnData?.sessions || [];
+      const newSessionsJson = JSON.stringify(newSessions);
+
+      // Only update state if data actually changed to prevent unnecessary re-renders
+      if (prevSessionsRef.current !== newSessionsJson) {
+        prevSessionsRef.current = newSessionsJson;
+        setChatSessions(newSessions);
+      }
     } catch (error) {
       console.error("Error fetching chats:", error);
     } finally {
-      setChatLoading(false);
+      if (!silent && isFirstLoad.current) {
+        setChatLoading(false);
+        isFirstLoad.current = false;
+      }
     }
   };
 
@@ -228,10 +260,15 @@ const BuyerSupport = () => {
 
   // Fetch chat sessions on mount
   useEffect(() => {
-    fetchChats();
+    fetchChats(); // Initial load with loading state
 
-    // Poll for new sessions every 15s (realtime won't work with custom auth)
-    const interval = setInterval(fetchChats, 15000);
+    // Poll for new sessions every 15s only when tab is visible (silent refresh)
+    const interval = setInterval(() => {
+      if (isTabVisible.current) {
+        fetchChats(true); // Silent = true, no loading state
+      }
+    }, 15000);
+
     return () => clearInterval(interval);
   }, [buyer?.id, resolvedPanelId]);
 
@@ -244,10 +281,13 @@ const BuyerSupport = () => {
 
     fetchChatMessages(selectedChat.id);
 
-    // Poll for new messages every 2s for fast sync (realtime won't work with custom auth RLS)
+    // Poll for new messages every 2s only when tab is visible
     const interval = setInterval(() => {
-      fetchChatMessages(selectedChat.id);
+      if (isTabVisible.current) {
+        fetchChatMessages(selectedChat.id);
+      }
     }, 2000);
+
     return () => clearInterval(interval);
   }, [selectedChat?.id, buyer?.id]);
 
@@ -256,7 +296,6 @@ const BuyerSupport = () => {
     setLoading(true);
     setError(null);
     try {
-      // Route through edge function to bypass RLS (custom auth buyers don't have Supabase JWT claims)
       const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: { action: "list-tickets", panelId: resolvedPanelId, buyerId: buyer.id },
       });
@@ -268,7 +307,6 @@ const BuyerSupport = () => {
       setTickets(transformedTickets);
     } catch (error: any) {
       console.error("Error fetching tickets:", error);
-      // Don't block with error - just show empty
       setTickets([]);
     } finally {
       setLoading(false);
@@ -294,12 +332,6 @@ const BuyerSupport = () => {
     }
     setSubmitting(true);
     try {
-      const initialMessage = {
-        sender: "buyer" as const,
-        content: newTicket.message,
-        timestamp: new Date().toISOString(),
-      };
-      // Route through edge function to bypass RLS
       const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
           action: "create-support-ticket",
@@ -313,19 +345,16 @@ const BuyerSupport = () => {
       });
       if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || "Failed to create ticket");
 
-      // Notify panel owner
       try {
         const { data: panelData } = await supabase.from("panels").select("owner_id").eq("id", resolvedPanelId).single();
         if (panelData?.owner_id) {
-          await supabase
-            .from("panel_notifications")
-            .insert({
-              user_id: panelData.owner_id,
-              title: "New Support Ticket",
-              message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`,
-              type: "system",
-              is_read: false,
-            });
+          await supabase.from("panel_notifications").insert({
+            user_id: panelData.owner_id,
+            title: "New Support Ticket",
+            message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`,
+            type: "system",
+            is_read: false,
+          });
         }
       } catch (e) {
         /* notification failure is non-critical */
@@ -385,23 +414,32 @@ const BuyerSupport = () => {
     }
   };
 
-  const handleEndChat = async () => {
+  // Open confirmation dialog when user clicks End Chat
+  const handleEndChatClick = () => {
+    setIsEndChatDialogOpen(true);
+  };
+
+  // Actual end chat execution after confirmation
+  const confirmEndChat = async () => {
     if (!buyer?.id || !selectedChat) return;
     try {
       const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: { action: "end-chat", panelId: resolvedPanelId || "", buyerId: buyer.id, sessionId: selectedChat.id },
       });
       if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to end chat");
-      // Update local state — mark session as closed so it moves to archived
+
+      // Update local state
       setChatSessions((prev) => prev.map((s) => (s.id === selectedChat.id ? { ...s, status: "closed" } : s)));
-      setShowRating(true);
+      setIsEndChatDialogOpen(false);
+      setIsRatingDialogOpen(true); // Open rating dialog instead of inline
       toast({ title: "Conversation ended" });
     } catch {
       toast({ variant: "destructive", title: "Failed to end conversation" });
     }
   };
 
-  const handleRateChat = async (rating: number) => {
+  // Submit rating from dialog
+  const submitRating = async (rating: number) => {
     if (!buyer?.id || !selectedChat) return;
     try {
       await supabase.functions.invoke("buyer-auth", {
@@ -414,9 +452,9 @@ const BuyerSupport = () => {
         },
       });
       toast({ title: "Thanks for your feedback!" });
-      setShowRating(false);
+      setIsRatingDialogOpen(false);
       setChatRating(0);
-      setSelectedChat(null); // Clear so user can start a new chat
+      setSelectedChat(null);
     } catch {
       toast({ variant: "destructive", title: "Failed to submit rating" });
     }
@@ -437,14 +475,13 @@ const BuyerSupport = () => {
     }
   };
 
-  // Chat: send message via edge function (bypasses RLS) - FIXED VERSION
+  // Chat: send message via edge function
   const handleSendChatMessage = async (sessionOverride?: ChatSession) => {
     let activeSession = sessionOverride || selectedChat;
     if (!chatInput.trim() || !buyer?.id) return;
 
     const msgContent = chatInput.trim();
 
-    // Auto-create session if none exists
     if (!activeSession) {
       activeSession = await handleStartChat();
       if (!activeSession) return;
@@ -452,7 +489,6 @@ const BuyerSupport = () => {
 
     setChatInput("");
 
-    // Optimistic update with temp ID
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg: ChatMessage = {
       id: tempId,
@@ -481,7 +517,6 @@ const BuyerSupport = () => {
         throw new Error(fnData?.error || fnError?.message);
       }
 
-      // Replace optimistic message with real one(s)
       if (aiMode && fnData?.userMessage) {
         setChatMessages((prev) => [
           ...prev.filter((m) => m.id !== tempId),
@@ -492,17 +527,17 @@ const BuyerSupport = () => {
         setChatMessages((prev) => prev.map((m) => (m.id === tempId ? fnData.message : m)));
       }
 
-      // Refresh session list to update last_message_at
-      fetchChats();
+      // Silent refresh of session list
+      fetchChats(true);
     } catch (error: any) {
       console.error("Send message error:", error);
       toast({ variant: "destructive", title: error.message || "Failed to send message" });
-      setChatInput(msgContent); // Restore input
-      setChatMessages((prev) => prev.filter((m) => m.id !== tempId)); // Remove optimistic
+      setChatInput(msgContent);
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   };
 
-  // Chat: create new session - returns the session for immediate use - FIXED VERSION
+  // Chat: create new session
   const handleStartChat = async (): Promise<ChatSession | null> => {
     if (!buyer?.id) {
       toast({ variant: "destructive", title: "Please log in to start a chat" });
@@ -517,7 +552,6 @@ const BuyerSupport = () => {
       return null;
     }
 
-    // Prevent creating a new chat if an active one exists
     const hasActive = chatSessions.some((s) => s.status === "active" || s.status === "open");
     if (hasActive) {
       const active = chatSessions.find((s) => s.status === "active" || s.status === "open")!;
@@ -534,7 +568,7 @@ const BuyerSupport = () => {
         body: {
           action: "create-chat-session",
           panelId: resolvedPanelId,
-          buyerId: buyer.id, // This becomes visitor_id in DB
+          buyerId: buyer.id,
           buyerName: buyer.full_name || buyer.email,
           buyerEmail: buyer.email,
         },
@@ -549,7 +583,6 @@ const BuyerSupport = () => {
       if (fnData?.session) {
         setChatSessions((prev) => [fnData.session, ...prev]);
         setSelectedChat(fnData.session);
-        // Immediately fetch messages for this new session
         await fetchChatMessages(fnData.session.id);
         return fnData.session;
       }
@@ -577,7 +610,6 @@ const BuyerSupport = () => {
     }
     if (session) {
       setChatInput("");
-      // Optimistic update
       const tempId = `temp-${Date.now()}`;
       const optimisticMsg: ChatMessage = {
         id: tempId,
@@ -608,8 +640,7 @@ const BuyerSupport = () => {
           setChatMessages((prev) => prev.map((m) => (m.id === tempId ? fnData.message : m)));
         }
 
-        // Refresh session list
-        fetchChats();
+        fetchChats(true);
       } catch (error: any) {
         toast({ variant: "destructive", title: error.message || "Failed to send message" });
         setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -719,7 +750,6 @@ const BuyerSupport = () => {
 
           {/* ===== TICKETS TAB ===== */}
           <TabsContent value="tickets" className="space-y-4 mt-4">
-            {/* Search and Filter */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -744,7 +774,6 @@ const BuyerSupport = () => {
               </Select>
             </div>
 
-            {/* Kanban Board */}
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -867,12 +896,11 @@ const BuyerSupport = () => {
                 {/* Messages Area */}
                 <ScrollArea className="flex-1 px-4">
                   <div className="space-y-3 py-4">
-                    {chatLoading ? (
+                    {chatLoading && isFirstLoad.current ? (
                       <div className="flex justify-center py-12">
                         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                       </div>
                     ) : chatFilter === "archived" ? (
-                      /* ===== ARCHIVED VIEW: List of closed chats for preview ===== */
                       !selectedChat ? (
                         <div className="space-y-2">
                           {chatSessions.filter((s) => s.status === "closed" || s.status === "archived").length === 0 ? (
@@ -910,7 +938,6 @@ const BuyerSupport = () => {
                           )}
                         </div>
                       ) : (
-                        /* Viewing an archived chat (read-only) */
                         <>
                           <Button
                             variant="ghost"
@@ -984,13 +1011,11 @@ const BuyerSupport = () => {
                         </>
                       )
                     ) : (
-                      /* ===== ACTIVE VIEW: Show current active chat directly (no list) ===== */
                       (() => {
                         const activeSession = chatSessions.find((s) => s.status === "active" || s.status === "open");
                         const currentChat = selectedChat || activeSession;
 
                         if (!currentChat) {
-                          // No active chat — show start prompt
                           return (
                             <div className="flex flex-col items-center justify-center py-16 text-center">
                               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -1004,7 +1029,6 @@ const BuyerSupport = () => {
                           );
                         }
 
-                        // Auto-select active session if not already selected
                         if (!selectedChat && activeSession) {
                           setTimeout(() => setSelectedChat(activeSession), 0);
                         }
@@ -1087,54 +1111,12 @@ const BuyerSupport = () => {
                                     variant="destructive"
                                     size="sm"
                                     className="text-xs gap-1.5 rounded-full"
-                                    onClick={handleEndChat}
+                                    onClick={handleEndChatClick} // Changed to open dialog
                                   >
                                     <XCircle className="w-3 h-3" /> End Chat
                                   </Button>
                                 </div>
                               </div>
-                            )}
-                            {/* Rating UI after ending */}
-                            {showRating && (
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="flex flex-col items-center gap-3 py-6"
-                              >
-                                <p className="text-sm font-medium">How was your experience?</p>
-                                <div className="flex gap-1">
-                                  {[1, 2, 3, 4, 5].map((star) => (
-                                    <button
-                                      key={star}
-                                      onClick={() => {
-                                        setChatRating(star);
-                                        handleRateChat(star);
-                                      }}
-                                      className="p-1 hover:scale-110 transition-transform"
-                                    >
-                                      <Star
-                                        className={cn(
-                                          "w-7 h-7",
-                                          star <= chatRating
-                                            ? "fill-yellow-400 text-yellow-400"
-                                            : "text-muted-foreground",
-                                        )}
-                                      />
-                                    </button>
-                                  ))}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-xs"
-                                  onClick={() => {
-                                    setShowRating(false);
-                                    setSelectedChat(null);
-                                  }}
-                                >
-                                  Skip
-                                </Button>
-                              </motion.div>
                             )}
                             <div ref={chatEndRef} />
                           </>
@@ -1144,7 +1126,7 @@ const BuyerSupport = () => {
                   </div>
                 </ScrollArea>
 
-                {/* Quick Replies — only when no active chat and in active filter */}
+                {/* Quick Replies */}
                 {chatFilter === "active" && !chatSessions.find((s) => s.status === "active" || s.status === "open") && (
                   <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-border/30">
                     {quickReplies.map((qr, i) => (
@@ -1161,7 +1143,7 @@ const BuyerSupport = () => {
                   </div>
                 )}
 
-                {/* Input Area — hidden for archived view or closed chats */}
+                {/* Input Area */}
                 {chatFilter === "active" && (!selectedChat || selectedChat.status !== "closed") && (
                   <div className="px-4 py-3 border-t border-border/50 bg-card/80">
                     <div className="flex gap-2">
@@ -1171,7 +1153,6 @@ const BuyerSupport = () => {
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={async (e) => {
                           if (e.key === "Enter" && chatInput.trim()) {
-                            // Check if there's already an active session
                             const hasActive = chatSessions.some((s) => s.status === "active" || s.status === "open");
                             let session = selectedChat;
                             if (!session && !hasActive) {
@@ -1213,8 +1194,6 @@ const BuyerSupport = () => {
                 )}
               </CardContent>
             </Card>
-
-            {/* AI mode indicator in input area */}
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
@@ -1386,9 +1365,75 @@ const BuyerSupport = () => {
             )}
           </DialogContent>
         </Dialog>
-      </div>
 
-      {/* Live Chat Widget hidden on support page to avoid disturbance */}
+        {/* End Chat Confirmation Dialog */}
+        <Dialog open={isEndChatDialogOpen} onOpenChange={setIsEndChatDialogOpen}>
+          <DialogContent className="glass-card">
+            <DialogHeader>
+              <DialogTitle>End Conversation?</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to end this chat session? You won't be able to send new messages after closing.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setIsEndChatDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmEndChat}>
+                Yes, End Chat
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rating Dialog */}
+        <Dialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
+          <DialogContent className="glass-card">
+            <DialogHeader>
+              <DialogTitle>How was your experience?</DialogTitle>
+              <DialogDescription>Please rate your support conversation to help us improve.</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setChatRating(star)}
+                    className="p-2 hover:scale-110 transition-transform"
+                  >
+                    <Star
+                      className={cn(
+                        "w-8 h-8",
+                        star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground",
+                      )}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {chatRating > 0
+                  ? `You rated this ${chatRating} star${chatRating > 1 ? "s" : ""}`
+                  : "Tap a star to rate"}
+              </p>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsRatingDialogOpen(false);
+                  setChatRating(0);
+                  setSelectedChat(null);
+                }}
+              >
+                Skip
+              </Button>
+              <Button disabled={chatRating === 0} onClick={() => submitRating(chatRating)}>
+                Submit Rating
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </BuyerLayout>
   );
 };
