@@ -1,52 +1,78 @@
 
 
-# Plan: Fix Panel Owner Chat Send, Tenant Ticket Flow, Add Conversation Rating/End, Fix Build Error
+# Plan: Integrate AI into Live Chat, Fix Chat History Saving, and Fix Tenant Ticket Errors
 
-## Issues
+## Issues Found
 
-### 1. Panel Owner Cannot Send Chat Messages (RLS Block)
-**Root cause**: `chat_messages` INSERT policy is `TO service_role` only (migration `20260212`). Panel owner's `ChatInbox.sendMessage()` (line 414) uses the anon/authenticated Supabase client directly — this gets rejected by RLS.
+### 1. "Continue with AI" Opens a Separate FloatingChatWidget Modal (Wrong)
+**Current**: When user clicks "Continue with AI" (line 816), it opens `FloatingChatWidget` in a full-screen overlay. This is a completely separate AI chat — not integrated into the live chat conversation. Messages sent to AI don't appear in the live chat history, and the user loses context.
 
-**Fix**: Add an RLS policy allowing authenticated panel owners to insert chat messages into sessions they own. Also add UPDATE policy for mark-as-read.
+**Fix**: Replace the modal approach with an inline AI mode inside the live chat itself. When "Continue with AI" is clicked, set a flag (`aiMode = true`). Messages typed while in AI mode are:
+1. Saved to `chat_messages` as normal (so panel owner sees them in history)
+2. Also sent to `ai-chat-reply` edge function for an AI response
+3. AI responses are saved as `chat_messages` with `sender_type: 'ai'` (new type) so they appear in the conversation thread
+4. A "Continue with Human" button lets the user switch back to waiting for a human reply
 
+This keeps everything in one conversation thread, visible to both tenant user and panel owner.
+
+### 2. Chat History Not Saving / Not Visible in Archived
+**Current**: The `list-chat-sessions` handler returns ALL sessions (both active and closed). The archived filter on the tenant side checks for `status === 'closed' || status === 'archived'`, which should work. However, messages may not persist correctly because:
+- The `end-chat` action sets `status: 'closed'` but the `updated_at` column may not exist on `chat_sessions` (the original schema doesn't include it)
+- The `handleEndChat` edge function may silently fail if the `updated_at` column doesn't exist
+
+**Fix**: Verify and add `updated_at` column if missing. Also ensure the session list query in `list-chat-sessions` returns sessions ordered properly. Add a `last_message_at` update when ending chat.
+
+### 3. Tenant Ticket Errors
+**Current**: The `handleResolveTicket` function (line 347) uses `supabase.from('support_tickets').update()` directly — this is the authenticated Supabase client but the tenant buyer uses custom auth (no Supabase JWT), so this will fail with RLS. Also, the `create-support-ticket` action uses `sender: 'user'` but the ticket view dialog checks `msg.sender === 'buyer'` for styling.
+
+**Fix**: 
+- Route `handleResolveTicket` through `buyer-auth` edge function
+- Normalize sender field: use `'buyer'` consistently in both creation and display
+- Add error handling for panel notification insert (line 271) — `panel_notifications` may have RLS blocking anonymous inserts
+
+### 4. `sender_type: 'ai'` Support in Database
+**Current**: The `chat_messages` table has a CHECK constraint: `sender_type IN ('visitor', 'owner')`. Adding AI messages requires adding `'ai'` as a valid sender type.
+
+**Fix**: Alter the CHECK constraint to allow `'ai'` as a sender_type.
+
+### 5. Panel Owner Sees AI Messages in Chat
+When a tenant uses AI mode, the panel owner should see those messages in `ChatInbox.tsx` with a distinct AI badge, so they know the context.
+
+---
+
+## Implementation Details
+
+### Database Migration
 ```sql
-CREATE POLICY "Panel owners can insert chat messages"
-ON public.chat_messages FOR INSERT TO authenticated
-WITH CHECK (session_id IN (SELECT id FROM public.chat_sessions WHERE public.is_panel_owner(panel_id)));
+-- Allow 'ai' sender_type in chat_messages
+ALTER TABLE public.chat_messages DROP CONSTRAINT IF EXISTS chat_messages_sender_type_check;
+ALTER TABLE public.chat_messages ADD CONSTRAINT chat_messages_sender_type_check 
+  CHECK (sender_type IN ('visitor', 'owner', 'ai'));
 
-CREATE POLICY "Panel owners can update chat messages"
-ON public.chat_messages FOR UPDATE TO authenticated
-USING (session_id IN (SELECT id FROM public.chat_sessions WHERE public.is_panel_owner(panel_id)));
-
-CREATE POLICY "Panel owners can update chat sessions"
-ON public.chat_sessions FOR UPDATE TO authenticated
-USING (public.is_panel_owner(panel_id));
+-- Ensure updated_at column exists on chat_sessions
+ALTER TABLE public.chat_sessions ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 ```
 
-### 2. Tenant Ticket Reply Uses Direct Supabase (RLS Block)
-**Root cause**: `BuyerSupport.handleSendMessage()` (line 287) calls `supabase.from('support_tickets').update()` directly. Tenant buyers use custom auth (no Supabase JWT), so this fails silently or errors.
+### Edge Function Changes (`buyer-auth`)
+- Add `send-ai-chat-message` action: receives user message, saves it as `visitor` message, calls `ai-chat-reply` function internally, saves AI response as `sender_type: 'ai'`, returns both messages
+- Fix `create-support-ticket`: change `sender: 'user'` to `sender: 'buyer'` for consistency
 
-**Fix**: Route ticket reply through `buyer-auth` edge function. Add a `reply-ticket` action that appends the message to the ticket's `messages` JSONB array using the service role.
+### Tenant Live Chat (`BuyerSupport.tsx`)
+- Remove the `FloatingChatWidget` modal overlay for AI
+- Add `aiMode` state boolean
+- When `aiMode` is true, messages go through `send-ai-chat-message` action
+- Show "Continue with Human" button when in AI mode
+- Show "Continue with AI" button when in human mode
+- AI messages render with a robot avatar and distinct styling
+- All messages (visitor, owner, AI) remain in one thread
 
-### 3. Tenant Cannot End/Close Ticket
-**Fix**: Add `close-ticket` action to `buyer-auth` edge function. Update ticket status to `closed`. Add "Close Ticket" button in BuyerSupport ticket view dialog.
+### Panel Owner Chat (`ChatInbox.tsx`)
+- Update `ChatMessages` component to handle `sender_type: 'ai'` with a robot icon and "AI Assistant" label
+- No functional changes needed — panel owner already sees all messages via realtime subscription
 
-### 4. Conversation Rating and End Chat
-**Fix**: 
-- Add `end-chat` and `rate-chat` actions to `buyer-auth` edge function
-- `end-chat`: Updates `chat_sessions.status` to `closed`
-- `rate-chat`: Adds rating to a `metadata` JSONB column or a separate field
-- In BuyerSupport chat UI: Add "End Conversation" button and a 1-5 star rating prompt when conversation ends
-
-### 5. Panel Owner Typing Indicator Error
-**Root cause**: `ChatInbox.broadcastTyping()` (line 399) calls `supabase.channel().send()` on a channel that may not be subscribed yet. The channel is only subscribed in the `useEffect` for the selected session, but `broadcastTyping` creates a new channel reference.
-
-**Fix**: Store the typing channel ref and reuse it, or subscribe to the typing channel before broadcasting.
-
-### 6. Build Error in `dns-lookup/index.ts`
-**Root cause**: TypeScript union type — `processedResults` items can be either resolved (with `value`) or error (without `value`). Line 261 accesses `.value` without narrowing.
-
-**Fix**: Add explicit type narrowing: `.filter(r => r.status === "resolved" && 'value' in r && r.value)` and cast appropriately.
+### Ticket Sender Normalization
+- Fix `handleResolveTicket` to route through edge function
+- Fix sender field mismatch (`'user'` vs `'buyer'`)
 
 ---
 
@@ -54,9 +80,9 @@ USING (public.is_panel_owner(panel_id));
 
 | File | Changes |
 |------|---------|
-| Database migration | Add INSERT/UPDATE policies for panel owners on `chat_messages` and `chat_sessions`; add `rating` column to `chat_sessions` |
-| `supabase/functions/buyer-auth/index.ts` | Add `reply-ticket`, `close-ticket`, `end-chat`, `rate-chat` actions |
-| `src/pages/buyer/BuyerSupport.tsx` | Route ticket replies through edge function; add End Conversation button with rating UI; add Close Ticket button |
-| `src/pages/panel/ChatInbox.tsx` | Fix typing broadcast channel reference; ensure send uses subscribed channel |
-| `supabase/functions/dns-lookup/index.ts` | Fix TypeScript union type narrowing on lines 261-262 |
+| Database migration | Add `'ai'` to `chat_messages` sender_type CHECK; add `updated_at` to `chat_sessions` |
+| `supabase/functions/buyer-auth/index.ts` | Add `send-ai-chat-message` action; fix ticket sender field |
+| `src/pages/buyer/BuyerSupport.tsx` | Replace FloatingChatWidget modal with inline AI mode; fix `handleResolveTicket` to use edge function; normalize sender checks |
+| `src/pages/panel/ChatInbox.tsx` | Add AI message styling with robot avatar in `ChatMessages` component |
+| `supabase/functions/ai-chat-reply/index.ts` | No changes needed — already functional |
 
