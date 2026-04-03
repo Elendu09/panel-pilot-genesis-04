@@ -671,17 +671,26 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
               <AvatarFallback className={cn(
                 msg.sender_type === 'owner' 
                   ? "bg-primary text-primary-foreground" 
+                  : msg.sender_type === 'ai'
+                  ? "bg-violet-500 text-white"
                   : "bg-muted"
               )}>
-                {msg.sender_type === 'owner' ? 'Y' : (selectedSession?.visitor_name?.[0] || 'V')}
+                {msg.sender_type === 'owner' ? 'Y' 
+                  : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" />
+                  : (selectedSession?.visitor_name?.[0] || 'V')}
               </AvatarFallback>
             </Avatar>
             <div className={cn(
               "max-w-[75%] rounded-2xl px-4 py-2",
               msg.sender_type === 'owner'
                 ? "bg-primary text-primary-foreground rounded-br-sm"
+                : msg.sender_type === 'ai'
+                ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
                 : "bg-muted rounded-bl-sm"
             )}>
+              {msg.sender_type === 'ai' && (
+                <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
+              )}
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               <div className={cn(
                 "flex items-center gap-1 mt-1",
