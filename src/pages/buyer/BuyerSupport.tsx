@@ -150,7 +150,7 @@ const BuyerSupport = () => {
   const [aiMode, setAiMode] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // New Dialog States
+  // Dialog States
   const [isEndChatDialogOpen, setIsEndChatDialogOpen] = useState(false);
   const [isRatingDialogOpen, setIsRatingDialogOpen] = useState(false);
   const [chatRating, setChatRating] = useState(0);
@@ -163,6 +163,9 @@ const BuyerSupport = () => {
   // FAQ state
   const [faqs, setFaqs] = useState(defaultFAQs);
 
+  // Theme customization state
+  const [themeColors, setThemeColors] = useState<Record<string, any>>({});
+
   // New ticket form
   const [newTicket, setNewTicket] = useState({
     subject: "",
@@ -170,7 +173,7 @@ const BuyerSupport = () => {
     message: "",
   });
 
-  // Visibility tracking to pause polling when tab is hidden
+  // Visibility tracking
   useEffect(() => {
     const handleVisibilityChange = () => {
       isTabVisible.current = document.visibilityState === "visible";
@@ -179,9 +182,9 @@ const BuyerSupport = () => {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  // Fetch panel FAQs from custom_branding
+  // Fetch panel FAQs and theme from custom_branding
   useEffect(() => {
-    const fetchFaqs = async () => {
+    const fetchPanelConfig = async () => {
       if (!panel?.id) return;
       const { data } = await (supabase as any)
         .from("panels_public")
@@ -192,19 +195,88 @@ const BuyerSupport = () => {
       if (branding?.faqs?.length > 0) {
         setFaqs(branding.faqs);
       }
+      // Extract theme colors for dialog styling
+      if (branding) {
+        const themeMode = branding.themeMode || "dark";
+        const isLight = themeMode === "light";
+        const modeColors = isLight ? branding.lightModeColors || {} : branding.darkModeColors || {};
+
+        setThemeColors({
+          primaryColor: branding.primaryColor || "#6366F1",
+          secondaryColor: branding.secondaryColor || "#8B5CF6",
+          accentColor: branding.accentColor || "#EC4899",
+          backgroundColor: modeColors.backgroundColor || (isLight ? "#FAFBFC" : "#0F172A"),
+          surfaceColor: modeColors.surfaceColor || (isLight ? "#FFFFFF" : "#1E293B"),
+          cardColor: modeColors.cardColor || (isLight ? "#FFFFFF" : "#1E293B"),
+          textColor: modeColors.textColor || (isLight ? "#1F2937" : "#FFFFFF"),
+          mutedColor: modeColors.mutedColor || (isLight ? "#6B7280" : "#94A3B8"),
+          borderColor: modeColors.borderColor || (isLight ? "#E5E7EB" : "#334155"),
+          fontFamily: branding.fontFamily || "Inter",
+          headingFont: branding.headingFont || "Inter",
+          borderRadius: branding.borderRadius || "12",
+          cardRadius: branding.cardRadius || 16,
+          themeMode,
+        });
+      }
     };
-    fetchFaqs();
+    fetchPanelConfig();
   }, [panel?.id]);
 
   useEffect(() => {
     fetchTickets();
   }, [buyer?.id, resolvedPanelId]);
 
-  // Fetch chat sessions - Smart polling without UI interruption
+  // Build inline style object for themed dialogs
+  const getThemedDialogStyle = (): React.CSSProperties => {
+    if (!themeColors.backgroundColor) return {};
+    return {
+      backgroundColor: themeColors.surfaceColor || themeColors.cardColor,
+      color: themeColors.textColor,
+      borderColor: themeColors.borderColor,
+      fontFamily: themeColors.fontFamily,
+      borderRadius: `${themeColors.cardRadius || 16}px`,
+    };
+  };
+
+  const getThemedInputStyle = (): React.CSSProperties => {
+    if (!themeColors.backgroundColor) return {};
+    return {
+      backgroundColor: themeColors.backgroundColor,
+      color: themeColors.textColor,
+      borderColor: themeColors.borderColor,
+      fontFamily: themeColors.fontFamily,
+    };
+  };
+
+  const getThemedButtonStyle = (): React.CSSProperties => {
+    if (!themeColors.primaryColor) return {};
+    return {
+      backgroundColor: themeColors.primaryColor,
+      color: "#FFFFFF",
+      fontFamily: themeColors.fontFamily,
+    };
+  };
+
+  const getThemedLabelStyle = (): React.CSSProperties => {
+    if (!themeColors.textColor) return {};
+    return {
+      color: themeColors.textColor,
+      fontFamily: themeColors.headingFont || themeColors.fontFamily,
+    };
+  };
+
+  const getThemedDescriptionStyle = (): React.CSSProperties => {
+    if (!themeColors.mutedColor) return {};
+    return {
+      color: themeColors.mutedColor,
+      fontFamily: themeColors.fontFamily,
+    };
+  };
+
+  // Fetch chat sessions
   const fetchChats = async (silent = false) => {
     if (!buyer?.id || !resolvedPanelId) return;
 
-    // Only show loading on first load, not on background refreshes
     if (!silent && isFirstLoad.current) {
       setChatLoading(true);
     }
@@ -218,7 +290,6 @@ const BuyerSupport = () => {
       const newSessions = fnData?.sessions || [];
       const newSessionsJson = JSON.stringify(newSessions);
 
-      // Only update state if data actually changed to prevent unnecessary re-renders
       if (prevSessionsRef.current !== newSessionsJson) {
         prevSessionsRef.current = newSessionsJson;
         setChatSessions(newSessions);
@@ -233,7 +304,6 @@ const BuyerSupport = () => {
     }
   };
 
-  // Fetch messages for selected chat - Extracted function for reuse
   const fetchChatMessages = async (sessionId: string) => {
     if (!buyer?.id || !sessionId) return;
 
@@ -258,21 +328,18 @@ const BuyerSupport = () => {
     }
   };
 
-  // Fetch chat sessions on mount
   useEffect(() => {
-    fetchChats(); // Initial load with loading state
+    fetchChats();
 
-    // Poll for new sessions every 15s only when tab is visible (silent refresh)
     const interval = setInterval(() => {
       if (isTabVisible.current) {
-        fetchChats(true); // Silent = true, no loading state
+        fetchChats(true);
       }
     }, 15000);
 
     return () => clearInterval(interval);
   }, [buyer?.id, resolvedPanelId]);
 
-  // Fetch messages for selected chat & poll for new ones
   useEffect(() => {
     if (!selectedChat) {
       setChatMessages([]);
@@ -281,7 +348,6 @@ const BuyerSupport = () => {
 
     fetchChatMessages(selectedChat.id);
 
-    // Poll for new messages every 2s only when tab is visible
     const interval = setInterval(() => {
       if (isTabVisible.current) {
         fetchChatMessages(selectedChat.id);
@@ -314,7 +380,7 @@ const BuyerSupport = () => {
   };
 
   const handleCreateTicket = async () => {
-    if (!newTicket.subject || !newTicket.message) {
+    if (!newTicket.subject.trim() || !newTicket.message.trim()) {
       toast({ variant: "destructive", title: "Please fill in all fields" });
       return;
     }
@@ -332,19 +398,42 @@ const BuyerSupport = () => {
     }
     setSubmitting(true);
     try {
+      console.log("Creating ticket with:", {
+        action: "create-support-ticket",
+        panelId: resolvedPanelId,
+        buyerId: buyer.id,
+        subject: newTicket.subject.trim(),
+        priority: newTicket.priority,
+      });
+
       const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
           action: "create-support-ticket",
           panelId: resolvedPanelId,
           buyerId: buyer.id,
-          subject: newTicket.subject,
-          message: newTicket.message,
-          senderName: buyer.full_name || buyer.email,
-          senderEmail: buyer.email,
+          subject: newTicket.subject.trim(),
+          priority: newTicket.priority,
+          message: newTicket.message.trim(),
+          senderName: buyer.full_name || buyer.email || "User",
+          senderEmail: buyer.email || "",
         },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || "Failed to create ticket");
 
+      console.log("Ticket creation response:", { fnData, fnError });
+
+      // Handle edge function invocation error
+      if (fnError) {
+        console.error("Edge function error:", fnError);
+        throw new Error(typeof fnError === "string" ? fnError : fnError.message || "Edge function failed");
+      }
+
+      // Handle error in response body
+      if (fnData?.error) {
+        console.error("Response error:", fnData.error);
+        throw new Error(fnData.error);
+      }
+
+      // Notify panel owner (non-critical)
       try {
         const { data: panelData } = await supabase.from("panels").select("owner_id").eq("id", resolvedPanelId).single();
         if (panelData?.owner_id) {
@@ -357,7 +446,7 @@ const BuyerSupport = () => {
           });
         }
       } catch (e) {
-        /* notification failure is non-critical */
+        console.log("Notification send failed (non-critical):", e);
       }
 
       toast({ title: "Ticket Created", description: "We'll respond as soon as possible" });
@@ -365,7 +454,12 @@ const BuyerSupport = () => {
       setNewTicket({ subject: "", priority: "medium", message: "" });
       fetchTickets();
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create ticket." });
+      console.error("Ticket creation failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create ticket",
+        description: error.message || "Something went wrong. Please try again.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -414,12 +508,10 @@ const BuyerSupport = () => {
     }
   };
 
-  // Open confirmation dialog when user clicks End Chat
   const handleEndChatClick = () => {
     setIsEndChatDialogOpen(true);
   };
 
-  // Actual end chat execution after confirmation
   const confirmEndChat = async () => {
     if (!buyer?.id || !selectedChat) return;
     try {
@@ -428,17 +520,15 @@ const BuyerSupport = () => {
       });
       if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to end chat");
 
-      // Update local state
       setChatSessions((prev) => prev.map((s) => (s.id === selectedChat.id ? { ...s, status: "closed" } : s)));
       setIsEndChatDialogOpen(false);
-      setIsRatingDialogOpen(true); // Open rating dialog instead of inline
+      setIsRatingDialogOpen(true);
       toast({ title: "Conversation ended" });
     } catch {
       toast({ variant: "destructive", title: "Failed to end conversation" });
     }
   };
 
-  // Submit rating from dialog
   const submitRating = async (rating: number) => {
     if (!buyer?.id || !selectedChat) return;
     try {
@@ -475,7 +565,6 @@ const BuyerSupport = () => {
     }
   };
 
-  // Chat: send message via edge function
   const handleSendChatMessage = async (sessionOverride?: ChatSession) => {
     let activeSession = sessionOverride || selectedChat;
     if (!chatInput.trim() || !buyer?.id) return;
@@ -527,7 +616,6 @@ const BuyerSupport = () => {
         setChatMessages((prev) => prev.map((m) => (m.id === tempId ? fnData.message : m)));
       }
 
-      // Silent refresh of session list
       fetchChats(true);
     } catch (error: any) {
       console.error("Send message error:", error);
@@ -537,7 +625,6 @@ const BuyerSupport = () => {
     }
   };
 
-  // Chat: create new session
   const handleStartChat = async (): Promise<ChatSession | null> => {
     if (!buyer?.id) {
       toast({ variant: "destructive", title: "Please log in to start a chat" });
@@ -594,7 +681,6 @@ const BuyerSupport = () => {
     }
   };
 
-  // Quick reply chips
   const quickReplies = [
     { label: "💰 Deposit Issue", text: "I need help with a deposit" },
     { label: "📦 Order Issue", text: "I have an issue with my order" },
@@ -731,7 +817,7 @@ const BuyerSupport = () => {
           </div>
         </motion.div>
 
-        {/* Tabs: Tickets | Live Chat | FAQ */}
+        {/* Tabs */}
         <Tabs defaultValue="chat" className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
             <TabsTrigger value="chat" className="gap-2">
@@ -855,7 +941,6 @@ const BuyerSupport = () => {
           <TabsContent value="chat" className="mt-4">
             <Card className="glass-card overflow-hidden">
               <CardContent className="p-0 flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: "400px" }}>
-                {/* Chat Header */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                     <MessagesSquare className="w-4 h-4 text-primary" />
@@ -893,7 +978,6 @@ const BuyerSupport = () => {
                   </div>
                 </div>
 
-                {/* Messages Area */}
                 <ScrollArea className="flex-1 px-4">
                   <div className="space-y-3 py-4">
                     {chatLoading && isFirstLoad.current ? (
@@ -1090,7 +1174,6 @@ const BuyerSupport = () => {
                                 </div>
                               </motion.div>
                             ))}
-                            {/* AI mode indicator + toggle + End Chat */}
                             {chatMessages.length > 0 && currentChat.status !== "closed" && (
                               <div className="flex flex-col items-center gap-2 pt-3">
                                 {aiMode && (
@@ -1111,7 +1194,7 @@ const BuyerSupport = () => {
                                     variant="destructive"
                                     size="sm"
                                     className="text-xs gap-1.5 rounded-full"
-                                    onClick={handleEndChatClick} // Changed to open dialog
+                                    onClick={handleEndChatClick}
                                   >
                                     <XCircle className="w-3 h-3" /> End Chat
                                   </Button>
@@ -1126,7 +1209,6 @@ const BuyerSupport = () => {
                   </div>
                 </ScrollArea>
 
-                {/* Quick Replies */}
                 {chatFilter === "active" && !chatSessions.find((s) => s.status === "active" || s.status === "open") && (
                   <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-border/30">
                     {quickReplies.map((qr, i) => (
@@ -1143,7 +1225,6 @@ const BuyerSupport = () => {
                   </div>
                 )}
 
-                {/* Input Area */}
                 {chatFilter === "active" && (!selectedChat || selectedChat.status !== "closed") && (
                   <div className="px-4 py-3 border-t border-border/50 bg-card/80">
                     <div className="flex gap-2">
@@ -1224,36 +1305,42 @@ const BuyerSupport = () => {
           </TabsContent>
         </Tabs>
 
-        {/* New Ticket Dialog */}
+        {/* New Ticket Dialog - THEMED */}
         <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
-          <DialogContent className="glass-card border-primary/20">
+          <DialogContent className="border" style={getThemedDialogStyle()}>
             <DialogHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <MessageSquare className="w-5 h-5 text-primary" />
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ backgroundColor: `${themeColors.primaryColor || "#6366F1"}20` }}
+                >
+                  <MessageSquare className="w-5 h-5" style={{ color: themeColors.primaryColor || "#6366F1" }} />
                 </div>
                 <div>
-                  <DialogTitle>Create New Ticket</DialogTitle>
-                  <DialogDescription>Describe your issue and we'll help you</DialogDescription>
+                  <DialogTitle style={getThemedLabelStyle()}>Create New Ticket</DialogTitle>
+                  <DialogDescription style={getThemedDescriptionStyle()}>
+                    Describe your issue and we'll help you
+                  </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Subject</Label>
+                <Label style={getThemedLabelStyle()}>Subject</Label>
                 <Input
                   placeholder="Brief description of your issue"
                   value={newTicket.subject}
                   onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                  style={getThemedInputStyle()}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Priority</Label>
+                <Label style={getThemedLabelStyle()}>Priority</Label>
                 <Select value={newTicket.priority} onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}>
-                  <SelectTrigger>
+                  <SelectTrigger style={getThemedInputStyle()}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={getThemedDialogStyle()}>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
@@ -1262,32 +1349,43 @@ const BuyerSupport = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Message</Label>
+                <Label style={getThemedLabelStyle()}>Message</Label>
                 <Textarea
                   placeholder="Describe your issue in detail..."
                   value={newTicket.message}
                   onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
                   rows={4}
+                  style={getThemedInputStyle()}
                 />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsNewTicketOpen(false)}
+                style={{
+                  borderColor: themeColors.borderColor,
+                  color: themeColors.textColor,
+                  fontFamily: themeColors.fontFamily,
+                }}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleCreateTicket} disabled={submitting}>
+              <Button onClick={handleCreateTicket} disabled={submitting} style={getThemedButtonStyle()}>
                 {submitting ? "Creating..." : "Create Ticket"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Ticket View Dialog */}
+        {/* Ticket View Dialog - THEMED */}
         <Dialog open={isTicketViewOpen} onOpenChange={setIsTicketViewOpen}>
-          <DialogContent className="glass-card max-w-lg max-h-[80vh] flex flex-col">
+          <DialogContent className="max-w-lg max-h-[80vh] flex flex-col border" style={getThemedDialogStyle()}>
             <DialogHeader>
               <div className="space-y-1">
-                <DialogTitle className="pr-8">{selectedTicket?.subject}</DialogTitle>
+                <DialogTitle className="pr-8" style={getThemedLabelStyle()}>
+                  {selectedTicket?.subject}
+                </DialogTitle>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge className={cn(statusConfig[selectedTicket?.status || "open"].color)}>
                     {statusConfig[selectedTicket?.status || "open"].label}
@@ -1302,6 +1400,10 @@ const BuyerSupport = () => {
                         variant="outline"
                         className="ml-auto text-xs gap-1"
                         onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}
+                        style={{
+                          borderColor: themeColors.borderColor,
+                          color: themeColors.textColor,
+                        }}
                       >
                         <CheckCircle className="w-3 h-3" />
                         Resolve
@@ -1328,21 +1430,29 @@ const BuyerSupport = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className={cn(
-                      "p-3 rounded-xl max-w-[85%]",
+                    className={cn("p-3 rounded-xl max-w-[85%]")}
+                    style={
                       msg.sender === "buyer" || msg.sender === "user"
-                        ? "ml-auto bg-primary text-primary-foreground"
-                        : "bg-muted",
-                    )}
+                        ? {
+                            marginLeft: "auto",
+                            backgroundColor: themeColors.primaryColor || undefined,
+                            color: "#FFFFFF",
+                          }
+                        : {
+                            backgroundColor: themeColors.backgroundColor || undefined,
+                            color: themeColors.textColor || undefined,
+                          }
+                    }
                   >
                     <p className="text-sm">{msg.content}</p>
                     <p
-                      className={cn(
-                        "text-xs mt-1",
-                        msg.sender === "buyer" || msg.sender === "user"
-                          ? "text-primary-foreground/70"
-                          : "text-muted-foreground",
-                      )}
+                      className="text-xs mt-1"
+                      style={{
+                        color:
+                          msg.sender === "buyer" || msg.sender === "user"
+                            ? "rgba(255,255,255,0.7)"
+                            : themeColors.mutedColor,
+                      }}
                     >
                       {new Date(msg.timestamp).toLocaleString()}
                     </p>
@@ -1351,14 +1461,19 @@ const BuyerSupport = () => {
               </div>
             </ScrollArea>
             {selectedTicket?.status !== "closed" && selectedTicket?.status !== "resolved" && (
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex gap-2 pt-4 border-t" style={{ borderColor: themeColors.borderColor }}>
                 <Input
                   placeholder="Type your message..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                  style={getThemedInputStyle()}
                 />
-                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()}>
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={submitting || !newMessage.trim()}
+                  style={getThemedButtonStyle()}
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -1366,17 +1481,25 @@ const BuyerSupport = () => {
           </DialogContent>
         </Dialog>
 
-        {/* End Chat Confirmation Dialog */}
+        {/* End Chat Confirmation Dialog - THEMED */}
         <Dialog open={isEndChatDialogOpen} onOpenChange={setIsEndChatDialogOpen}>
-          <DialogContent className="glass-card">
+          <DialogContent className="border" style={getThemedDialogStyle()}>
             <DialogHeader>
-              <DialogTitle>End Conversation?</DialogTitle>
-              <DialogDescription>
+              <DialogTitle style={getThemedLabelStyle()}>End Conversation?</DialogTitle>
+              <DialogDescription style={getThemedDescriptionStyle()}>
                 Are you sure you want to end this chat session? You won't be able to send new messages after closing.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setIsEndChatDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsEndChatDialogOpen(false)}
+                style={{
+                  borderColor: themeColors.borderColor,
+                  color: themeColors.textColor,
+                  fontFamily: themeColors.fontFamily,
+                }}
+              >
                 Cancel
               </Button>
               <Button variant="destructive" onClick={confirmEndChat}>
@@ -1386,12 +1509,14 @@ const BuyerSupport = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Rating Dialog */}
+        {/* Rating Dialog - THEMED */}
         <Dialog open={isRatingDialogOpen} onOpenChange={setIsRatingDialogOpen}>
-          <DialogContent className="glass-card">
+          <DialogContent className="border" style={getThemedDialogStyle()}>
             <DialogHeader>
-              <DialogTitle>How was your experience?</DialogTitle>
-              <DialogDescription>Please rate your support conversation to help us improve.</DialogDescription>
+              <DialogTitle style={getThemedLabelStyle()}>How was your experience?</DialogTitle>
+              <DialogDescription style={getThemedDescriptionStyle()}>
+                Please rate your support conversation to help us improve.
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="flex gap-2">
@@ -1402,15 +1527,15 @@ const BuyerSupport = () => {
                     className="p-2 hover:scale-110 transition-transform"
                   >
                     <Star
-                      className={cn(
-                        "w-8 h-8",
-                        star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground",
-                      )}
+                      className={cn("w-8 h-8", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "")}
+                      style={{
+                        color: star <= chatRating ? "#FBBF24" : themeColors.mutedColor || "#94A3B8",
+                      }}
                     />
                   </button>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm" style={getThemedDescriptionStyle()}>
                 {chatRating > 0
                   ? `You rated this ${chatRating} star${chatRating > 1 ? "s" : ""}`
                   : "Tap a star to rate"}
@@ -1424,10 +1549,18 @@ const BuyerSupport = () => {
                   setChatRating(0);
                   setSelectedChat(null);
                 }}
+                style={{
+                  color: themeColors.textColor,
+                  fontFamily: themeColors.fontFamily,
+                }}
               >
                 Skip
               </Button>
-              <Button disabled={chatRating === 0} onClick={() => submitRating(chatRating)}>
+              <Button
+                disabled={chatRating === 0}
+                onClick={() => submitRating(chatRating)}
+                style={getThemedButtonStyle()}
+              >
                 Submit Rating
               </Button>
             </DialogFooter>
