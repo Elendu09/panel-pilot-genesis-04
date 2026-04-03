@@ -845,25 +845,32 @@ const BuyerSupport = () => {
                                 </div>
                               </motion.div>
                             ))}
-                            {/* End conversation + Continue with AI */}
+                            {/* AI mode indicator + toggle + End Chat */}
                             {chatMessages.length > 0 && currentChat.status !== 'closed' && (
-                              <div className="flex justify-center gap-2 pt-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs gap-1.5 rounded-full"
-                                  onClick={() => setShowAIChat(true)}
-                                >
-                                  🤖 Continue with AI
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="text-xs gap-1.5 rounded-full"
-                                  onClick={handleEndChat}
-                                >
-                                  <XCircle className="w-3 h-3" /> End Chat
-                                </Button>
+                              <div className="flex flex-col items-center gap-2 pt-3">
+                                {aiMode && (
+                                  <Badge variant="secondary" className="gap-1 text-xs">
+                                    <Bot className="w-3 h-3" /> AI Mode Active
+                                  </Badge>
+                                )}
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant={aiMode ? "default" : "outline"}
+                                    size="sm"
+                                    className="text-xs gap-1.5 rounded-full"
+                                    onClick={() => setAiMode(!aiMode)}
+                                  >
+                                    <Bot className="w-3 h-3" /> {aiMode ? 'Continue with Human' : 'Continue with AI'}
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="text-xs gap-1.5 rounded-full"
+                                    onClick={handleEndChat}
+                                  >
+                                    <XCircle className="w-3 h-3" /> End Chat
+                                  </Button>
+                                </div>
                               </div>
                             )}
                             {/* Rating UI after ending */}
