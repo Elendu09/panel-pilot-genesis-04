@@ -51,7 +51,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
-import { FloatingChatWidget } from "@/components/storefront/FloatingChatWidget";
+import { Bot } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -65,7 +65,7 @@ interface Ticket {
 }
 
 interface Message {
-  sender: 'buyer' | 'support';
+  sender: 'buyer' | 'support' | 'user';
   content: string;
   timestamp: string;
 }
@@ -134,7 +134,7 @@ const BuyerSupport = () => {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
-  const [showAIChat, setShowAIChat] = useState(false);
+  const [aiMode, setAiMode] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [chatRating, setChatRating] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -345,9 +345,12 @@ const BuyerSupport = () => {
   };
 
   const handleResolveTicket = async (ticketId: string) => {
+    if (!buyer?.id) return;
     try {
-      const { error } = await supabase.from('support_tickets').update({ status: 'resolved', updated_at: new Date().toISOString() }).eq('id', ticketId);
-      if (error) throw error;
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to resolve ticket');
       toast({ title: "Ticket resolved" });
       if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'resolved' });
       fetchTickets();
@@ -368,35 +371,72 @@ const BuyerSupport = () => {
     const msgContent = chatInput.trim();
     setChatInput("");
     
-    // Optimistic update: show message immediately in UI
-    const optimisticMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      session_id: activeSession.id,
-      sender_type: 'visitor',
-      content: msgContent,
-      created_at: new Date().toISOString(),
-    };
-    setChatMessages(prev => [...prev, optimisticMsg]);
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-    
-    const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
-    const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-      body: {
-        action: 'send-chat-message',
-        panelId: pId,
-        sessionId: activeSession.id,
-        buyerId: buyer.id,
+    if (aiMode) {
+      // AI mode: send through AI chat action which saves user msg + gets AI reply
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: activeSession.id,
+        sender_type: 'visitor',
         content: msgContent,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
+      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'send-ai-chat-message',
+          panelId: pId,
+          sessionId: activeSession.id,
+          buyerId: buyer.id,
+          content: msgContent,
+        }
+      });
+      if (fnError || fnData?.error) {
+        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
+        setChatInput(msgContent);
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else {
+        // Replace optimistic with real user msg and add AI reply
+        setChatMessages(prev => {
+          const updated = prev.map(m => m.id === optimisticMsg.id ? fnData.userMessage : m);
+          if (fnData.aiMessage) {
+            updated.push(fnData.aiMessage);
+          }
+          return updated;
+        });
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
-    });
-    if (fnError || fnData?.error) {
-      toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
-      setChatInput(msgContent); // restore on failure
-      // Remove optimistic message
-      setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-    } else if (fnData?.message) {
-      // Replace optimistic message with real one from server
-      setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+    } else {
+      // Human mode: regular send
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: activeSession.id,
+        sender_type: 'visitor',
+        content: msgContent,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
+      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'send-chat-message',
+          panelId: pId,
+          sessionId: activeSession.id,
+          buyerId: buyer.id,
+          content: msgContent,
+        }
+      });
+      if (fnError || fnData?.error) {
+        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
+        setChatInput(msgContent);
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else if (fnData?.message) {
+        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+      }
     }
   };
 
@@ -724,17 +764,26 @@ const BuyerSupport = () => {
                             >
                               <div className={cn(
                                 "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" 
+                                  : msg.sender_type === 'ai' ? "bg-violet-500 text-white"
+                                  : "bg-muted text-muted-foreground"
                               )}>
-                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
+                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') 
+                                  : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" /> 
+                                  : 'S'}
                               </div>
                               <div className={cn(
                                 "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
                                 msg.sender_type === 'visitor'
                                   ? "bg-primary text-primary-foreground rounded-br-sm"
+                                  : msg.sender_type === 'ai'
+                                  ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
                                   : "bg-muted rounded-bl-sm"
                               )}>
-                                <p>{msg.content}</p>
+                                {msg.sender_type === 'ai' && (
+                                  <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
+                                )}
+                                <p className="whitespace-pre-wrap">{msg.content}</p>
                                 <p className={cn(
                                   "text-[10px] mt-1",
                                   msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
@@ -785,17 +834,26 @@ const BuyerSupport = () => {
                               >
                                 <div className={cn(
                                   "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                                  msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                                  msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" 
+                                    : msg.sender_type === 'ai' ? "bg-violet-500 text-white"
+                                    : "bg-muted text-muted-foreground"
                                 )}>
-                                  {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') : 'S'}
+                                  {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') 
+                                    : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" /> 
+                                    : 'S'}
                                 </div>
                                 <div className={cn(
                                   "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
                                   msg.sender_type === 'visitor'
                                     ? "bg-primary text-primary-foreground rounded-br-sm"
+                                    : msg.sender_type === 'ai'
+                                    ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
                                     : "bg-muted rounded-bl-sm"
                                 )}>
-                                  <p>{msg.content}</p>
+                                  {msg.sender_type === 'ai' && (
+                                    <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
+                                  )}
+                                  <p className="whitespace-pre-wrap">{msg.content}</p>
                                   <p className={cn(
                                     "text-[10px] mt-1",
                                     msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
@@ -805,25 +863,32 @@ const BuyerSupport = () => {
                                 </div>
                               </motion.div>
                             ))}
-                            {/* End conversation + Continue with AI */}
+                            {/* AI mode indicator + toggle + End Chat */}
                             {chatMessages.length > 0 && currentChat.status !== 'closed' && (
-                              <div className="flex justify-center gap-2 pt-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs gap-1.5 rounded-full"
-                                  onClick={() => setShowAIChat(true)}
-                                >
-                                  🤖 Continue with AI
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="text-xs gap-1.5 rounded-full"
-                                  onClick={handleEndChat}
-                                >
-                                  <XCircle className="w-3 h-3" /> End Chat
-                                </Button>
+                              <div className="flex flex-col items-center gap-2 pt-3">
+                                {aiMode && (
+                                  <Badge variant="secondary" className="gap-1 text-xs">
+                                    <Bot className="w-3 h-3" /> AI Mode Active
+                                  </Badge>
+                                )}
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant={aiMode ? "default" : "outline"}
+                                    size="sm"
+                                    className="text-xs gap-1.5 rounded-full"
+                                    onClick={() => setAiMode(!aiMode)}
+                                  >
+                                    <Bot className="w-3 h-3" /> {aiMode ? 'Continue with Human' : 'Continue with AI'}
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="text-xs gap-1.5 rounded-full"
+                                    onClick={handleEndChat}
+                                  >
+                                    <XCircle className="w-3 h-3" /> End Chat
+                                  </Button>
+                                </div>
                               </div>
                             )}
                             {/* Rating UI after ending */}
@@ -924,22 +989,7 @@ const BuyerSupport = () => {
               </CardContent>
             </Card>
 
-            {/* AI Chat Modal */}
-            {showAIChat && (
-              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end justify-center sm:items-center">
-                <div className="w-full max-w-md h-[80vh] relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2 z-10"
-                    onClick={() => setShowAIChat(false)}
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </Button>
-                  <FloatingChatWidget />
-                </div>
-              </div>
-            )}
+            {/* AI mode indicator in input area */}
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
@@ -1034,10 +1084,10 @@ const BuyerSupport = () => {
               <div className="space-y-4 py-4">
                 {(selectedTicket?.messages || []).map((msg: Message, index: number) => (
                   <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
-                    className={cn("p-3 rounded-xl max-w-[85%]", msg.sender === 'buyer' ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
+                    className={cn("p-3 rounded-xl max-w-[85%]", (msg.sender === 'buyer' || msg.sender === 'user') ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
                   >
                     <p className="text-sm">{msg.content}</p>
-                    <p className={cn("text-xs mt-1", msg.sender === 'buyer' ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
+                    <p className={cn("text-xs mt-1", (msg.sender === 'buyer' || msg.sender === 'user') ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
                   </motion.div>
                 ))}
               </div>
