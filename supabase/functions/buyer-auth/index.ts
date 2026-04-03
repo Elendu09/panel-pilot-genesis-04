@@ -1630,7 +1630,7 @@ async function handleCreateSupportTicket(supabaseAdmin: any, body: any) {
       priority: 'medium',
       ticket_type: 'user_to_panel',
       messages: [{
-        sender: 'user',
+        sender: 'buyer',
         content: message,
         timestamp: new Date().toISOString(),
         senderName: senderName || 'Guest',
