@@ -971,22 +971,7 @@ const BuyerSupport = () => {
               </CardContent>
             </Card>
 
-            {/* AI Chat Modal */}
-            {showAIChat && (
-              <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end justify-center sm:items-center">
-                <div className="w-full max-w-md h-[80vh] relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-2 right-2 z-10"
-                    onClick={() => setShowAIChat(false)}
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </Button>
-                  <FloatingChatWidget />
-                </div>
-              </div>
-            )}
+            {/* AI mode indicator in input area */}
           </TabsContent>
 
           {/* ===== FAQ TAB ===== */}
