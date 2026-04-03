@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star } from "lucide-react";
 import {
-  MessageSquare, 
-  Plus, 
-  Clock, 
+  MessageSquare,
+  Plus,
+  Clock,
   CheckCircle,
   XCircle,
   Send,
@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   LogIn,
   HelpCircle,
-  MessagesSquare
+  MessagesSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,19 +30,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
@@ -65,7 +54,7 @@ interface Ticket {
 }
 
 interface Message {
-  sender: 'buyer' | 'support' | 'user';
+  sender: "buyer" | "support" | "user";
   content: string;
   timestamp: string;
 }
@@ -103,19 +92,44 @@ const priorityConfig: Record<string, string> = {
 };
 
 const defaultFAQs = [
-  { question: "How long does delivery take?", answer: "Most orders begin processing within minutes of placement. Delivery speed depends on the service type — some complete instantly while others may take up to 72 hours." },
-  { question: "How do I add funds to my account?", answer: "Navigate to the Deposit page from your dashboard. We accept various payment methods. Your balance updates instantly after a successful payment." },
-  { question: "What payment methods are accepted?", answer: "We support multiple payment methods including cryptocurrency, credit cards, and various e-wallets depending on the payment gateway configured by the panel." },
-  { question: "Can I get a refund?", answer: "Refund policies vary by service. If an order is not delivered or only partially completed, please open a support ticket and our team will review your case." },
-  { question: "Is it safe to use your services?", answer: "Yes! We use secure payment processing and never ask for your social media passwords. All services are delivered through official platform APIs." },
-  { question: "What happens if my order fails?", answer: "If an order fails or is partially delivered, the remaining balance will be automatically refunded to your account. You can also contact support for assistance." },
+  {
+    question: "How long does delivery take?",
+    answer:
+      "Most orders begin processing within minutes of placement. Delivery speed depends on the service type — some complete instantly while others may take up to 72 hours.",
+  },
+  {
+    question: "How do I add funds to my account?",
+    answer:
+      "Navigate to the Deposit page from your dashboard. We accept various payment methods. Your balance updates instantly after a successful payment.",
+  },
+  {
+    question: "What payment methods are accepted?",
+    answer:
+      "We support multiple payment methods including cryptocurrency, credit cards, and various e-wallets depending on the payment gateway configured by the panel.",
+  },
+  {
+    question: "Can I get a refund?",
+    answer:
+      "Refund policies vary by service. If an order is not delivered or only partially completed, please open a support ticket and our team will review your case.",
+  },
+  {
+    question: "Is it safe to use your services?",
+    answer:
+      "Yes! We use secure payment processing and never ask for your social media passwords. All services are delivered through official platform APIs.",
+  },
+  {
+    question: "What happens if my order fails?",
+    answer:
+      "If an order fails or is partially delivered, the remaining balance will be automatically refunded to your account. You can also contact support for assistance.",
+  },
 ];
 
 const BuyerSupport = () => {
   const { buyer, loading: authLoading, panelId: authPanelId } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   // Triple fallback for panel ID: auth context -> tenant hook -> localStorage
-  const resolvedPanelId = authPanelId || panel?.id || (typeof window !== 'undefined' ? localStorage.getItem('current_panel_id') : null);
+  const resolvedPanelId =
+    authPanelId || panel?.id || (typeof window !== "undefined" ? localStorage.getItem("current_panel_id") : null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +147,7 @@ const BuyerSupport = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [chatFilter, setChatFilter] = useState<'active' | 'archived'>('active');
+  const [chatFilter, setChatFilter] = useState<"active" | "archived">("active");
   const [aiMode, setAiMode] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [chatRating, setChatRating] = useState(0);
@@ -146,7 +160,7 @@ const BuyerSupport = () => {
   const [newTicket, setNewTicket] = useState({
     subject: "",
     priority: "medium",
-    message: ""
+    message: "",
   });
 
   // Fetch panel FAQs from custom_branding
@@ -154,9 +168,9 @@ const BuyerSupport = () => {
     const fetchFaqs = async () => {
       if (!panel?.id) return;
       const { data } = await (supabase as any)
-        .from('panels_public')
-        .select('custom_branding')
-        .eq('id', panel.id)
+        .from("panels_public")
+        .select("custom_branding")
+        .eq("id", panel.id)
         .single();
       const branding = data?.custom_branding as any;
       if (branding?.faqs?.length > 0) {
@@ -170,18 +184,50 @@ const BuyerSupport = () => {
     fetchTickets();
   }, [buyer?.id, resolvedPanelId]);
 
-  // Fetch chat sessions
-  useEffect(() => {
+  // Fetch chat sessions - Extracted function for reuse
+  const fetchChats = async () => {
     if (!buyer?.id || !resolvedPanelId) return;
-    const fetchChats = async () => {
-      setChatLoading(true);
-      // Use edge function to bypass RLS (custom auth buyers can't use direct queries)
-      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'list-chat-sessions', panelId: resolvedPanelId, buyerId: buyer.id }
+    setChatLoading(true);
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: { action: "list-chat-sessions", panelId: resolvedPanelId, buyerId: buyer.id },
       });
+      if (fnError) throw fnError;
       setChatSessions(fnData?.sessions || []);
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+    } finally {
       setChatLoading(false);
-    };
+    }
+  };
+
+  // Fetch messages for selected chat - Extracted function for reuse
+  const fetchChatMessages = async (sessionId: string) => {
+    if (!buyer?.id || !sessionId) return;
+
+    try {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: {
+          action: "list-chat-messages",
+          sessionId: sessionId,
+          buyerId: buyer.id,
+          panelId: resolvedPanelId,
+        },
+      });
+
+      if (fnError) throw fnError;
+
+      if (fnData?.messages) {
+        setChatMessages(fnData.messages);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    }
+  };
+
+  // Fetch chat sessions on mount
+  useEffect(() => {
     fetchChats();
 
     // Poll for new sessions every 15s (realtime won't work with custom auth)
@@ -191,22 +237,17 @@ const BuyerSupport = () => {
 
   // Fetch messages for selected chat & poll for new ones
   useEffect(() => {
-    if (!selectedChat) { setChatMessages([]); return; }
-    
-    const fetchMessages = async () => {
-      // Use edge function to bypass RLS
-      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'list-chat-messages', sessionId: selectedChat.id, buyerId: buyer?.id }
-      });
-      if (fnData?.messages) {
-        setChatMessages(fnData.messages);
-        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      }
-    };
-    fetchMessages();
+    if (!selectedChat) {
+      setChatMessages([]);
+      return;
+    }
+
+    fetchChatMessages(selectedChat.id);
 
     // Poll for new messages every 2s for fast sync (realtime won't work with custom auth RLS)
-    const interval = setInterval(fetchMessages, 2000);
+    const interval = setInterval(() => {
+      fetchChatMessages(selectedChat.id);
+    }, 2000);
     return () => clearInterval(interval);
   }, [selectedChat?.id, buyer?.id]);
 
@@ -216,17 +257,17 @@ const BuyerSupport = () => {
     setError(null);
     try {
       // Route through edge function to bypass RLS (custom auth buyers don't have Supabase JWT claims)
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'list-tickets', panelId: resolvedPanelId, buyerId: buyer.id }
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: { action: "list-tickets", panelId: resolvedPanelId, buyerId: buyer.id },
       });
       if (fnError) throw fnError;
       const transformedTickets = (fnData?.tickets || []).map((ticket: any) => ({
         ...ticket,
-        messages: Array.isArray(ticket.messages) ? ticket.messages : []
+        messages: Array.isArray(ticket.messages) ? ticket.messages : [],
       })) as Ticket[];
       setTickets(transformedTickets);
     } catch (error: any) {
-      console.error('Error fetching tickets:', error);
+      console.error("Error fetching tickets:", error);
       // Don't block with error - just show empty
       setTickets([]);
     } finally {
@@ -244,33 +285,51 @@ const BuyerSupport = () => {
       return;
     }
     if (!resolvedPanelId) {
-      toast({ variant: "destructive", title: "Error", description: "Unable to connect. Please refresh the page and try again." });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Unable to connect. Please refresh the page and try again.",
+      });
       return;
     }
     setSubmitting(true);
     try {
-      const initialMessage = { sender: 'buyer' as const, content: newTicket.message, timestamp: new Date().toISOString() };
+      const initialMessage = {
+        sender: "buyer" as const,
+        content: newTicket.message,
+        timestamp: new Date().toISOString(),
+      };
       // Route through edge function to bypass RLS
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
-          action: 'create-support-ticket',
+          action: "create-support-ticket",
           panelId: resolvedPanelId,
           buyerId: buyer.id,
           subject: newTicket.subject,
           message: newTicket.message,
           senderName: buyer.full_name || buyer.email,
           senderEmail: buyer.email,
-        }
+        },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || 'Failed to create ticket');
+      if (fnError || fnData?.error) throw new Error(fnData?.error || fnError?.message || "Failed to create ticket");
 
       // Notify panel owner
       try {
-        const { data: panelData } = await supabase.from('panels').select('owner_id').eq('id', resolvedPanelId).single();
+        const { data: panelData } = await supabase.from("panels").select("owner_id").eq("id", resolvedPanelId).single();
         if (panelData?.owner_id) {
-          await supabase.from('panel_notifications').insert({ user_id: panelData.owner_id, title: 'New Support Ticket', message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`, type: 'system', is_read: false });
+          await supabase
+            .from("panel_notifications")
+            .insert({
+              user_id: panelData.owner_id,
+              title: "New Support Ticket",
+              message: `${buyer.full_name || buyer.email} submitted: "${newTicket.subject}"`,
+              type: "system",
+              is_read: false,
+            });
         }
-      } catch (e) { /* notification failure is non-critical */ }
+      } catch (e) {
+        /* notification failure is non-critical */
+      }
 
       toast({ title: "Ticket Created", description: "We'll respond as soon as possible" });
       setIsNewTicketOpen(false);
@@ -278,207 +337,225 @@ const BuyerSupport = () => {
       fetchTickets();
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to create ticket." });
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedTicket || !buyer?.id) return;
     setSubmitting(true);
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
-          action: 'reply-ticket',
-          panelId: resolvedPanelId || '',
+          action: "reply-ticket",
+          panelId: resolvedPanelId || "",
           buyerId: buyer.id,
           ticketId: selectedTicket.id,
           content: newMessage.trim(),
-        }
+        },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to send reply');
-      const updatedMessages = fnData.messages || [...(selectedTicket.messages || []), { sender: 'buyer', content: newMessage.trim(), timestamp: new Date().toISOString() }];
+      if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to send reply");
+      const updatedMessages = fnData.messages || [
+        ...(selectedTicket.messages || []),
+        { sender: "buyer", content: newMessage.trim(), timestamp: new Date().toISOString() },
+      ];
       setSelectedTicket({ ...selectedTicket, messages: updatedMessages });
-      setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t));
+      setTickets((prev) => prev.map((t) => (t.id === selectedTicket.id ? { ...t, messages: updatedMessages } : t)));
       setNewMessage("");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message || "Failed to send message" });
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCloseTicket = async (ticketId: string) => {
     if (!buyer?.id) return;
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: { action: "close-ticket", panelId: resolvedPanelId || "", buyerId: buyer.id, ticketId },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to close ticket');
+      if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to close ticket");
       toast({ title: "Ticket closed" });
-      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'closed' });
+      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: "closed" });
       fetchTickets();
-    } catch { toast({ variant: "destructive", title: "Failed to close ticket" }); }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to close ticket" });
+    }
   };
 
   const handleEndChat = async () => {
     if (!buyer?.id || !selectedChat) return;
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'end-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id }
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: { action: "end-chat", panelId: resolvedPanelId || "", buyerId: buyer.id, sessionId: selectedChat.id },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to end chat');
+      if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to end chat");
       // Update local state — mark session as closed so it moves to archived
-      setChatSessions(prev => prev.map(s => s.id === selectedChat.id ? { ...s, status: 'closed' } : s));
+      setChatSessions((prev) => prev.map((s) => (s.id === selectedChat.id ? { ...s, status: "closed" } : s)));
       setShowRating(true);
       toast({ title: "Conversation ended" });
-    } catch { toast({ variant: "destructive", title: "Failed to end conversation" }); }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to end conversation" });
+    }
   };
 
   const handleRateChat = async (rating: number) => {
     if (!buyer?.id || !selectedChat) return;
     try {
-      await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'rate-chat', panelId: resolvedPanelId || '', buyerId: buyer.id, sessionId: selectedChat.id, rating }
+      await supabase.functions.invoke("buyer-auth", {
+        body: {
+          action: "rate-chat",
+          panelId: resolvedPanelId || "",
+          buyerId: buyer.id,
+          sessionId: selectedChat.id,
+          rating,
+        },
       });
       toast({ title: "Thanks for your feedback!" });
       setShowRating(false);
       setChatRating(0);
       setSelectedChat(null); // Clear so user can start a new chat
-    } catch { toast({ variant: "destructive", title: "Failed to submit rating" }); }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to submit rating" });
+    }
   };
 
   const handleResolveTicket = async (ticketId: string) => {
     if (!buyer?.id) return;
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+        body: { action: "close-ticket", panelId: resolvedPanelId || "", buyerId: buyer.id, ticketId },
       });
-      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to resolve ticket');
+      if (fnError || fnData?.error) throw new Error(fnData?.error || "Failed to resolve ticket");
       toast({ title: "Ticket resolved" });
-      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'resolved' });
+      if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: "resolved" });
       fetchTickets();
-    } catch { toast({ variant: "destructive", title: "Failed to update ticket" }); }
+    } catch {
+      toast({ variant: "destructive", title: "Failed to update ticket" });
+    }
   };
 
-  // Chat: send message via edge function (bypasses RLS)
+  // Chat: send message via edge function (bypasses RLS) - FIXED VERSION
   const handleSendChatMessage = async (sessionOverride?: ChatSession) => {
     let activeSession = sessionOverride || selectedChat;
     if (!chatInput.trim() || !buyer?.id) return;
-    
+
+    const msgContent = chatInput.trim();
+
     // Auto-create session if none exists
     if (!activeSession) {
       activeSession = await handleStartChat();
       if (!activeSession) return;
     }
-    
-    const msgContent = chatInput.trim();
+
     setChatInput("");
-    
-    if (aiMode) {
-      // AI mode: send through AI chat action which saves user msg + gets AI reply
-      const optimisticMsg: ChatMessage = {
-        id: `temp-${Date.now()}`,
-        session_id: activeSession.id,
-        sender_type: 'visitor',
-        content: msgContent,
-        created_at: new Date().toISOString(),
-      };
-      setChatMessages(prev => [...prev, optimisticMsg]);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-      
-      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+
+    // Optimistic update with temp ID
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      session_id: activeSession.id,
+      sender_type: "visitor",
+      content: msgContent,
+      created_at: new Date().toISOString(),
+    };
+
+    setChatMessages((prev) => [...prev, optimisticMsg]);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+    try {
+      const action = aiMode ? "send-ai-chat-message" : "send-chat-message";
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
-          action: 'send-ai-chat-message',
-          panelId: pId,
+          action,
+          panelId: resolvedPanelId,
           sessionId: activeSession.id,
           buyerId: buyer.id,
           content: msgContent,
-        }
+        },
       });
+
       if (fnError || fnData?.error) {
-        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
-        setChatInput(msgContent);
-        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      } else {
-        // Replace optimistic with real user msg and add AI reply
-        setChatMessages(prev => {
-          const updated = prev.map(m => m.id === optimisticMsg.id ? fnData.userMessage : m);
-          if (fnData.aiMessage) {
-            updated.push(fnData.aiMessage);
-          }
-          return updated;
-        });
-        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+        throw new Error(fnData?.error || fnError?.message);
       }
-    } else {
-      // Human mode: regular send
-      const optimisticMsg: ChatMessage = {
-        id: `temp-${Date.now()}`,
-        session_id: activeSession.id,
-        sender_type: 'visitor',
-        content: msgContent,
-        created_at: new Date().toISOString(),
-      };
-      setChatMessages(prev => [...prev, optimisticMsg]);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-      
-      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-        body: {
-          action: 'send-chat-message',
-          panelId: pId,
-          sessionId: activeSession.id,
-          buyerId: buyer.id,
-          content: msgContent,
-        }
-      });
-      if (fnError || fnData?.error) {
-        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
-        setChatInput(msgContent);
-        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+
+      // Replace optimistic message with real one(s)
+      if (aiMode && fnData?.userMessage) {
+        setChatMessages((prev) => [
+          ...prev.filter((m) => m.id !== tempId),
+          fnData.userMessage,
+          ...(fnData.aiMessage ? [fnData.aiMessage] : []),
+        ]);
       } else if (fnData?.message) {
-        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+        setChatMessages((prev) => prev.map((m) => (m.id === tempId ? fnData.message : m)));
       }
+
+      // Refresh session list to update last_message_at
+      fetchChats();
+    } catch (error: any) {
+      console.error("Send message error:", error);
+      toast({ variant: "destructive", title: error.message || "Failed to send message" });
+      setChatInput(msgContent); // Restore input
+      setChatMessages((prev) => prev.filter((m) => m.id !== tempId)); // Remove optimistic
     }
   };
 
-  // Chat: create new session - returns the session for immediate use
+  // Chat: create new session - returns the session for immediate use - FIXED VERSION
   const handleStartChat = async (): Promise<ChatSession | null> => {
     if (!buyer?.id) {
       toast({ variant: "destructive", title: "Please log in to start a chat" });
       return null;
     }
     if (!resolvedPanelId) {
-      toast({ variant: "destructive", title: "Unable to connect", description: "Panel ID not found. Please refresh the page and try again." });
+      toast({
+        variant: "destructive",
+        title: "Unable to connect",
+        description: "Panel ID not found. Please refresh the page and try again.",
+      });
       return null;
     }
+
     // Prevent creating a new chat if an active one exists
-    const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+    const hasActive = chatSessions.some((s) => s.status === "active" || s.status === "open");
     if (hasActive) {
-      const active = chatSessions.find(s => s.status === 'active' || s.status === 'open')!;
+      const active = chatSessions.find((s) => s.status === "active" || s.status === "open")!;
       setSelectedChat(active);
-      toast({ title: "Active chat exists", description: "Please end your current conversation before starting a new one." });
+      toast({
+        title: "Active chat exists",
+        description: "Please end your current conversation before starting a new one.",
+      });
       return active;
     }
+
     try {
-      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
         body: {
+          action: "create-chat-session",
           panelId: resolvedPanelId,
-          action: 'create-chat-session',
-          buyerId: buyer.id,
+          buyerId: buyer.id, // This becomes visitor_id in DB
           buyerName: buyer.full_name || buyer.email,
           buyerEmail: buyer.email,
-        }
+        },
       });
+
       if (fnError || fnData?.error) {
+        console.error("Chat creation error:", fnError || fnData?.error);
         toast({ variant: "destructive", title: fnData?.error || "Failed to start chat" });
         return null;
       }
+
       if (fnData?.session) {
-        setChatSessions(prev => [fnData.session, ...prev]);
+        setChatSessions((prev) => [fnData.session, ...prev]);
         setSelectedChat(fnData.session);
+        // Immediately fetch messages for this new session
+        await fetchChatMessages(fnData.session.id);
         return fnData.session;
       }
       return null;
-    } catch {
+    } catch (err) {
+      console.error("Chat start error:", err);
       toast({ variant: "destructive", title: "Failed to start chat" });
       return null;
     }
@@ -486,10 +563,10 @@ const BuyerSupport = () => {
 
   // Quick reply chips
   const quickReplies = [
-    { label: '💰 Deposit Issue', text: 'I need help with a deposit' },
-    { label: '📦 Order Issue', text: 'I have an issue with my order' },
-    { label: '💳 Transaction', text: 'I need help with a transaction' },
-    { label: '🔑 Account', text: 'I need help with my account' },
+    { label: "💰 Deposit Issue", text: "I need help with a deposit" },
+    { label: "📦 Order Issue", text: "I have an issue with my order" },
+    { label: "💳 Transaction", text: "I need help with a transaction" },
+    { label: "🔑 Account", text: "I need help with my account" },
   ];
 
   const handleQuickReply = async (text: string) => {
@@ -501,56 +578,85 @@ const BuyerSupport = () => {
     if (session) {
       setChatInput("");
       // Optimistic update
+      const tempId = `temp-${Date.now()}`;
       const optimisticMsg: ChatMessage = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         session_id: session.id,
-        sender_type: 'visitor',
+        sender_type: "visitor",
         content: text,
         created_at: new Date().toISOString(),
       };
-      setChatMessages(prev => [...prev, optimisticMsg]);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-      
-      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
-      const { data: fnData } = await supabase.functions.invoke('buyer-auth', {
-        body: { action: 'send-chat-message', panelId: pId, sessionId: session.id, buyerId: buyer?.id, content: text }
-      });
-      if (fnData?.error) {
-        toast({ variant: "destructive", title: fnData.error });
-        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      } else if (fnData?.message) {
-        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+      setChatMessages((prev) => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke("buyer-auth", {
+          body: {
+            action: "send-chat-message",
+            panelId: resolvedPanelId,
+            sessionId: session.id,
+            buyerId: buyer?.id,
+            content: text,
+          },
+        });
+
+        if (fnError || fnData?.error) {
+          throw new Error(fnData?.error || fnError?.message);
+        }
+
+        if (fnData?.message) {
+          setChatMessages((prev) => prev.map((m) => (m.id === tempId ? fnData.message : m)));
+        }
+
+        // Refresh session list
+        fetchChats();
+      } catch (error: any) {
+        toast({ variant: "destructive", title: error.message || "Failed to send message" });
+        setChatMessages((prev) => prev.filter((m) => m.id !== tempId));
       }
     }
   };
 
-  const openTicket = (ticket: Ticket) => { setSelectedTicket(ticket); setIsTicketViewOpen(true); };
+  const openTicket = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setIsTicketViewOpen(true);
+  };
 
-  const filteredTickets = tickets.filter(ticket => {
+  const filteredTickets = tickets.filter((ticket) => {
     const matchesStatus = statusFilter === "all" || ticket.status === statusFilter;
     const matchesSearch = ticket.subject.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
   const kanbanColumns = [
-    { id: 'open', title: 'Open', tickets: filteredTickets.filter(t => t.status === 'open') },
-    { id: 'in_progress', title: 'In Progress', tickets: filteredTickets.filter(t => t.status === 'in_progress') },
-    { id: 'resolved', title: 'Resolved', tickets: filteredTickets.filter(t => t.status === 'resolved') },
-    { id: 'closed', title: 'Closed', tickets: filteredTickets.filter(t => t.status === 'closed') },
+    { id: "open", title: "Open", tickets: filteredTickets.filter((t) => t.status === "open") },
+    { id: "in_progress", title: "In Progress", tickets: filteredTickets.filter((t) => t.status === "in_progress") },
+    { id: "resolved", title: "Resolved", tickets: filteredTickets.filter((t) => t.status === "resolved") },
+    { id: "closed", title: "Closed", tickets: filteredTickets.filter((t) => t.status === "closed") },
   ];
 
   if (panelLoading || authLoading) {
-    return (<BuyerLayout><div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div></BuyerLayout>);
+    return (
+      <BuyerLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </BuyerLayout>
+    );
   }
 
   if (!buyer) {
     return (
       <BuyerLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4"><LogIn className="w-8 h-8 text-primary" /></div>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <LogIn className="w-8 h-8 text-primary" />
+          </div>
           <h2 className="text-xl font-bold mb-2">Login Required</h2>
           <p className="text-muted-foreground mb-4 text-sm">Please sign in to access support.</p>
-          <Button asChild><a href="/auth">Sign In</a></Button>
+          <Button asChild>
+            <a href="/auth">Sign In</a>
+          </Button>
         </div>
       </BuyerLayout>
     );
@@ -560,7 +666,9 @@ const BuyerSupport = () => {
     return (
       <BuyerLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4"><AlertTriangle className="w-8 h-8 text-amber-500" /></div>
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-500/10 flex items-center justify-center mb-4">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
           <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
           <p className="text-muted-foreground mb-4 text-sm">{error}</p>
           <Button onClick={fetchTickets}>Try Again</Button>
@@ -573,22 +681,40 @@ const BuyerSupport = () => {
     <BuyerLayout>
       <div className="space-y-6">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">Support Center</h1>
+            <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              Support Center
+            </h1>
             <p className="text-muted-foreground">Get help with your orders and account</p>
           </div>
           <div className="hidden md:block">
-            <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+            <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              New Ticket
+            </Button>
           </div>
         </motion.div>
 
         {/* Tabs: Tickets | Live Chat | FAQ */}
         <Tabs defaultValue="chat" className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-md">
-            <TabsTrigger value="chat" className="gap-2"><MessagesSquare className="w-4 h-4" />Live Chat</TabsTrigger>
-            <TabsTrigger value="tickets" className="gap-2"><MessageSquare className="w-4 h-4" />Tickets</TabsTrigger>
-            <TabsTrigger value="faq" className="gap-2"><HelpCircle className="w-4 h-4" />FAQ</TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2">
+              <MessagesSquare className="w-4 h-4" />
+              Live Chat
+            </TabsTrigger>
+            <TabsTrigger value="tickets" className="gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Tickets
+            </TabsTrigger>
+            <TabsTrigger value="faq" className="gap-2">
+              <HelpCircle className="w-4 h-4" />
+              FAQ
+            </TabsTrigger>
           </TabsList>
 
           {/* ===== TICKETS TAB ===== */}
@@ -597,10 +723,17 @@ const BuyerSupport = () => {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Search tickets..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 bg-card/50" />
+                <Input
+                  placeholder="Search tickets..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-card/50"
+                />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tickets</SelectItem>
                   <SelectItem value="open">Open</SelectItem>
@@ -613,14 +746,19 @@ const BuyerSupport = () => {
 
             {/* Kanban Board */}
             {loading ? (
-              <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+              </div>
             ) : filteredTickets.length === 0 ? (
               <Card className="glass-card">
                 <CardContent className="py-12 text-center">
                   <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-semibold mb-2">No tickets yet</h3>
                   <p className="text-muted-foreground mb-4">Create your first support ticket</p>
-                  <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2"><Plus className="w-4 h-4" />New Ticket</Button>
+                  <Button onClick={() => setIsNewTicketOpen(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    New Ticket
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
@@ -633,22 +771,37 @@ const BuyerSupport = () => {
                       <div className="flex items-center gap-2 px-2">
                         <StatusIcon className="w-4 h-4 text-muted-foreground" />
                         <h3 className="font-semibold">{column.title}</h3>
-                        <Badge variant="secondary" className="ml-auto">{column.tickets.length}</Badge>
+                        <Badge variant="secondary" className="ml-auto">
+                          {column.tickets.length}
+                        </Badge>
                       </div>
                       <div className="space-y-2 min-h-[200px] p-2 rounded-xl bg-muted/30">
                         <AnimatePresence>
                           {column.tickets.map((ticket) => (
-                            <motion.div key={ticket.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
-                              <Card className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200" onClick={() => openTicket(ticket)}>
+                            <motion.div
+                              key={ticket.id}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                            >
+                              <Card
+                                className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200"
+                                onClick={() => openTicket(ticket)}
+                              >
                                 <CardContent className="p-3 space-y-2">
                                   <p className="font-medium text-sm line-clamp-2">{ticket.subject}</p>
                                   <div className="flex items-center justify-between">
-                                    <Badge className={cn("text-xs", priorityConfig[ticket.priority])}>{ticket.priority}</Badge>
-                                    <span className="text-xs text-muted-foreground">{new Date(ticket.created_at).toLocaleDateString()}</span>
+                                    <Badge className={cn("text-xs", priorityConfig[ticket.priority])}>
+                                      {ticket.priority}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(ticket.created_at).toLocaleDateString()}
+                                    </span>
                                   </div>
                                   {ticket.messages?.length > 0 && (
                                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                      <MessageSquare className="w-3 h-3" />{ticket.messages.length} message{ticket.messages.length > 1 ? 's' : ''}
+                                      <MessageSquare className="w-3 h-3" />
+                                      {ticket.messages.length} message{ticket.messages.length > 1 ? "s" : ""}
                                     </div>
                                   )}
                                 </CardContent>
@@ -656,7 +809,11 @@ const BuyerSupport = () => {
                             </motion.div>
                           ))}
                         </AnimatePresence>
-                        {column.tickets.length === 0 && <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">No tickets</div>}
+                        {column.tickets.length === 0 && (
+                          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                            No tickets
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -668,14 +825,14 @@ const BuyerSupport = () => {
           {/* ===== LIVE CHAT TAB ===== */}
           <TabsContent value="chat" className="mt-4">
             <Card className="glass-card overflow-hidden">
-            <CardContent className="p-0 flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+              <CardContent className="p-0 flex flex-col" style={{ height: "calc(100vh - 280px)", minHeight: "400px" }}>
                 {/* Chat Header */}
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-border/50 bg-card/80">
                   <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                     <MessagesSquare className="w-4 h-4 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm">{panel?.name || 'Support'}</h3>
+                    <h3 className="font-semibold text-sm">{panel?.name || "Support"}</h3>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       Online
@@ -683,17 +840,27 @@ const BuyerSupport = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button
-                      variant={chatFilter === 'active' ? 'default' : 'ghost'}
+                      variant={chatFilter === "active" ? "default" : "ghost"}
                       size="sm"
                       className="text-xs h-7 px-2"
-                      onClick={() => { setChatFilter('active'); setSelectedChat(null); }}
-                    >Active</Button>
+                      onClick={() => {
+                        setChatFilter("active");
+                        setSelectedChat(null);
+                      }}
+                    >
+                      Active
+                    </Button>
                     <Button
-                      variant={chatFilter === 'archived' ? 'default' : 'ghost'}
+                      variant={chatFilter === "archived" ? "default" : "ghost"}
                       size="sm"
                       className="text-xs h-7 px-2"
-                      onClick={() => { setChatFilter('archived'); setSelectedChat(null); }}
-                    >Archived</Button>
+                      onClick={() => {
+                        setChatFilter("archived");
+                        setSelectedChat(null);
+                      }}
+                    >
+                      Archived
+                    </Button>
                   </div>
                 </div>
 
@@ -701,23 +868,25 @@ const BuyerSupport = () => {
                 <ScrollArea className="flex-1 px-4">
                   <div className="space-y-3 py-4">
                     {chatLoading ? (
-                      <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-                    ) : chatFilter === 'archived' ? (
+                      <div className="flex justify-center py-12">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : chatFilter === "archived" ? (
                       /* ===== ARCHIVED VIEW: List of closed chats for preview ===== */
                       !selectedChat ? (
                         <div className="space-y-2">
-                          {chatSessions
-                            .filter(s => s.status === 'closed' || s.status === 'archived')
-                            .length === 0 ? (
+                          {chatSessions.filter((s) => s.status === "closed" || s.status === "archived").length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-center">
                               <Clock className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
                               <h3 className="font-semibold mb-1">No Chat History</h3>
-                              <p className="text-sm text-muted-foreground">Your previous conversations will appear here</p>
+                              <p className="text-sm text-muted-foreground">
+                                Your previous conversations will appear here
+                              </p>
                             </div>
                           ) : (
                             chatSessions
-                              .filter(s => s.status === 'closed' || s.status === 'archived')
-                              .map(session => (
+                              .filter((s) => s.status === "closed" || s.status === "archived")
+                              .map((session) => (
                                 <motion.div
                                   key={session.id}
                                   initial={{ opacity: 0, y: 5 }}
@@ -727,10 +896,14 @@ const BuyerSupport = () => {
                                 >
                                   <div className="flex items-center justify-between">
                                     <p className="text-sm font-medium">Chat #{session.id.slice(0, 6)}</p>
-                                    <Badge variant="secondary" className="text-[10px]">Ended</Badge>
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      Ended
+                                    </Badge>
                                   </div>
                                   <p className="text-xs text-muted-foreground mt-1">
-                                    {session.last_message_at ? new Date(session.last_message_at).toLocaleString() : new Date(session.created_at).toLocaleString()}
+                                    {session.last_message_at
+                                      ? new Date(session.last_message_at).toLocaleString()
+                                      : new Date(session.created_at).toLocaleString()}
                                   </p>
                                 </motion.div>
                               ))
@@ -752,43 +925,57 @@ const BuyerSupport = () => {
                               <Clock className="w-3 h-3" /> Conversation ended
                             </Badge>
                           </div>
-                          {chatMessages.map(msg => (
+                          {chatMessages.map((msg) => (
                             <motion.div
                               key={msg.id}
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className={cn(
-                                "flex gap-2",
-                                msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
-                              )}
+                              className={cn("flex gap-2", msg.sender_type === "visitor" ? "flex-row-reverse" : "")}
                             >
-                              <div className={cn(
-                                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                                msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" 
-                                  : msg.sender_type === 'ai' ? "bg-violet-500 text-white"
-                                  : "bg-muted text-muted-foreground"
-                              )}>
-                                {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') 
-                                  : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" /> 
-                                  : 'S'}
+                              <div
+                                className={cn(
+                                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                                  msg.sender_type === "visitor"
+                                    ? "bg-primary text-primary-foreground"
+                                    : msg.sender_type === "ai"
+                                      ? "bg-violet-500 text-white"
+                                      : "bg-muted text-muted-foreground",
+                                )}
+                              >
+                                {msg.sender_type === "visitor" ? (
+                                  buyer?.full_name?.[0] || "Y"
+                                ) : msg.sender_type === "ai" ? (
+                                  <Bot className="w-4 h-4" />
+                                ) : (
+                                  "S"
+                                )}
                               </div>
-                              <div className={cn(
-                                "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
-                                msg.sender_type === 'visitor'
-                                  ? "bg-primary text-primary-foreground rounded-br-sm"
-                                  : msg.sender_type === 'ai'
-                                  ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
-                                  : "bg-muted rounded-bl-sm"
-                              )}>
-                                {msg.sender_type === 'ai' && (
+                              <div
+                                className={cn(
+                                  "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
+                                  msg.sender_type === "visitor"
+                                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                                    : msg.sender_type === "ai"
+                                      ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
+                                      : "bg-muted rounded-bl-sm",
+                                )}
+                              >
+                                {msg.sender_type === "ai" && (
                                   <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
                                 )}
                                 <p className="whitespace-pre-wrap">{msg.content}</p>
-                                <p className={cn(
-                                  "text-[10px] mt-1",
-                                  msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
-                                )}>
-                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                <p
+                                  className={cn(
+                                    "text-[10px] mt-1",
+                                    msg.sender_type === "visitor"
+                                      ? "text-primary-foreground/60"
+                                      : "text-muted-foreground",
+                                  )}
+                                >
+                                  {new Date(msg.created_at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </p>
                               </div>
                             </motion.div>
@@ -799,9 +986,9 @@ const BuyerSupport = () => {
                     ) : (
                       /* ===== ACTIVE VIEW: Show current active chat directly (no list) ===== */
                       (() => {
-                        const activeSession = chatSessions.find(s => s.status === 'active' || s.status === 'open');
+                        const activeSession = chatSessions.find((s) => s.status === "active" || s.status === "open");
                         const currentChat = selectedChat || activeSession;
-                        
+
                         if (!currentChat) {
                           // No active chat — show start prompt
                           return (
@@ -810,61 +997,77 @@ const BuyerSupport = () => {
                                 <MessagesSquare className="w-8 h-8 text-primary" />
                               </div>
                               <h3 className="font-semibold mb-1">Start a Conversation</h3>
-                              <p className="text-sm text-muted-foreground mb-4">Type a message below or tap a quick reply to chat with support</p>
+                              <p className="text-sm text-muted-foreground mb-4">
+                                Type a message below or tap a quick reply to chat with support
+                              </p>
                             </div>
                           );
                         }
-                        
+
                         // Auto-select active session if not already selected
                         if (!selectedChat && activeSession) {
                           setTimeout(() => setSelectedChat(activeSession), 0);
                         }
-                        
+
                         return (
                           <>
-                            {chatMessages.map(msg => (
+                            {chatMessages.map((msg) => (
                               <motion.div
                                 key={msg.id}
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={cn(
-                                  "flex gap-2",
-                                  msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
-                                )}
+                                className={cn("flex gap-2", msg.sender_type === "visitor" ? "flex-row-reverse" : "")}
                               >
-                                <div className={cn(
-                                  "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                                  msg.sender_type === 'visitor' ? "bg-primary text-primary-foreground" 
-                                    : msg.sender_type === 'ai' ? "bg-violet-500 text-white"
-                                    : "bg-muted text-muted-foreground"
-                                )}>
-                                  {msg.sender_type === 'visitor' ? (buyer?.full_name?.[0] || 'Y') 
-                                    : msg.sender_type === 'ai' ? <Bot className="w-4 h-4" /> 
-                                    : 'S'}
+                                <div
+                                  className={cn(
+                                    "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                                    msg.sender_type === "visitor"
+                                      ? "bg-primary text-primary-foreground"
+                                      : msg.sender_type === "ai"
+                                        ? "bg-violet-500 text-white"
+                                        : "bg-muted text-muted-foreground",
+                                  )}
+                                >
+                                  {msg.sender_type === "visitor" ? (
+                                    buyer?.full_name?.[0] || "Y"
+                                  ) : msg.sender_type === "ai" ? (
+                                    <Bot className="w-4 h-4" />
+                                  ) : (
+                                    "S"
+                                  )}
                                 </div>
-                                <div className={cn(
-                                  "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
-                                  msg.sender_type === 'visitor'
-                                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                                    : msg.sender_type === 'ai'
-                                    ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
-                                    : "bg-muted rounded-bl-sm"
-                                )}>
-                                  {msg.sender_type === 'ai' && (
+                                <div
+                                  className={cn(
+                                    "max-w-[75%] px-3 py-2 rounded-2xl text-sm",
+                                    msg.sender_type === "visitor"
+                                      ? "bg-primary text-primary-foreground rounded-br-sm"
+                                      : msg.sender_type === "ai"
+                                        ? "bg-violet-500/10 border border-violet-500/20 rounded-bl-sm"
+                                        : "bg-muted rounded-bl-sm",
+                                  )}
+                                >
+                                  {msg.sender_type === "ai" && (
                                     <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
                                   )}
                                   <p className="whitespace-pre-wrap">{msg.content}</p>
-                                  <p className={cn(
-                                    "text-[10px] mt-1",
-                                    msg.sender_type === 'visitor' ? "text-primary-foreground/60" : "text-muted-foreground"
-                                  )}>
-                                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  <p
+                                    className={cn(
+                                      "text-[10px] mt-1",
+                                      msg.sender_type === "visitor"
+                                        ? "text-primary-foreground/60"
+                                        : "text-muted-foreground",
+                                    )}
+                                  >
+                                    {new Date(msg.created_at).toLocaleTimeString([], {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })}
                                   </p>
                                 </div>
                               </motion.div>
                             ))}
                             {/* AI mode indicator + toggle + End Chat */}
-                            {chatMessages.length > 0 && currentChat.status !== 'closed' && (
+                            {chatMessages.length > 0 && currentChat.status !== "closed" && (
                               <div className="flex flex-col items-center gap-2 pt-3">
                                 {aiMode && (
                                   <Badge variant="secondary" className="gap-1 text-xs">
@@ -878,7 +1081,7 @@ const BuyerSupport = () => {
                                     className="text-xs gap-1.5 rounded-full"
                                     onClick={() => setAiMode(!aiMode)}
                                   >
-                                    <Bot className="w-3 h-3" /> {aiMode ? 'Continue with Human' : 'Continue with AI'}
+                                    <Bot className="w-3 h-3" /> {aiMode ? "Continue with Human" : "Continue with AI"}
                                   </Button>
                                   <Button
                                     variant="destructive"
@@ -900,19 +1103,35 @@ const BuyerSupport = () => {
                               >
                                 <p className="text-sm font-medium">How was your experience?</p>
                                 <div className="flex gap-1">
-                                  {[1, 2, 3, 4, 5].map(star => (
+                                  {[1, 2, 3, 4, 5].map((star) => (
                                     <button
                                       key={star}
-                                      onClick={() => { setChatRating(star); handleRateChat(star); }}
+                                      onClick={() => {
+                                        setChatRating(star);
+                                        handleRateChat(star);
+                                      }}
                                       className="p-1 hover:scale-110 transition-transform"
                                     >
                                       <Star
-                                        className={cn("w-7 h-7", star <= chatRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")}
+                                        className={cn(
+                                          "w-7 h-7",
+                                          star <= chatRating
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-muted-foreground",
+                                        )}
                                       />
                                     </button>
                                   ))}
                                 </div>
-                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setShowRating(false); setSelectedChat(null); }}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => {
+                                    setShowRating(false);
+                                    setSelectedChat(null);
+                                  }}
+                                >
                                   Skip
                                 </Button>
                               </motion.div>
@@ -926,7 +1145,7 @@ const BuyerSupport = () => {
                 </ScrollArea>
 
                 {/* Quick Replies — only when no active chat and in active filter */}
-                {chatFilter === 'active' && !chatSessions.find(s => s.status === 'active' || s.status === 'open') && (
+                {chatFilter === "active" && !chatSessions.find((s) => s.status === "active" || s.status === "open") && (
                   <div className="px-4 py-2 flex gap-2 flex-wrap border-t border-border/30">
                     {quickReplies.map((qr, i) => (
                       <Button
@@ -943,7 +1162,7 @@ const BuyerSupport = () => {
                 )}
 
                 {/* Input Area — hidden for archived view or closed chats */}
-                {chatFilter === 'active' && (!selectedChat || selectedChat.status !== 'closed') && (
+                {chatFilter === "active" && (!selectedChat || selectedChat.status !== "closed") && (
                   <div className="px-4 py-3 border-t border-border/50 bg-card/80">
                     <div className="flex gap-2">
                       <Input
@@ -951,15 +1170,18 @@ const BuyerSupport = () => {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={async (e) => {
-                          if (e.key === 'Enter' && chatInput.trim()) {
+                          if (e.key === "Enter" && chatInput.trim()) {
                             // Check if there's already an active session
-                            const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+                            const hasActive = chatSessions.some((s) => s.status === "active" || s.status === "open");
                             let session = selectedChat;
                             if (!session && !hasActive) {
                               session = await handleStartChat();
                             } else if (!session && hasActive) {
-                              const active = chatSessions.find(s => s.status === 'active' || s.status === 'open');
-                              if (active) { setSelectedChat(active); session = active; }
+                              const active = chatSessions.find((s) => s.status === "active" || s.status === "open");
+                              if (active) {
+                                setSelectedChat(active);
+                                session = active;
+                              }
                             }
                             if (session) handleSendChatMessage(session);
                           }
@@ -970,13 +1192,16 @@ const BuyerSupport = () => {
                         size="icon"
                         disabled={!chatInput.trim()}
                         onClick={async () => {
-                          const hasActive = chatSessions.some(s => s.status === 'active' || s.status === 'open');
+                          const hasActive = chatSessions.some((s) => s.status === "active" || s.status === "open");
                           let session = selectedChat;
                           if (!session && !hasActive) {
                             session = await handleStartChat();
                           } else if (!session && hasActive) {
-                            const active = chatSessions.find(s => s.status === 'active' || s.status === 'open');
-                            if (active) { setSelectedChat(active); session = active; }
+                            const active = chatSessions.find((s) => s.status === "active" || s.status === "open");
+                            if (active) {
+                              setSelectedChat(active);
+                              session = active;
+                            }
                           }
                           if (session) handleSendChatMessage(session);
                         }}
@@ -997,7 +1222,9 @@ const BuyerSupport = () => {
             <Card className="glass-card">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="p-3 rounded-xl bg-primary/10"><HelpCircle className="w-6 h-6 text-primary" /></div>
+                  <div className="p-3 rounded-xl bg-primary/10">
+                    <HelpCircle className="w-6 h-6 text-primary" />
+                  </div>
                   <div>
                     <h2 className="font-semibold text-lg">Frequently Asked Questions</h2>
                     <p className="text-sm text-muted-foreground">Find quick answers to common questions</p>
@@ -1009,9 +1236,7 @@ const BuyerSupport = () => {
                       <AccordionTrigger className="text-sm font-medium hover:no-underline">
                         {faq.question}
                       </AccordionTrigger>
-                      <AccordionContent className="text-sm text-muted-foreground">
-                        {faq.answer}
-                      </AccordionContent>
+                      <AccordionContent className="text-sm text-muted-foreground">{faq.answer}</AccordionContent>
                     </AccordionItem>
                   ))}
                 </Accordion>
@@ -1025,19 +1250,30 @@ const BuyerSupport = () => {
           <DialogContent className="glass-card border-primary/20">
             <DialogHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10"><MessageSquare className="w-5 h-5 text-primary" /></div>
-                <div><DialogTitle>Create New Ticket</DialogTitle><DialogDescription>Describe your issue and we'll help you</DialogDescription></div>
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle>Create New Ticket</DialogTitle>
+                  <DialogDescription>Describe your issue and we'll help you</DialogDescription>
+                </div>
               </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Subject</Label>
-                <Input placeholder="Brief description of your issue" value={newTicket.subject} onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })} />
+                <Input
+                  placeholder="Brief description of your issue"
+                  value={newTicket.subject}
+                  onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>
                 <Select value={newTicket.priority} onValueChange={(v) => setNewTicket({ ...newTicket, priority: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
@@ -1048,12 +1284,21 @@ const BuyerSupport = () => {
               </div>
               <div className="space-y-2">
                 <Label>Message</Label>
-                <Textarea placeholder="Describe your issue in detail..." value={newTicket.message} onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })} rows={4} />
+                <Textarea
+                  placeholder="Describe your issue in detail..."
+                  value={newTicket.message}
+                  onChange={(e) => setNewTicket({ ...newTicket, message: e.target.value })}
+                  rows={4}
+                />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateTicket} disabled={submitting}>{submitting ? "Creating..." : "Create Ticket"}</Button>
+              <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateTicket} disabled={submitting}>
+                {submitting ? "Creating..." : "Create Ticket"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1065,15 +1310,31 @@ const BuyerSupport = () => {
               <div className="space-y-1">
                 <DialogTitle className="pr-8">{selectedTicket?.subject}</DialogTitle>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge className={cn(statusConfig[selectedTicket?.status || 'open'].color)}>{statusConfig[selectedTicket?.status || 'open'].label}</Badge>
-                  <Badge className={cn(priorityConfig[selectedTicket?.priority || 'medium'])}>{selectedTicket?.priority}</Badge>
-                  {(selectedTicket?.status === 'open' || selectedTicket?.status === 'in_progress') && (
+                  <Badge className={cn(statusConfig[selectedTicket?.status || "open"].color)}>
+                    {statusConfig[selectedTicket?.status || "open"].label}
+                  </Badge>
+                  <Badge className={cn(priorityConfig[selectedTicket?.priority || "medium"])}>
+                    {selectedTicket?.priority}
+                  </Badge>
+                  {(selectedTicket?.status === "open" || selectedTicket?.status === "in_progress") && (
                     <>
-                      <Button size="sm" variant="outline" className="ml-auto text-xs gap-1" onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}>
-                        <CheckCircle className="w-3 h-3" />Resolve
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-auto text-xs gap-1"
+                        onClick={() => selectedTicket && handleResolveTicket(selectedTicket.id)}
+                      >
+                        <CheckCircle className="w-3 h-3" />
+                        Resolve
                       </Button>
-                      <Button size="sm" variant="destructive" className="text-xs gap-1" onClick={() => selectedTicket && handleCloseTicket(selectedTicket.id)}>
-                        <XCircle className="w-3 h-3" />Close
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="text-xs gap-1"
+                        onClick={() => selectedTicket && handleCloseTicket(selectedTicket.id)}
+                      >
+                        <XCircle className="w-3 h-3" />
+                        Close
                       </Button>
                     </>
                   )}
@@ -1083,19 +1344,44 @@ const BuyerSupport = () => {
             <ScrollArea className="flex-1 pr-4">
               <div className="space-y-4 py-4">
                 {(selectedTicket?.messages || []).map((msg: Message, index: number) => (
-                  <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
-                    className={cn("p-3 rounded-xl max-w-[85%]", (msg.sender === 'buyer' || msg.sender === 'user') ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={cn(
+                      "p-3 rounded-xl max-w-[85%]",
+                      msg.sender === "buyer" || msg.sender === "user"
+                        ? "ml-auto bg-primary text-primary-foreground"
+                        : "bg-muted",
+                    )}
                   >
                     <p className="text-sm">{msg.content}</p>
-                    <p className={cn("text-xs mt-1", (msg.sender === 'buyer' || msg.sender === 'user') ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
+                    <p
+                      className={cn(
+                        "text-xs mt-1",
+                        msg.sender === "buyer" || msg.sender === "user"
+                          ? "text-primary-foreground/70"
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {new Date(msg.timestamp).toLocaleString()}
+                    </p>
                   </motion.div>
                 ))}
               </div>
             </ScrollArea>
-            {selectedTicket?.status !== 'closed' && selectedTicket?.status !== 'resolved' && (
+            {selectedTicket?.status !== "closed" && selectedTicket?.status !== "resolved" && (
               <div className="flex gap-2 pt-4 border-t">
-                <Input placeholder="Type your message..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()} />
-                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()}><Send className="w-4 h-4" /></Button>
+                <Input
+                  placeholder="Type your message..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                />
+                <Button onClick={handleSendMessage} disabled={submitting || !newMessage.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
               </div>
             )}
           </DialogContent>
