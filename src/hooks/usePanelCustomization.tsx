@@ -92,8 +92,8 @@ export function usePanelCustomization(panelId: string | undefined) {
       return data;
     },
     enabled: !!panelId,
-    staleTime: 1000, // Reduced to 1 second for better preview responsiveness
-    refetchInterval: 2000, // Poll every 2 seconds for preview updates
+    staleTime: 1000,
+    refetchInterval: 2000,
   });
 
   // Process and memoize customization data
@@ -108,8 +108,8 @@ export function usePanelCustomization(panelId: string | undefined) {
 
     // Merge base branding with defaults
     const baseData = {
-      ...themeDefaultsData, // Apply theme defaults first
-      ...branding, // Then override with saved values
+      ...themeDefaultsData,
+      ...branding,
 
       // Critical fields from database
       selectedTheme,
@@ -191,8 +191,8 @@ export function usePanelCustomization(panelId: string | undefined) {
       if (updates.selectedTheme && updates.selectedTheme !== currentData.selectedTheme) {
         const newThemeDefaults = getThemeDefaults(updates.selectedTheme);
         mergedUpdates = {
-          ...newThemeDefaults, // Apply new theme defaults
-          ...updates, // Override with explicit updates
+          ...newThemeDefaults,
+          ...updates,
           // Preserve user content
           heroTitle: updates.heroTitle ?? currentData.heroTitle ?? "",
           heroSubtitle: updates.heroSubtitle ?? currentData.heroSubtitle ?? "",
@@ -205,9 +205,9 @@ export function usePanelCustomization(panelId: string | undefined) {
       }
 
       // Build complete custom_branding object preserving existing data
-      const customBranding = {
-        ...currentData, // Preserve existing values
-        ...mergedUpdates, // Apply new updates
+      const customBranding: Record<string, any> = {
+        ...currentData,
+        ...mergedUpdates,
 
         // Ensure critical fields are set
         selectedTheme: mergedUpdates.selectedTheme || currentData.selectedTheme || "default",
@@ -239,9 +239,9 @@ export function usePanelCustomization(panelId: string | undefined) {
         .update({
           custom_branding: customBranding,
           theme_type: customBranding.selectedTheme,
-          primary_color: customBranding.primaryColor,
-          secondary_color: customBranding.secondaryColor,
-          logo_url: customBranding.logoUrl,
+          primary_color: mergedUpdates.primaryColor ?? currentData.primaryColor,
+          secondary_color: mergedUpdates.secondaryColor ?? currentData.secondaryColor,
+          logo_url: mergedUpdates.logoUrl ?? currentData.logoUrl,
           updated_at: new Date().toISOString(),
         })
         .eq("id", panelId);
@@ -252,7 +252,6 @@ export function usePanelCustomization(panelId: string | undefined) {
       try {
         localStorage.setItem("panelDesignUpdatedAt", String(Date.now()));
         window.dispatchEvent(new Event("panelDesignUpdated"));
-        // Also dispatch storage event for cross-tab sync
         window.dispatchEvent(
           new StorageEvent("storage", {
             key: "panelDesignUpdatedAt",
@@ -264,14 +263,10 @@ export function usePanelCustomization(panelId: string | undefined) {
       }
     },
     onSuccess: () => {
-      // Immediate invalidation for preview
       queryClient.invalidateQueries({ queryKey: ["panel-customization", panelId] });
       queryClient.invalidateQueries({ queryKey: ["panel-buyer-theme", panelId] });
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
-
-      // Force immediate refetch
       queryClient.refetchQueries({ queryKey: ["panel-customization", panelId], exact: true });
-
       toast({ title: "Design saved successfully!" });
     },
     onError: (error: any) => {
