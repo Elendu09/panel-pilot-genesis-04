@@ -71,7 +71,7 @@ interface ChatSession {
   last_message?: string;
 }
 
-type SenderType = 'visitor' | 'owner';
+type SenderType = 'visitor' | 'owner' | 'ai';
 
 interface ChatMessage {
   id: string;

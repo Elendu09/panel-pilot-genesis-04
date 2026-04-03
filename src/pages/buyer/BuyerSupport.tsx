@@ -345,9 +345,12 @@ const BuyerSupport = () => {
   };
 
   const handleResolveTicket = async (ticketId: string) => {
+    if (!buyer?.id) return;
     try {
-      const { error } = await supabase.from('support_tickets').update({ status: 'resolved', updated_at: new Date().toISOString() }).eq('id', ticketId);
-      if (error) throw error;
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: { action: 'close-ticket', panelId: resolvedPanelId || '', buyerId: buyer.id, ticketId }
+      });
+      if (fnError || fnData?.error) throw new Error(fnData?.error || 'Failed to resolve ticket');
       toast({ title: "Ticket resolved" });
       if (selectedTicket?.id === ticketId) setSelectedTicket({ ...selectedTicket, status: 'resolved' });
       fetchTickets();
