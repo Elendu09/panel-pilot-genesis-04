@@ -371,35 +371,72 @@ const BuyerSupport = () => {
     const msgContent = chatInput.trim();
     setChatInput("");
     
-    // Optimistic update: show message immediately in UI
-    const optimisticMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      session_id: activeSession.id,
-      sender_type: 'visitor',
-      content: msgContent,
-      created_at: new Date().toISOString(),
-    };
-    setChatMessages(prev => [...prev, optimisticMsg]);
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
-    
-    const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
-    const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
-      body: {
-        action: 'send-chat-message',
-        panelId: pId,
-        sessionId: activeSession.id,
-        buyerId: buyer.id,
+    if (aiMode) {
+      // AI mode: send through AI chat action which saves user msg + gets AI reply
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: activeSession.id,
+        sender_type: 'visitor',
         content: msgContent,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
+      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'send-ai-chat-message',
+          panelId: pId,
+          sessionId: activeSession.id,
+          buyerId: buyer.id,
+          content: msgContent,
+        }
+      });
+      if (fnError || fnData?.error) {
+        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
+        setChatInput(msgContent);
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else {
+        // Replace optimistic with real user msg and add AI reply
+        setChatMessages(prev => {
+          const updated = prev.map(m => m.id === optimisticMsg.id ? fnData.userMessage : m);
+          if (fnData.aiMessage) {
+            updated.push(fnData.aiMessage);
+          }
+          return updated;
+        });
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
-    });
-    if (fnError || fnData?.error) {
-      toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
-      setChatInput(msgContent); // restore on failure
-      // Remove optimistic message
-      setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-    } else if (fnData?.message) {
-      // Replace optimistic message with real one from server
-      setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+    } else {
+      // Human mode: regular send
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        session_id: activeSession.id,
+        sender_type: 'visitor',
+        content: msgContent,
+        created_at: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, optimisticMsg]);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      
+      const pId = resolvedPanelId || localStorage.getItem('current_panel_id') || '';
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('buyer-auth', {
+        body: {
+          action: 'send-chat-message',
+          panelId: pId,
+          sessionId: activeSession.id,
+          buyerId: buyer.id,
+          content: msgContent,
+        }
+      });
+      if (fnError || fnData?.error) {
+        toast({ variant: "destructive", title: fnData?.error || "Failed to send message" });
+        setChatInput(msgContent);
+        setChatMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      } else if (fnData?.message) {
+        setChatMessages(prev => prev.map(m => m.id === optimisticMsg.id ? fnData.message : m));
+      }
     }
   };
 
