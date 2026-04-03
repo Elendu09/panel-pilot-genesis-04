@@ -549,6 +549,8 @@ serve(async (req) => {
         return await handleEndChat(supabaseAdmin, body);
       case 'rate-chat':
         return await handleRateChat(supabaseAdmin, body);
+      case 'send-ai-chat-message':
+        return await handleSendAIChatMessage(supabaseAdmin, body);
       case 'mfa-enroll':
         return await handleMfaEnroll(supabaseAdmin, body);
       case 'mfa-verify':
