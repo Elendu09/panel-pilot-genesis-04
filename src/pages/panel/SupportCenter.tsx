@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MessageSquare, 
-  Search, 
-  Plus, 
-  Clock, 
-  AlertCircle, 
+import {
+  MessageSquare,
+  Search,
+  Plus,
+  Clock,
+  AlertCircle,
   CheckCircle,
   Send,
   Users,
@@ -28,7 +28,10 @@ import {
   Trash2,
   Edit,
   GripVertical,
-  HelpCircle
+  HelpCircle,
+  Loader2,
+  TicketX,
+  RefreshCw,
 } from "lucide-react";
 import { KnowledgeBase } from "@/components/support/KnowledgeBase";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +45,7 @@ interface TicketMessage {
   id: string;
   content: string;
   sender: string;
-  sender_type: 'user' | 'admin' | 'panel_owner';
+  sender_type: "user" | "admin" | "panel_owner";
   created_at: string;
 }
 
@@ -66,22 +69,23 @@ const SupportCenter = () => {
   const { profile } = useAuth();
   const { panel } = useTenant();
   const isMobile = useIsMobile();
-  
+
   const [activeTab, setActiveTab] = useState("livechat");
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [newMessage, setNewMessage] = useState("");
   const [ticketSheetOpen, setTicketSheetOpen] = useState(false);
-  
+
   // Customer tickets (user_to_panel)
   const [customerTickets, setCustomerTickets] = useState<Ticket[]>([]);
   const [loadingCustomerTickets, setLoadingCustomerTickets] = useState(true);
-  
+  const [customerTicketsError, setCustomerTicketsError] = useState<string | null>(null);
+
   // Platform tickets (panel_to_admin)
   const [platformTickets, setPlatformTickets] = useState<Ticket[]>([]);
   const [loadingPlatformTickets, setLoadingPlatformTickets] = useState(true);
-  
+
   // New platform ticket dialog
   const [newTicketDialogOpen, setNewTicketDialogOpen] = useState(false);
   const [newTicketSubject, setNewTicketSubject] = useState("");
@@ -108,13 +112,18 @@ const SupportCenter = () => {
     }
   }, [panel?.id, profile?.id]);
 
+  // Auto-refresh customer tickets every 30s
+  useEffect(() => {
+    if (!panel?.id) return;
+    const interval = setInterval(() => {
+      fetchCustomerTickets(true); // Silent refresh
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [panel?.id]);
+
   const fetchPanelFaqs = async () => {
     if (!panel?.id) return;
-    const { data } = await supabase
-      .from('panels')
-      .select('custom_branding')
-      .eq('id', panel.id)
-      .single();
+    const { data } = await supabase.from("panels").select("custom_branding").eq("id", panel.id).single();
     const branding = (data?.custom_branding as any) || {};
     setPanelFaqs(branding.faqs || []);
   };
@@ -123,25 +132,21 @@ const SupportCenter = () => {
     if (!panel?.id) return;
     setSavingFaqs(true);
     try {
-      const { data: existing } = await supabase
-        .from('panels')
-        .select('custom_branding')
-        .eq('id', panel.id)
-        .single();
+      const { data: existing } = await supabase.from("panels").select("custom_branding").eq("id", panel.id).single();
       const existingBranding = (existing?.custom_branding as any) || {};
-      
+
       const { error } = await supabase
-        .from('panels')
+        .from("panels")
         .update({
-          custom_branding: { ...existingBranding, faqs }
+          custom_branding: { ...existingBranding, faqs },
         })
-        .eq('id', panel.id);
-      
+        .eq("id", panel.id);
+
       if (error) throw error;
       setPanelFaqs(faqs);
       toast({ title: "FAQs updated", description: "Your tenant users will see these FAQs immediately." });
     } catch (err) {
-      console.error('Error saving FAQs:', err);
+      console.error("Error saving FAQs:", err);
       toast({ variant: "destructive", title: "Failed to save FAQs" });
     } finally {
       setSavingFaqs(false);
@@ -179,47 +184,58 @@ const SupportCenter = () => {
     savePanelFaqs(updated);
   };
 
-  const fetchCustomerTickets = async () => {
-    if (!panel?.id) return;
-    setLoadingCustomerTickets(true);
-    try {
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('panel_id', panel.id)
-        .eq('ticket_type', 'user_to_panel')
-        .order('created_at', { ascending: false });
+  const fetchCustomerTickets = useCallback(
+    async (silent = false) => {
+      if (!panel?.id) return;
+      if (!silent) setLoadingCustomerTickets(true);
+      setCustomerTicketsError(null);
+      try {
+        const { data, error } = await supabase
+          .from("support_tickets")
+          .select("*")
+          .eq("panel_id", panel.id)
+          .eq("ticket_type", "user_to_panel")
+          .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setCustomerTickets((data || []).map(ticket => ({
-        ...ticket,
-        messages: Array.isArray(ticket.messages) ? ticket.messages as unknown as TicketMessage[] : []
-      })));
-    } catch (error) {
-      console.error('Error fetching customer tickets:', error);
-    } finally {
-      setLoadingCustomerTickets(false);
-    }
-  };
+        if (error) throw error;
+        setCustomerTickets(
+          (data || []).map((ticket) => ({
+            ...ticket,
+            messages: Array.isArray(ticket.messages) ? (ticket.messages as unknown as TicketMessage[]) : [],
+          })),
+        );
+      } catch (error: any) {
+        console.error("Error fetching customer tickets:", error);
+        if (!silent) {
+          setCustomerTicketsError(error.message || "Failed to load tickets");
+        }
+      } finally {
+        if (!silent) setLoadingCustomerTickets(false);
+      }
+    },
+    [panel?.id],
+  );
 
   const fetchPlatformTickets = async () => {
     if (!profile?.id) return;
     setLoadingPlatformTickets(true);
     try {
       const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', profile.id)
-        .eq('ticket_type', 'panel_to_admin')
-        .order('created_at', { ascending: false });
+        .from("support_tickets")
+        .select("*")
+        .eq("user_id", profile.id)
+        .eq("ticket_type", "panel_to_admin")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setPlatformTickets((data || []).map(ticket => ({
-        ...ticket,
-        messages: Array.isArray(ticket.messages) ? ticket.messages as unknown as TicketMessage[] : []
-      })));
+      setPlatformTickets(
+        (data || []).map((ticket) => ({
+          ...ticket,
+          messages: Array.isArray(ticket.messages) ? (ticket.messages as unknown as TicketMessage[]) : [],
+        })),
+      );
     } catch (error) {
-      console.error('Error fetching platform tickets:', error);
+      console.error("Error fetching platform tickets:", error);
     } finally {
       setLoadingPlatformTickets(false);
     }
@@ -234,27 +250,25 @@ const SupportCenter = () => {
         id: crypto.randomUUID(),
         content: newTicketMessage,
         sender: profile.full_name || profile.email,
-        sender_type: 'panel_owner',
-        created_at: new Date().toISOString()
+        sender_type: "panel_owner",
+        created_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: profile.id,
-          panel_id: panel?.id,
-          subject: `[${newTicketCategory.toUpperCase()}] ${newTicketSubject}`,
-          priority: newTicketPriority,
-          status: 'open',
-          ticket_type: 'panel_to_admin',
-          messages: [initialMessage] as any
-        });
+      const { error } = await supabase.from("support_tickets").insert({
+        user_id: profile.id,
+        panel_id: panel?.id,
+        subject: `[${newTicketCategory.toUpperCase()}] ${newTicketSubject}`,
+        priority: newTicketPriority,
+        status: "open",
+        ticket_type: "panel_to_admin",
+        messages: [initialMessage] as any,
+      });
 
       if (error) throw error;
 
       toast({
         title: "Ticket Created",
-        description: "Your support ticket has been submitted to the platform admin."
+        description: "Your support ticket has been submitted to the platform admin.",
       });
 
       setNewTicketDialogOpen(false);
@@ -264,11 +278,11 @@ const SupportCenter = () => {
       setNewTicketPriority("medium");
       fetchPlatformTickets();
     } catch (error) {
-      console.error('Error creating ticket:', error);
+      console.error("Error creating ticket:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create support ticket"
+        description: "Failed to create support ticket",
       });
     } finally {
       setSubmittingTicket(false);
@@ -283,23 +297,23 @@ const SupportCenter = () => {
       const newMessageObj: TicketMessage = {
         id: crypto.randomUUID(),
         content: newMessage,
-        sender: profile?.full_name || 'Panel Owner',
-        sender_type: 'panel_owner',
-        created_at: new Date().toISOString()
+        sender: profile?.full_name || "Panel Owner",
+        sender_type: "panel_owner",
+        created_at: new Date().toISOString(),
       };
 
       await supabase
-        .from('support_tickets')
+        .from("support_tickets")
         .update({
-          messages: [...currentMessages, newMessageObj] as any
+          messages: [...currentMessages, newMessageObj] as any,
         })
-        .eq('id', ticket.id);
+        .eq("id", ticket.id);
 
       toast({
         title: "Reply Sent",
-        description: isPlatformTicket 
+        description: isPlatformTicket
           ? "Your reply has been sent to platform support."
-          : "Your reply has been sent to the customer."
+          : "Your reply has been sent to the customer.",
       });
 
       setNewMessage("");
@@ -308,24 +322,45 @@ const SupportCenter = () => {
       } else {
         fetchCustomerTickets();
       }
-      
-      // Update selected ticket messages in state
-      setSelectedTicket(prev => prev ? {
-        ...prev,
-        messages: [...currentMessages, newMessageObj]
-      } : null);
+
+      setSelectedTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: [...currentMessages, newMessageObj],
+            }
+          : null,
+      );
     } catch (error) {
-      console.error('Error sending reply:', error);
+      console.error("Error sending reply:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to send reply"
+        description: "Failed to send reply",
       });
     }
   };
 
+  const handleUpdateTicketStatus = async (ticketId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq("id", ticketId);
+
+      if (error) throw error;
+
+      toast({ title: `Ticket ${newStatus === "resolved" ? "resolved" : "updated"}` });
+
+      setSelectedTicket((prev) => (prev ? { ...prev, status: newStatus } : null));
+      fetchCustomerTickets(true);
+    } catch (error) {
+      toast({ variant: "destructive", title: "Failed to update ticket" });
+    }
+  };
+
   const filterTickets = (tickets: Ticket[]) => {
-    return tickets.filter(ticket => {
+    return tickets.filter((ticket) => {
       const matchesSearch = ticket.subject.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesFilter = filterStatus === "all" || ticket.status === filterStatus;
       return matchesSearch && matchesFilter;
@@ -334,25 +369,38 @@ const SupportCenter = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "open": return "destructive";
-      case "in_progress": return "secondary";
-      case "resolved": return "default";
-      default: return "secondary";
+      case "open":
+        return "destructive";
+      case "in_progress":
+        return "secondary";
+      case "resolved":
+        return "default";
+      default:
+        return "secondary";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "high": return "text-red-500";
-      case "medium": return "text-amber-500";
-      case "low": return "text-emerald-500";
-      default: return "text-muted-foreground";
+      case "high":
+        return "text-red-500";
+      case "urgent":
+        return "text-red-600";
+      case "medium":
+        return "text-amber-500";
+      case "low":
+        return "text-emerald-500";
+      default:
+        return "text-muted-foreground";
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString() + " " + 
-           new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return (
+      new Date(dateString).toLocaleDateString() +
+      " " +
+      new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    );
   };
 
   const handleTicketSelect = (ticket: Ticket) => {
@@ -361,6 +409,63 @@ const SupportCenter = () => {
       setTicketSheetOpen(true);
     }
   };
+
+  // Enhanced Empty State Component
+  const EmptyTicketsView = ({ type }: { type: "customer" | "platform" }) => (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+        <TicketX className="w-10 h-10 text-muted-foreground/50" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">
+        {type === "customer" ? "No Customer Tickets" : "No Platform Tickets"}
+      </h3>
+      <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+        {type === "customer"
+          ? "Customer support tickets will appear here when your users submit them through their panel."
+          : "You haven't submitted any platform support tickets yet."}
+      </p>
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => (type === "customer" ? fetchCustomerTickets() : fetchPlatformTickets())}
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </Button>
+        {type === "platform" && (
+          <Button size="sm" className="gap-2" onClick={() => setNewTicketDialogOpen(true)}>
+            <Plus className="w-4 h-4" />
+            Create Ticket
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Enhanced Loading State Component
+  const LoadingTicketsView = () => (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <Loader2 className="w-10 h-10 animate-spin text-primary/50 mb-4" />
+      <p className="text-sm text-muted-foreground">Loading tickets...</p>
+    </div>
+  );
+
+  // Error State Component
+  const ErrorTicketsView = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+        <AlertCircle className="w-8 h-8 text-destructive" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">Failed to load tickets</h3>
+      <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">{message}</p>
+      <Button variant="outline" size="sm" className="gap-2" onClick={onRetry}>
+        <RefreshCw className="w-4 h-4" />
+        Try Again
+      </Button>
+    </div>
+  );
 
   // Mobile Ticket Card Component
   const TicketCard = ({ ticket, onClick }: { ticket: Ticket; onClick: () => void }) => (
@@ -386,34 +491,30 @@ const SupportCenter = () => {
     </div>
   );
 
-  // Ticket Details Content (used in both sheet and desktop view)
+  // Ticket Details Content
   const TicketDetailsContent = ({ ticket, isPlatformTicket }: { ticket: Ticket; isPlatformTicket: boolean }) => (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-1">
         {ticket.messages?.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            No messages yet
-          </div>
+          <div className="text-center text-muted-foreground py-8">No messages yet</div>
         ) : (
           ticket.messages?.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.sender_type === 'panel_owner' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.sender_type === "panel_owner" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[85%] px-4 py-2 rounded-2xl ${
-                  message.sender_type === 'panel_owner'
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : message.sender_type === 'admin'
-                    ? 'bg-violet-500/20 text-violet-400 rounded-bl-sm'
-                    : 'bg-muted rounded-bl-sm'
+                  message.sender_type === "panel_owner"
+                    ? "bg-primary text-primary-foreground rounded-br-sm"
+                    : message.sender_type === "admin"
+                      ? "bg-violet-500/20 text-violet-400 rounded-bl-sm"
+                      : "bg-muted rounded-bl-sm"
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium">{message.sender}</span>
-                  <span className="text-xs opacity-70">
-                    {formatDate(message.created_at)}
-                  </span>
+                  <span className="text-xs opacity-70">{formatDate(message.created_at)}</span>
                 </div>
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
@@ -421,45 +522,65 @@ const SupportCenter = () => {
           ))
         )}
       </div>
-      
-      <div className="border-t border-border pt-4 pb-safe">
-        <div className="flex gap-2">
-          <Textarea
-            placeholder="Type your reply..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            className="flex-1 min-h-[80px]"
-            rows={3}
-          />
-        </div>
-        <div className="flex gap-2 mt-2">
-          <Button
-            onClick={() => handleSendReply(ticket, isPlatformTicket)}
-            disabled={!newMessage.trim()}
-            className="flex-1 sm:flex-none"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send
-          </Button>
-          {!isPlatformTicket && (
-            <Button variant="outline" size="sm" className="hidden sm:flex">
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Resolve
+
+      {ticket.status !== "closed" && ticket.status !== "resolved" && (
+        <div className="border-t border-border pt-4 pb-safe">
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Type your reply..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              className="flex-1 min-h-[80px]"
+              rows={3}
+            />
+          </div>
+          <div className="flex gap-2 mt-2">
+            <Button
+              onClick={() => handleSendReply(ticket, isPlatformTicket)}
+              disabled={!newMessage.trim()}
+              className="flex-1 sm:flex-none"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Send
             </Button>
-          )}
+            {!isPlatformTicket && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => handleUpdateTicketStatus(ticket.id, "resolved")}
+              >
+                <CheckCircle className="w-4 h-4" />
+                Resolve
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
+      {(ticket.status === "closed" || ticket.status === "resolved") && (
+        <div className="border-t border-border pt-4 text-center">
+          <Badge variant="secondary" className="gap-1">
+            <CheckCircle className="w-3 h-3" />
+            This ticket has been {ticket.status}
+          </Badge>
+        </div>
+      )}
     </div>
   );
 
-  const renderTicketList = (tickets: Ticket[], loading: boolean, isPlatformTicket: boolean) => {
+  const renderTicketList = (
+    tickets: Ticket[],
+    loading: boolean,
+    isPlatformTicket: boolean,
+    errorMsg?: string | null,
+  ) => {
     const filteredList = filterTickets(tickets);
+    const type = isPlatformTicket ? "platform" : "customer";
 
-    // Mobile view - full width card list
+    // Mobile view
     if (isMobile) {
       return (
         <div className="space-y-4">
-          {/* Search and filters */}
           <div className="space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -480,29 +601,46 @@ const SupportCenter = () => {
                     onClick={() => setFilterStatus(status)}
                     className="shrink-0"
                   >
-                    {status === "all" ? "All" : status === "in_progress" ? "In Progress" : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status === "all"
+                      ? "All"
+                      : status === "in_progress"
+                        ? "In Progress"
+                        : status.charAt(0).toUpperCase() + status.slice(1)}
                   </Button>
                 ))}
               </div>
             </ScrollArea>
           </div>
 
-          {/* Ticket list */}
           {loading ? (
-            <div className="p-8 text-center text-muted-foreground">Loading tickets...</div>
+            <LoadingTicketsView />
+          ) : errorMsg ? (
+            <ErrorTicketsView
+              message={errorMsg}
+              onRetry={() => (isPlatformTicket ? fetchPlatformTickets() : fetchCustomerTickets())}
+            />
+          ) : tickets.length === 0 ? (
+            <EmptyTicketsView type={type} />
           ) : filteredList.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Inbox className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No tickets found</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <Search className="w-10 h-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">No tickets match your search</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterStatus("all");
+                }}
+              >
+                Clear filters
+              </Button>
             </div>
           ) : (
             <div className="space-y-3 pb-20">
               {filteredList.map((ticket) => (
-                <TicketCard 
-                  key={ticket.id} 
-                  ticket={ticket} 
-                  onClick={() => handleTicketSelect(ticket)}
-                />
+                <TicketCard key={ticket.id} ticket={ticket} onClick={() => handleTicketSelect(ticket)} />
               ))}
             </div>
           )}
@@ -510,15 +648,27 @@ const SupportCenter = () => {
       );
     }
 
-    // Desktop view - original card design
+    // Desktop view
     return (
       <Card className="bg-gradient-card border-border shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            {isPlatformTicket ? 'Platform Tickets' : 'Customer Tickets'}
-            <div className="flex space-x-2 text-sm">
-              <Badge variant="destructive">{tickets.filter(t => t.status === 'open').length}</Badge>
-              <Badge variant="secondary">{tickets.filter(t => t.status === 'in_progress').length}</Badge>
+            <span>{isPlatformTicket ? "Platform Tickets" : "Customer Tickets"}</span>
+            <div className="flex items-center space-x-2 text-sm">
+              {!loading && tickets.length > 0 && (
+                <>
+                  <Badge variant="destructive">{tickets.filter((t) => t.status === "open").length} open</Badge>
+                  <Badge variant="secondary">{tickets.filter((t) => t.status === "in_progress").length} active</Badge>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => (isPlatformTicket ? fetchPlatformTickets() : fetchCustomerTickets())}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
             </div>
           </CardTitle>
           <div className="space-y-3">
@@ -539,27 +689,49 @@ const SupportCenter = () => {
                   size="sm"
                   onClick={() => setFilterStatus(status)}
                 >
-                  {status === "all" ? "All" : status === "in_progress" ? "In Progress" : status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === "all"
+                    ? "All"
+                    : status === "in_progress"
+                      ? "In Progress"
+                      : status.charAt(0).toUpperCase() + status.slice(1)}
                 </Button>
               ))}
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="space-y-1 max-h-[500px] overflow-y-auto">
-            {loading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading tickets...</div>
-            ) : filteredList.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <Inbox className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No tickets found</p>
-              </div>
-            ) : (
-              filteredList.map((ticket) => (
+          {loading ? (
+            <LoadingTicketsView />
+          ) : errorMsg ? (
+            <ErrorTicketsView
+              message={errorMsg}
+              onRetry={() => (isPlatformTicket ? fetchPlatformTickets() : fetchCustomerTickets())}
+            />
+          ) : tickets.length === 0 ? (
+            <EmptyTicketsView type={type} />
+          ) : filteredList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Search className="w-10 h-10 text-muted-foreground/40 mb-3" />
+              <p className="text-sm text-muted-foreground">No tickets match "{searchTerm}"</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterStatus("all");
+                }}
+              >
+                Clear filters
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-1 max-h-[500px] overflow-y-auto">
+              {filteredList.map((ticket) => (
                 <div
                   key={ticket.id}
                   className={`p-4 cursor-pointer border-b border-border hover:bg-accent transition-colors ${
-                    selectedTicket?.id === ticket.id ? 'bg-accent' : ''
+                    selectedTicket?.id === ticket.id ? "bg-accent" : ""
                   }`}
                   onClick={() => setSelectedTicket(ticket)}
                 >
@@ -579,19 +751,16 @@ const SupportCenter = () => {
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   };
 
   const renderTicketDetails = (isPlatformTicket: boolean) => {
-    // On mobile, details are shown in a sheet
-    if (isMobile) {
-      return null;
-    }
+    if (isMobile) return null;
 
     if (!selectedTicket) {
       return (
@@ -599,7 +768,8 @@ const SupportCenter = () => {
           <CardContent className="flex items-center justify-center h-full">
             <div className="text-center text-muted-foreground">
               <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Select a ticket to view details</p>
+              <p className="font-medium mb-1">Select a ticket to view details</p>
+              <p className="text-xs">Click on any ticket from the list</p>
             </div>
           </CardContent>
         </Card>
@@ -612,9 +782,7 @@ const SupportCenter = () => {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">{selectedTicket.subject}</CardTitle>
             <div className="flex items-center space-x-2">
-              <Badge variant={getStatusColor(selectedTicket.status)}>
-                {selectedTicket.status}
-              </Badge>
+              <Badge variant={getStatusColor(selectedTicket.status)}>{selectedTicket.status}</Badge>
               <Badge variant="outline" className={getPriorityColor(selectedTicket.priority)}>
                 {selectedTicket.priority} priority
               </Badge>
@@ -639,11 +807,19 @@ const SupportCenter = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Support Center</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Manage customer tickets, live chat, and platform support</p>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Manage customer tickets, live chat, and platform support
+          </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSelectedTicket(null); }}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val);
+          setSelectedTicket(null);
+        }}
+      >
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:w-full sm:max-w-2xl sm:grid sm:grid-cols-4">
             <TabsTrigger value="livechat" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap px-3 sm:px-4">
@@ -666,7 +842,6 @@ const SupportCenter = () => {
         </div>
 
         <TabsContent value="knowledge" className="mt-4 sm:mt-6 space-y-6">
-          {/* FAQ Management for tenant users */}
           <Card className="bg-gradient-card border-border shadow-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -701,7 +876,12 @@ const SupportCenter = () => {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditFaq(idx)}>
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFaq(idx)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => handleDeleteFaq(idx)}
+                        >
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
@@ -712,7 +892,6 @@ const SupportCenter = () => {
             </CardContent>
           </Card>
 
-          {/* Panel owner knowledge base */}
           <KnowledgeBase />
         </TabsContent>
 
@@ -722,15 +901,13 @@ const SupportCenter = () => {
 
         <TabsContent value="customer" className="mt-4 sm:mt-6">
           {isMobile ? (
-            renderTicketList(customerTickets, loadingCustomerTickets, false)
+            renderTicketList(customerTickets, loadingCustomerTickets, false, customerTicketsError)
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
-                {renderTicketList(customerTickets, loadingCustomerTickets, false)}
+                {renderTicketList(customerTickets, loadingCustomerTickets, false, customerTicketsError)}
               </div>
-              <div className="lg:col-span-2">
-                {renderTicketDetails(false)}
-              </div>
+              <div className="lg:col-span-2">{renderTicketDetails(false)}</div>
             </div>
           )}
         </TabsContent>
@@ -746,12 +923,8 @@ const SupportCenter = () => {
             renderTicketList(platformTickets, loadingPlatformTickets, true)
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                {renderTicketList(platformTickets, loadingPlatformTickets, true)}
-              </div>
-              <div className="lg:col-span-2">
-                {renderTicketDetails(true)}
-              </div>
+              <div className="lg:col-span-1">{renderTicketList(platformTickets, loadingPlatformTickets, true)}</div>
+              <div className="lg:col-span-2">{renderTicketDetails(true)}</div>
             </div>
           )}
         </TabsContent>
@@ -762,18 +935,11 @@ const SupportCenter = () => {
         <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl">
           <SheetHeader className="pb-4 border-b">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setTicketSheetOpen(false)}
-                className="shrink-0"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setTicketSheetOpen(false)} className="shrink-0">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex-1 min-w-0">
-                <SheetTitle className="text-left text-base line-clamp-1">
-                  {selectedTicket?.subject}
-                </SheetTitle>
+                <SheetTitle className="text-left text-base line-clamp-1">{selectedTicket?.subject}</SheetTitle>
                 <div className="flex items-center gap-2 mt-1">
                   {selectedTicket && (
                     <>
@@ -791,10 +957,7 @@ const SupportCenter = () => {
           </SheetHeader>
           <div className="flex-1 overflow-hidden pt-4 h-[calc(100%-80px)]">
             {selectedTicket && (
-              <TicketDetailsContent 
-                ticket={selectedTicket} 
-                isPlatformTicket={activeTab === 'platform'} 
-              />
+              <TicketDetailsContent ticket={selectedTicket} isPlatformTicket={activeTab === "platform"} />
             )}
           </div>
         </SheetContent>
@@ -821,7 +984,7 @@ const SupportCenter = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Priority</Label>
               <Select value={newTicketPriority} onValueChange={setNewTicketPriority}>
@@ -835,7 +998,7 @@ const SupportCenter = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label>Subject</Label>
               <Input
@@ -844,7 +1007,7 @@ const SupportCenter = () => {
                 placeholder="Brief description of your issue"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label>Message</Label>
               <Textarea
@@ -859,7 +1022,7 @@ const SupportCenter = () => {
             <Button variant="outline" onClick={() => setNewTicketDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCreatePlatformTicket}
               disabled={submittingTicket || !newTicketSubject.trim() || !newTicketMessage.trim()}
               className="w-full sm:w-auto"
@@ -874,7 +1037,7 @@ const SupportCenter = () => {
       <Dialog open={faqDialogOpen} onOpenChange={setFaqDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingFaqIndex !== null ? 'Edit FAQ' : 'Add FAQ'}</DialogTitle>
+            <DialogTitle>{editingFaqIndex !== null ? "Edit FAQ" : "Add FAQ"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
