@@ -1961,3 +1961,116 @@ async function handleRateChat(supabaseAdmin: any, body: any) {
 
   return jsonResponse({ success: true });
 }
+
+// Handle AI chat message — saves user msg, gets AI reply, saves AI reply, returns both
+async function handleSendAIChatMessage(supabaseAdmin: any, body: any) {
+  const { sessionId, buyerId, content, panelId } = body;
+
+  if (!sessionId || !buyerId || !content?.trim()) {
+    return jsonResponse({ error: 'Missing sessionId, buyerId, or content' });
+  }
+
+  // Verify session belongs to buyer
+  const { data: session } = await supabaseAdmin
+    .from('chat_sessions')
+    .select('id, visitor_id, panel_id')
+    .eq('id', sessionId)
+    .eq('visitor_id', buyerId)
+    .single();
+
+  if (!session) {
+    return jsonResponse({ error: 'Invalid session' });
+  }
+
+  // 1. Save user message as 'visitor'
+  const { data: userMsg, error: userErr } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      session_id: sessionId,
+      sender_type: 'visitor',
+      content: content.trim(),
+    })
+    .select()
+    .single();
+
+  if (userErr) {
+    console.error('Failed to save user AI message:', userErr);
+    return jsonResponse({ error: 'Failed to send message' });
+  }
+
+  // Update last_message_at
+  await supabaseAdmin
+    .from('chat_sessions')
+    .update({ last_message_at: new Date().toISOString() })
+    .eq('id', sessionId);
+
+  // 2. Get panel info for AI context
+  const { data: panel } = await supabaseAdmin
+    .from('panels')
+    .select('name')
+    .eq('id', session.panel_id)
+    .single();
+
+  // 3. Fetch recent conversation history for context
+  const { data: recentMsgs } = await supabaseAdmin
+    .from('chat_messages')
+    .select('sender_type, content')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  const conversationHistory = (recentMsgs || []).reverse().map((m: any) => ({
+    role: m.sender_type === 'visitor' ? 'user' : 'assistant',
+    content: m.content,
+  }));
+
+  // 4. Call AI chat reply edge function
+  let aiReplyText = "I'm sorry, I couldn't generate a response right now. A human agent will assist you shortly.";
+  try {
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    
+    const aiResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat-reply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        message: content.trim(),
+        pageContext: 'Live Chat Support',
+        panelInfo: { name: panel?.name || 'SMM Panel' },
+        conversationHistory,
+      }),
+    });
+
+    if (aiResponse.ok) {
+      const aiData = await aiResponse.json();
+      if (aiData.reply) {
+        aiReplyText = aiData.reply;
+      }
+    }
+  } catch (err) {
+    console.error('AI reply error:', err);
+  }
+
+  // 5. Save AI reply as 'ai' sender_type
+  const { data: aiMsg, error: aiErr } = await supabaseAdmin
+    .from('chat_messages')
+    .insert({
+      session_id: sessionId,
+      sender_type: 'ai',
+      content: aiReplyText,
+    })
+    .select()
+    .single();
+
+  if (aiErr) {
+    console.error('Failed to save AI reply:', aiErr);
+  }
+
+  return jsonResponse({ 
+    userMessage: userMsg,
+    aiMessage: aiMsg || { id: `ai-fallback-${Date.now()}`, session_id: sessionId, sender_type: 'ai', content: aiReplyText, created_at: new Date().toISOString() },
+  });
+}
