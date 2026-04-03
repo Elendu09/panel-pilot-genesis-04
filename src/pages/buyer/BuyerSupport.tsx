@@ -51,7 +51,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
-import { FloatingChatWidget } from "@/components/storefront/FloatingChatWidget";
+import { Bot } from "lucide-react";
 
 interface Ticket {
   id: string;
