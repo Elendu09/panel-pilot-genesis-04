@@ -65,7 +65,7 @@ interface Ticket {
 }
 
 interface Message {
-  sender: 'buyer' | 'support';
+  sender: 'buyer' | 'support' | 'user';
   content: string;
   timestamp: string;
 }
