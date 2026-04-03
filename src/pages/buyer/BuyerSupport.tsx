@@ -1084,10 +1084,10 @@ const BuyerSupport = () => {
               <div className="space-y-4 py-4">
                 {(selectedTicket?.messages || []).map((msg: Message, index: number) => (
                   <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
-                    className={cn("p-3 rounded-xl max-w-[85%]", msg.sender === 'buyer' ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
+                    className={cn("p-3 rounded-xl max-w-[85%]", (msg.sender === 'buyer' || msg.sender === 'user') ? "ml-auto bg-primary text-primary-foreground" : "bg-muted")}
                   >
                     <p className="text-sm">{msg.content}</p>
-                    <p className={cn("text-xs mt-1", msg.sender === 'buyer' ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
+                    <p className={cn("text-xs mt-1", (msg.sender === 'buyer' || msg.sender === 'user') ? "text-primary-foreground/70" : "text-muted-foreground")}>{new Date(msg.timestamp).toLocaleString()}</p>
                   </motion.div>
                 ))}
               </div>
