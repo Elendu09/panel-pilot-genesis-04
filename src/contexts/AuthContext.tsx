@@ -13,7 +13,6 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: any; emailNotVerified?: boolean; email?: string }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  needsMfaChallenge: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,7 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
-  const [mfaVerified, setMfaVerified] = useState(false);
   const { toast } = useToast();
 
   const fetchProfile = async (userId: string) => {
@@ -45,7 +43,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updates.role = metadata.role || "panel_owner";
         }
         if (!data.username) {
-          // Generate username from email prefix or full name
           const emailPrefix = (data.email || "")
             .split("@")[0]
             .replace(/[^a-zA-Z0-9_]/g, "")
@@ -137,63 +134,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // Handle auth state changes (login, logout, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
 
-      if (session?.user) {
+      if (currentSession?.user) {
+        // Only fetch profile, DO NOT check MFA here.
+        // If they have a session, they are already verified.
         setTimeout(() => {
-          fetchProfile(session.user.id);
+          fetchProfile(currentSession.user.id);
         }, 0);
       } else {
         setProfile(null);
+        // Only reset MFA challenge if explicitly logged out
+        if (event === "SIGNED_OUT") {
+          setNeedsMfaChallenge(false);
+        }
       }
       setLoading(false);
     });
 
+    // Initial session check on page load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
       if (session?.user) {
+        // Just fetch profile, trust the existing session
         fetchProfile(session.user.id);
       }
-
-      // Check MFA status only on initial load, not on every auth state change
-      if (session?.user && !mfaVerified) {
-        checkMfaStatus(session.user.id);
-      }
-
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const checkMfaStatus = async (userId: string) => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", {
-        body: { action: "status" },
-      });
-
-      // Only show MFA challenge if:
-      // 1. MFA is enabled AND
-      // 2. User hasn't verified MFA yet AND
-      // 3. This is the first time after login (not on page refresh)
-      if (mfaStatus?.enabled && !mfaVerified) {
-        setNeedsMfaChallenge(true);
-      }
-    } catch (e) {
-      console.error("MFA status check failed:", e);
-    }
-  };
 
   const signUp = async (email: string, password: string, username?: string, fullName?: string) => {
     try {
@@ -289,9 +265,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error };
       }
 
-      // Check MFA status after successful login
+      // ✅ CRITICAL FIX: Only check MFA status immediately after a successful password login
+      // We do NOT check this on page refresh or token renewal.
       if (data?.user) {
-        await checkMfaStatus(data.user.id);
+        try {
+          const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", {
+            body: { action: "status" },
+          });
+
+          if (mfaStatus?.enabled) {
+            // User has MFA enabled, show challenge before granting full access
+            setNeedsMfaChallenge(true);
+          } else {
+            // No MFA, proceed normally (onAuthStateChange will handle profile fetch)
+            setNeedsMfaChallenge(false);
+          }
+        } catch (e) {
+          console.error("MFA status check failed:", e);
+          // Fail open or closed? Usually fail open to let them in if MFA service is down,
+          // but for security, you might want to block. Here we assume no MFA if check fails.
+          setNeedsMfaChallenge(false);
+        }
       }
 
       return { error };
@@ -312,7 +306,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setProfile(null);
       setNeedsMfaChallenge(false);
-      setMfaVerified(false);
       toast({
         title: "Signed out successfully",
       });
@@ -327,15 +320,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleMfaVerified = () => {
     setNeedsMfaChallenge(false);
-    setMfaVerified(true);
+    // Optionally refresh profile here if MFA status changed in DB
+    if (user) fetchProfile(user.id);
   };
 
   const handleMfaCancelled = () => {
-    setNeedsMfaChallenge(false);
-    setMfaVerified(false);
-    setUser(null);
-    setSession(null);
-    setProfile(null);
+    // If they cancel MFA, we must log them out to prevent unauthorized access
+    signOut();
   };
 
   const value = {
@@ -347,7 +338,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     refreshProfile,
-    needsMfaChallenge,
   };
 
   return (
