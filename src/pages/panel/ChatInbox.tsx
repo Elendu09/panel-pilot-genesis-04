@@ -286,11 +286,14 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     }
   }, [panelId, filter]);
 
+  const fetchSessionsRef = useRef(fetchSessions);
+  fetchSessionsRef.current = fetchSessions;
+
   useEffect(() => {
     if (!panelId) return;
 
     setLoading(true);
-    fetchSessions().finally(() => setLoading(false));
+    fetchSessionsRef.current().finally(() => setLoading(false));
 
     // Subscribe to new sessions via realtime
     const channel = supabase
@@ -304,7 +307,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
           filter: `panel_id=eq.${panelId}`,
         },
         () => {
-          fetchSessions();
+          fetchSessionsRef.current();
         },
       )
       .subscribe();
@@ -312,7 +315,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [panelId, filter, fetchSessions]);
+  }, [panelId, filter]);
 
   // Fetch messages for selected session
   useEffect(() => {
