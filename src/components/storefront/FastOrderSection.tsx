@@ -1195,7 +1195,7 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                               )}
                             </div>
                             <Badge variant="secondary" className="text-[7px] font-mono px-0.5 py-0 h-3 mb-0.5">
-                              ID: {service.display_order || service.displayOrder || '—'}
+                              ID: {service.display_order ?? service.displayOrder ?? '—'}
                             </Badge>
                             <p className={cn(
                               "text-[10px] sm:text-xs line-clamp-1",

@@ -36,6 +36,7 @@ export interface UnifiedService {
   description: string;
   isActive: boolean;
   displayOrder: number;
+  display_order: number;
   refillAvailable: boolean;
   cancelAvailable: boolean;
   averageTime: string;

@@ -4060,6 +4060,7 @@ export type Database = {
       }
       support_tickets: {
         Row: {
+          buyer_id: string | null
           created_at: string
           id: string
           messages: Json | null
@@ -4072,6 +4073,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          buyer_id?: string | null
           created_at?: string
           id?: string
           messages?: Json | null
@@ -4084,6 +4086,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          buyer_id?: string | null
           created_at?: string
           id?: string
           messages?: Json | null
@@ -4096,6 +4099,20 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "support_tickets_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "client_users_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "support_tickets_panel_id_fkey"
             columns: ["panel_id"]

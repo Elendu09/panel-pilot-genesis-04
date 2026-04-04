@@ -316,12 +316,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
-      <TwoFactorChallenge 
-        open={needsMfaChallenge} 
-        onVerified={handleMfaVerified}
-        onCancel={handleMfaCancelled}
-      />
+      {needsMfaChallenge ? (
+        <TwoFactorChallenge 
+          open={true} 
+          onVerified={handleMfaVerified}
+          onCancel={handleMfaCancelled}
+        />
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 }

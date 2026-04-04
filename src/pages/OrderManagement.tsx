@@ -149,7 +149,7 @@ const OrderManagement = () => {
 
   const totalOrders = orders.length;
   const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const pendingOrders = orders.filter(o => ['pending', 'processing', 'awaiting_payment', 'in_progress'].includes(o.status || '')).length;
   const totalOrderAmount = orders.reduce((sum, order) => sum + (order.price || 0), 0);
   const profitFromOrders = orders.reduce((sum, order) => {
     const cost = order.provider_cost || order.service?.provider_cost || 0;
