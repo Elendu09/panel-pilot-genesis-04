@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
-import { 
+import {
   ShoppingCart,
   Clock,
   CheckCircle,
@@ -22,15 +22,14 @@ import {
   XCircle,
   TrendingUp,
   DollarSign,
-  Users,
   Activity,
   Search,
-  Filter,
   Eye,
   RefreshCw,
   Calendar,
-  ArrowUpDown,
-  ExternalLink
+  ExternalLink,
+  Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -44,7 +43,7 @@ interface Order {
   provider_id?: string;
   provider_order_id?: string;
   notes?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial' | 'processing' | 'awaiting_payment';
+  status: "pending" | "in_progress" | "completed" | "cancelled" | "partial" | "processing" | "awaiting_payment";
   start_count: number;
   remains: number;
   progress: number;
@@ -54,9 +53,7 @@ interface Order {
     name: string;
     category: string;
     provider_cost?: number;
-    provider?: {
-      name: string;
-    } | null;
+    provider?: { name: string } | null;
   };
   buyer?: {
     email: string;
@@ -64,143 +61,156 @@ interface Order {
   };
 }
 
+const ITEMS_PER_PAGE = 25;
+
 const OrderManagement = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchingMore, setFetchingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [currentPanelId, setCurrentPanelId] = useState<string | null>(null);
 
+  // 1. SECURITY: Fetch confirmed Panel ID first
   useEffect(() => {
-    if (user) {
-      fetchOrders();
-    }
+    const getPanelId = async () => {
+      if (!user || !profile) return;
+      const { data, error } = await supabase.from("panels").select("id").eq("owner_id", profile.id).maybeSingle();
+      if (data) setCurrentPanelId(data.id);
+    };
+    getPanelId();
   }, [user, profile]);
 
-  const fetchOrders = async () => {
-    try {
-      let query = (supabase as any).from('orders').select(`
-        *, provider_cost, provider_id, provider_order_id, notes,
-        service:services(name, category, provider_cost, provider:providers(name)),
-        buyer:client_users!orders_buyer_id_fkey(email, full_name)
-      `);
+  // 2. ACTUAL PAGINATION: fetch function
+  const fetchOrders = useCallback(
+    async (isLoadMore = false) => {
+      if (!user || !currentPanelId) return;
 
-      // If panel owner, only show orders for their panel
-      if (profile?.role === 'panel_owner') {
-        const { data: panelData } = await supabase
-          .from('panels')
-          .select('id')
-          .eq('owner_id', profile.id)
-          .single();
+      if (isLoadMore) setFetchingMore(true);
+      else setLoading(true);
 
-        if (panelData) {
-          query = query.eq('panel_id', panelData.id);
+      try {
+        let query = supabase
+          .from("orders")
+          .select(
+            `
+          *,
+          service:services(name, category, provider_cost, provider:providers(name)),
+          buyer:client_users!orders_buyer_id_fkey(email, full_name)
+        `,
+          )
+          .eq("panel_id", currentPanelId)
+          .order("created_at", { ascending: false });
+
+        // Apply range for pagination
+        const from = isLoadMore ? orders.length : 0;
+        const to = from + ITEMS_PER_PAGE - 1;
+        query = query.range(from, to);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (isLoadMore) {
+          setOrders((prev) => [...prev, ...(data || [])]);
+        } else {
+          setOrders(data || []);
         }
+
+        setHasMore(data?.length === ITEMS_PER_PAGE);
+      } catch (error: any) {
+        console.error("Error fetching orders:", error);
+        toast({ variant: "destructive", title: "Fetch Error", description: error.message });
+      } finally {
+        setLoading(false);
+        setFetchingMore(false);
       }
+    },
+    [user, currentPanelId, orders.length, toast],
+  );
 
-      const { data: ordersData } = await query
-        .order('created_at', { ascending: false })
-        .limit(100);
+  useEffect(() => {
+    if (currentPanelId) fetchOrders();
+  }, [currentPanelId]);
 
-      setOrders(ordersData || []);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load orders"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateOrderStatus = async (orderId: string, newStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial') => {
+  // 3. SECURITY: Update status with ownership check
+  const updateOrderStatus = async (orderId: string, newStatus: Order["status"]) => {
+    if (!currentPanelId) return;
     try {
-      await supabase
-        .from('orders')
+      const { error } = await supabase
+        .from("orders")
         .update({ status: newStatus })
-        .eq('id', orderId);
+        .eq("id", orderId)
+        .eq("panel_id", currentPanelId); // Ensure owner owns this specific order
 
-      fetchOrders();
-      toast({
-        title: "Status Updated",
-        description: "Order status has been updated successfully"
-      });
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update order status"
-      });
+      if (error) throw error;
+
+      // Update local state instead of full refresh for smoother UX
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
+      if (selectedOrder?.id === orderId) setSelectedOrder((prev) => (prev ? { ...prev, status: newStatus } : null));
+
+      toast({ title: "Status Updated", description: `Order is now ${newStatus}` });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Update Failed", description: error.message });
     }
   };
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.target_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.service?.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.target_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.service?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const totalOrders = orders.length;
-  const completedOrders = orders.filter(o => o.status === 'completed').length;
-  const pendingOrders = orders.filter(o => ['pending', 'processing', 'awaiting_payment', 'in_progress'].includes(o.status || '')).length;
-  const totalOrderAmount = orders.reduce((sum, order) => sum + (order.price || 0), 0);
-  const profitFromOrders = orders.reduce((sum, order) => {
-    const cost = order.provider_cost || order.service?.provider_cost || 0;
-    return sum + ((order.price || 0) - cost);
-  }, 0);
-  const conversionRate = totalOrders > 0 ? ((completedOrders / totalOrders) * 100) : 0;
+  // 4. PERFORMANCE: Memoized Statistics
+  const stats = useMemo(() => {
+    const total = orders.length;
+    const completed = orders.filter((o) => o.status === "completed").length;
+    const pending = orders.filter((o) =>
+      ["pending", "processing", "awaiting_payment", "in_progress"].includes(o.status),
+    ).length;
+    const revenue = orders.reduce((sum, o) => sum + (o.price || 0), 0);
+    const cost = orders.reduce((sum, o) => sum + (o.provider_cost || o.service?.provider_cost || 0), 0);
+    const profit = revenue - cost;
+    const conv = total > 0 ? (completed / total) * 100 : 0;
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-3 h-3" />;
-      case 'in_progress':
-        return <Activity className="w-3 h-3" />;
-      case 'pending':
-        return <Clock className="w-3 h-3" />;
-      case 'cancelled':
-        return <XCircle className="w-3 h-3" />;
-      case 'partial':
-        return <AlertCircle className="w-3 h-3" />;
-      default:
-        return <Clock className="w-3 h-3" />;
-    }
-  };
+    return { total, completed, pending, revenue, profit, conv };
+  }, [orders]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-500/20 text-green-400';
-      case 'in_progress':
-        return 'bg-blue-500/20 text-blue-400';
-      case 'pending':
-        return 'bg-yellow-500/20 text-yellow-400';
-      case 'cancelled':
-        return 'bg-red-500/20 text-red-400';
-      case 'partial':
-        return 'bg-orange-500/20 text-orange-400';
+      case "completed":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "in_progress":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "pending":
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
+      case "cancelled":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "partial":
+        return "bg-orange-500/20 text-orange-400 border-orange-500/30";
       default:
-        return 'bg-gray-500/20 text-gray-400';
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
   const getCategoryIcon = (category: string) => {
-    const icons = {
-      instagram: '📸',
-      youtube: '🎥', 
-      tiktok: '🎵',
-      twitter: '🐦',
-      facebook: '👥',
-      linkedin: '💼'
+    const icons: Record<string, string> = {
+      instagram: "📸",
+      youtube: "🎥",
+      tiktok: "🎵",
+      twitter: "🐦",
+      facebook: "👥",
+      linkedin: "💼",
     };
-    return icons[category] || '🌟';
+    return icons[category.toLowerCase()] || "🌟";
   };
 
   if (!user) {
@@ -208,7 +218,7 @@ const OrderManagement = () => {
       <div className="min-h-screen bg-background">
         <Navigation />
         <div className="container mx-auto px-4 py-20 text-center">
-          <h1 className="text-4xl font-bold mb-4">Please log in to continue</h1>
+          <h1 className="text-4xl font-bold mb-4">Access Denied</h1>
           <Button asChild>
             <Link to="/auth">Sign In</Link>
           </Button>
@@ -221,233 +231,105 @@ const OrderManagement = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10">
       <Helmet>
-        <title>Order Management - HOME OF SMM</title>
-        <meta name="description" content="Manage and track all your SMM orders and service deliveries." />
-        <meta name="robots" content="noindex,nofollow" />
+        <title>Order Management - Panel Owner</title>
       </Helmet>
-
       <Navigation />
-      
+
       <section className="pt-20 pb-12">
         <div className="container mx-auto px-4">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold">Order Management</h1>
-                <p className="text-muted-foreground">Track and manage all your SMM orders</p>
+                <p className="text-muted-foreground text-sm">Control panel for all tenant orders</p>
               </div>
-              <Button onClick={fetchOrders} variant="outline" className="gap-2">
-                <RefreshCw className="w-4 h-4" />
+              <Button onClick={() => fetchOrders(false)} variant="outline" className="gap-2" disabled={loading}>
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                 Refresh
               </Button>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Total Orders</p>
-                      <p className="text-xl font-bold text-primary">{totalOrders}</p>
-                    </div>
-                    <ShoppingCart className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Completed</p>
-                      <p className="text-xl font-bold text-primary">{completedOrders}</p>
-                    </div>
-                    <CheckCircle className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Pending</p>
-                      <p className="text-xl font-bold text-primary">{pendingOrders}</p>
-                    </div>
-                    <Clock className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Total Order Amount</p>
-                      <p className="text-xl font-bold text-primary">${totalOrderAmount.toFixed(2)}</p>
-                    </div>
-                    <DollarSign className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Profit from Orders</p>
-                      <p className="text-xl font-bold text-primary">${profitFromOrders.toFixed(2)}</p>
-                    </div>
-                    <TrendingUp className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-card border-border shadow-card">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-muted-foreground">Conversion Rate</p>
-                      <p className="text-xl font-bold text-primary">{conversionRate.toFixed(1)}%</p>
-                    </div>
-                    <Activity className="w-6 h-6 text-primary" />
-                  </div>
-                </CardContent>
-              </Card>
+              <StatCard label="Total" value={stats.total} Icon={ShoppingCart} />
+              <StatCard label="Completed" value={stats.completed} Icon={CheckCircle} />
+              <StatCard label="Pending" value={stats.pending} Icon={Clock} />
+              <StatCard label="Revenue" value={`$${stats.revenue.toFixed(2)}`} Icon={DollarSign} />
+              <StatCard label="Profit" value={`$${stats.profit.toFixed(2)}`} Icon={TrendingUp} />
+              <StatCard label="Success" value={`${stats.conv.toFixed(1)}%`} Icon={Activity} />
             </div>
 
-            {/* Orders Table */}
-            <Card className="bg-gradient-card border-border shadow-card">
+            <Card className="bg-card/50 backdrop-blur border-border/50">
               <CardHeader>
-                <CardTitle>Orders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex flex-col md:flex-row gap-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search orders by number, service, or URL..."
+                      placeholder="Search Order #, URL, or Service..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
+                      className="pl-9 bg-background/50"
                     />
                   </div>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full md:w-[180px]">
-                      <SelectValue placeholder="Filter by status" />
+                    <SelectTrigger className="w-full md:w-[180px] bg-background/50">
+                      <SelectValue placeholder="Filter Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {["pending", "processing", "in_progress", "completed", "cancelled", "partial"].map((s) => (
+                        <SelectItem key={s} value={s} className="capitalize">
+                          {s}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {loading ? (
-                  <div className="text-center py-8">
-                    <ShoppingCart className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">Loading orders...</p>
-                  </div>
-                ) : (
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto rounded-md border border-border/40">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30">
                       <TableRow>
                         <TableHead>Order #</TableHead>
                         <TableHead>Service</TableHead>
-                        <TableHead>Provider</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Target URL</TableHead>
-                        <TableHead>Quantity</TableHead>
+                        <TableHead className="hidden md:table-cell">Customer</TableHead>
                         <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                        <TableHead className="hidden lg:table-cell">Progress</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell>
-                            <div className="font-mono text-sm">{order.order_number}</div>
-                          </TableCell>
+                        <TableRow key={order.id} className="hover:bg-muted/20">
+                          <TableCell className="font-mono text-xs font-bold">{order.order_number}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <span className="text-lg">
-                                {getCategoryIcon(order.service?.category || '')}
-                              </span>
-                              <div>
-                                <p className="font-medium">{order.service?.name}</p>
-                                <p className="text-sm text-muted-foreground capitalize">
-                                  {order.service?.category}
-                                </p>
-                              </div>
+                              <span>{getCategoryIcon(order.service?.category || "")}</span>
+                              <span className="truncate max-w-[150px] text-xs font-medium">{order.service?.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {order.service?.provider?.name || '—'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-[120px]">
-                              <p className="font-medium truncate">{order.buyer?.full_name || 'No Name'}</p>
-                              <p className="text-sm text-muted-foreground truncate">{order.buyer?.email}</p>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="text-xs">
+                              <p className="font-semibold">{order.buyer?.full_name}</p>
+                              <p className="text-muted-foreground">{order.buyer?.email}</p>
                             </div>
                           </TableCell>
+                          <TableCell className="text-xs font-bold">${order.price.toFixed(2)}</TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <span className="font-mono text-sm truncate max-w-[200px]">
-                                {order.target_url}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => window.open(order.target_url, '_blank')}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium">{order.quantity?.toLocaleString()}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium">${order.price?.toFixed(2)}</span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(order.status)}>
-                              {getStatusIcon(order.status)}
-                              <span className="ml-1 capitalize">{order.status.replace('_', ' ')}</span>
+                            <Badge className={cn("text-[10px] h-5", getStatusColor(order.status))}>
+                              <span className="capitalize">{order.status}</span>
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="w-20">
-                              <Progress value={order.progress || 0} className="h-2" />
-                              <span className="text-xs text-muted-foreground">
-                                {Math.round(order.progress || 0)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(order.created_at).toLocaleDateString()}
+                          <TableCell className="hidden lg:table-cell">
+                            <div className="w-16">
+                              <Progress value={order.progress} className="h-1" />
+                              <span className="text-[10px] text-muted-foreground">{order.progress}%</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              onClick={() => setSelectedOrder(order)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(order)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                           </TableCell>
@@ -455,19 +337,34 @@ const OrderManagement = () => {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* PAGINATION: Load More Button */}
+                {hasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => fetchOrders(true)}
+                      disabled={fetchingMore}
+                      className="w-full max-w-xs gap-2"
+                    >
+                      {fetchingMore ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4" />
+                      )}
+                      Load More Orders
+                    </Button>
+                  </div>
                 )}
 
-                {!loading && filteredOrders.length === 0 && (
-                  <div className="text-center py-12">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">No orders found</h3>
-                    <p className="text-muted-foreground">
-                      {orders.length === 0 
-                        ? "No orders have been placed yet" 
-                        : "Try adjusting your search or filter criteria"
-                      }
-                    </p>
+                {loading && (
+                  <div className="py-20 text-center">
+                    <Loader2 className="mx-auto w-8 h-8 animate-spin text-primary" />
                   </div>
+                )}
+                {!loading && filteredOrders.length === 0 && (
+                  <div className="py-20 text-center text-muted-foreground">No orders found matching your criteria.</div>
                 )}
               </CardContent>
             </Card>
@@ -475,144 +372,94 @@ const OrderManagement = () => {
         </div>
       </section>
 
-      {/* Order Detail Dialog */}
+      {/* Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-lg p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4 text-primary" />
-              Order Details
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2">Order Details: {selectedOrder?.order_number}</DialogTitle>
           </DialogHeader>
           {selectedOrder && (
-            <div className="space-y-4 text-sm">
-              {/* Row 1: Order # + Status */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Order #</p>
-                  <p className="font-mono text-xs font-semibold break-all">{selectedOrder.order_number}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Status</p>
-                  <Badge className={cn("mt-0.5", getStatusColor(selectedOrder.status))}>
-                    {getStatusIcon(selectedOrder.status)}
-                    <span className="ml-1 capitalize">{selectedOrder.status.replace('_', ' ')}</span>
-                  </Badge>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="space-y-4">
+                <DetailItem label="Service Name" value={selectedOrder.service?.name} />
+                <DetailItem label="Target URL" value={selectedOrder.target_url} isLink />
+                <DetailItem label="Quantity" value={selectedOrder.quantity.toLocaleString()} />
+                <DetailItem label="Status" value={selectedOrder.status.toUpperCase()} />
               </div>
-
-              {/* Row 2: Service + Provider */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Service</p>
-                  <p className="font-medium text-xs leading-snug">{selectedOrder.service?.name || 'Deleted service'}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider</p>
-                  <p className="text-xs">{selectedOrder.service?.provider?.name || '—'}</p>
-                </div>
-              </div>
-
-              {/* Row 3: Customer + Quantity */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Customer</p>
-                  <p className="font-medium text-xs">{selectedOrder.buyer?.full_name || 'N/A'}</p>
-                  <p className="text-muted-foreground text-[10px] break-all">{selectedOrder.buyer?.email}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Quantity / Start</p>
-                  <p className="font-medium text-xs">{selectedOrder.quantity?.toLocaleString()}</p>
-                  <p className="text-muted-foreground text-[10px]">Start: {selectedOrder.start_count ?? '—'}</p>
-                </div>
-              </div>
-
-              {/* Target URL */}
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Target URL</p>
-                <div className="flex items-center gap-2">
-                  <p className="break-all text-xs flex-1">{selectedOrder.target_url}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 shrink-0"
-                    onClick={() => {
-                      const url = selectedOrder.target_url;
-                      const finalUrl = url.startsWith('http') ? url : (url.startsWith('@') ? `https://instagram.com/${url.replace('@', '')}` : `https://${url}`);
-                      window.open(finalUrl, '_blank');
-                    }}
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Earnings Breakdown */}
-              <div className="p-3 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Earnings Breakdown</p>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Customer Paid</p>
-                    <p className="text-sm font-bold text-green-500">${selectedOrder.price?.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Provider Cost</p>
-                    <p className="text-sm font-bold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground">Your Profit</p>
-                    <p className={cn(
-                      "text-sm font-bold",
-                      (selectedOrder.price - (selectedOrder.provider_cost || 0)) >= 0 ? "text-green-500" : "text-red-500"
-                    )}>
-                      ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
-                    </p>
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                  <h4 className="text-xs font-bold uppercase text-primary mb-3">Profit Analysis</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Selling Price:</span>
+                      <span className="font-bold text-green-500">${selectedOrder.price.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Provider Cost:</span>
+                      <span className="font-bold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Your Profit:</span>
+                      <span className="text-primary">
+                        ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Progress */}
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Progress</p>
-                <Progress value={selectedOrder.progress || 0} className="h-2 mt-1" />
-                <span className="text-xs text-muted-foreground">{Math.round(selectedOrder.progress || 0)}%</span>
-              </div>
-
-              {/* Provider Order ID + Notes */}
-              <div className="grid grid-cols-2 gap-3">
-                {selectedOrder.provider_order_id && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider Order ID</p>
-                    <p className="font-mono text-xs">{selectedOrder.provider_order_id}</p>
-                  </div>
-                )}
-                {selectedOrder.notes && (
-                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Notes</p>
-                    <p className="text-xs">{selectedOrder.notes}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Timestamps */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Created</p>
-                  <p className="text-xs">{new Date(selectedOrder.created_at).toLocaleString()}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Updated</p>
-                  <p className="text-xs">{new Date(selectedOrder.updated_at).toLocaleString()}</p>
+                <div className="space-y-2">
+                  <Label className="text-xs">Update Status</Label>
+                  <Select onValueChange={(v) => updateOrderStatus(selectedOrder.id, v as any)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Change Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["pending", "processing", "in_progress", "completed", "cancelled", "partial"].map((s) => (
+                        <SelectItem key={s} value={s} className="capitalize">
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
-
       <Footer />
     </div>
   );
 };
+
+// Helper Components
+const StatCard = ({ label, value, Icon }: any) => (
+  <Card className="bg-card/40 border-border/40">
+    <CardContent className="p-4 flex items-center justify-between">
+      <div>
+        <p className="text-[10px] uppercase font-bold text-muted-foreground">{label}</p>
+        <p className="text-lg font-bold">{value}</p>
+      </div>
+      <Icon className="w-5 h-5 text-primary/40" />
+    </CardContent>
+  </Card>
+);
+
+const DetailItem = ({ label, value, isLink }: any) => (
+  <div>
+    <p className="text-[10px] uppercase text-muted-foreground font-bold">{label}</p>
+    {isLink ? (
+      <a
+        href={value}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs text-primary hover:underline break-all inline-flex items-center gap-1"
+      >
+        {value} <ExternalLink className="w-3 h-3" />
+      </a>
+    ) : (
+      <p className="text-sm font-medium">{value || "—"}</p>
+    )}
+  </div>
+);
 
 export default OrderManagement;
