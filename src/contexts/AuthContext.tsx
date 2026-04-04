@@ -145,11 +145,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        // Check MFA status on session restore (prevents bypass via reload)
+        try {
+          const { data: mfaStatus } = await supabase.functions.invoke('mfa-setup', {
+            body: { action: 'status' }
+          });
+          if (mfaStatus?.enabled) {
+            setNeedsMfaChallenge(true);
+          }
+        } catch (e) {
+          console.error('MFA status check on restore failed:', e);
+        }
       }
       setLoading(false);
     });

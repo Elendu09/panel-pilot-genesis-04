@@ -286,11 +286,14 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     }
   }, [panelId, filter]);
 
+  const fetchSessionsRef = useRef(fetchSessions);
+  fetchSessionsRef.current = fetchSessions;
+
   useEffect(() => {
     if (!panelId) return;
 
     setLoading(true);
-    fetchSessions().finally(() => setLoading(false));
+    fetchSessionsRef.current().finally(() => setLoading(false));
 
     // Subscribe to new sessions via realtime
     const channel = supabase
@@ -304,7 +307,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
           filter: `panel_id=eq.${panelId}`,
         },
         () => {
-          fetchSessions();
+          fetchSessionsRef.current();
         },
       )
       .subscribe();
@@ -312,7 +315,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [panelId, filter, fetchSessions]);
+  }, [panelId, filter]);
 
   // Fetch messages for selected session
   useEffect(() => {
@@ -594,6 +597,9 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     [sendMessage],
   );
 
+  const cannedResponsesRef = useRef(cannedResponses);
+  cannedResponsesRef.current = cannedResponses;
+
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value;
@@ -603,13 +609,13 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
       // Check for shortcut trigger
       if (value.startsWith("/")) {
         const shortcut = value.slice(1).toLowerCase();
-        const match = cannedResponses.find((r) => r.shortcut?.toLowerCase() === shortcut);
+        const match = cannedResponsesRef.current.find((r) => r.shortcut?.toLowerCase() === shortcut);
         if (match && value === `/${shortcut}`) {
           setNewMessage(match.content);
         }
       }
     },
-    [broadcastTyping, cannedResponses],
+    [broadcastTyping],
   );
 
   const handleSessionSelect = useCallback(
