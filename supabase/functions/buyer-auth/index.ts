@@ -1796,7 +1796,7 @@ async function handleListTickets(supabaseAdmin: any, body: any) {
     .from('support_tickets')
     .select('*')
     .eq('panel_id', panelId)
-    .eq('user_id', buyerId)
+    .eq('buyer_id', buyerId)
     .eq('ticket_type', 'user_to_panel')
     .order('created_at', { ascending: false });
 

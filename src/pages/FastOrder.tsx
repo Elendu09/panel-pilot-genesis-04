@@ -377,6 +377,8 @@ const FastOrderContent = () => {
     min_quantity: s.minQuantity,
     max_quantity: s.maxQuantity,
     provider_service_id: s.providerServiceId,
+    display_order: s.display_order,
+    displayOrder: s.displayOrder,
   }));
 
   // Analytics tracking for Fast Order funnel
