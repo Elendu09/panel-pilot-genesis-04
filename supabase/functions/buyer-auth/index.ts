@@ -1620,14 +1620,17 @@ async function handleCreateSupportTicket(supabaseAdmin: any, body: any) {
     return jsonResponse({ error: 'Missing required fields (panelId, subject, message)' });
   }
 
+  const priority = body.priority || 'medium';
+
   const { data: ticket, error } = await supabaseAdmin
     .from('support_tickets')
     .insert({
       panel_id: panelId,
-      user_id: buyerId || null,
+      user_id: null,
+      buyer_id: buyerId || null,
       subject,
       status: 'open',
-      priority: 'medium',
+      priority,
       ticket_type: 'user_to_panel',
       messages: [{
         sender: 'buyer',
