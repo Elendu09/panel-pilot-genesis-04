@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { TwoFactorChallenge } from "@/components/auth/TwoFactorChallenge";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { TwoFactorChallenge } from '@/components/auth/TwoFactorChallenge';
 
 interface AuthContextType {
   user: User | null;
@@ -17,10 +17,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Storage keys for MFA state persistence
-const MFA_REQUIRED_KEY = "mfa_required";
-const MFA_VERIFIED_KEY = "mfa_verified_timestamp";
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -31,19 +27,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
       if (error) throw error;
-      // ... rest of your fetchProfile logic ...
+      
+      // For OAuth users: ensure role is set and username is populated
+      if (data && (!data.role || !data.username)) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const metadata = authUser?.user_metadata || {};
+        const updates: Record<string, any> = {};
+        
+        if (!data.role) {
+          updates.role = metadata.role || 'panel_owner';
+        }
+        if (!data.username) {
+          // Generate username from email prefix or full name
+          const emailPrefix = (data.email || '').split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
+          const namePrefix = (metadata.full_name || '').replace(/\s+/g, '').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
+          updates.username = namePrefix || emailPrefix || `user_${Date.now().toString(36)}`;
+        }
+        if (!data.full_name && metadata.full_name) {
+          updates.full_name = metadata.full_name;
+        }
+        if (!data.avatar_url && metadata.avatar_url) {
+          updates.avatar_url = metadata.avatar_url;
+        }
+        
+        if (Object.keys(updates).length > 0) {
+          const { data: updated } = await supabase
+            .from('profiles')
+            .update(updates)
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+          
+          if (updated) {
+            setProfile(updated);
+            return updated;
+          }
+        }
+      }
+      
       setProfile(data);
+
+      // Check for pending panel creation
+      const pendingPanel = localStorage.getItem('pendingPanelCreation');
+      if (pendingPanel && data.role === 'panel_owner') {
+        const panelData = JSON.parse(pendingPanel);
+        if (panelData.userId === userId) {
+          await createPanel(panelData.panelName, data.id);
+          localStorage.removeItem('pendingPanelCreation');
+        }
+      }
+
       return data;
     } catch (error) {
-      console.error("Error fetching profile:", error);
+      console.error('Error fetching profile:', error);
       return null;
     }
   };
 
   const createPanel = async (panelName: string, ownerId: string) => {
-    // ... your existing createPanel logic ...
+    try {
+      const { error } = await supabase
+        .from('panels')
+        .insert([
+          {
+            name: panelName,
+            owner_id: ownerId,
+            status: 'active' as const,
+            is_approved: true,
+            theme_type: 'dark_gradient' as const,
+            subdomain: panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'panel',
+          }
+        ]);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Panel Created",
+        description: "Your subdomain is live now. Configure services to start selling."
+      });
+    } catch (error) {
+      console.error('Error creating panel:', error);
+      toast({
+        variant: "destructive",
+        title: "Panel Creation Error",
+        description: "Failed to create your panel. Please contact support."
+      });
+    }
   };
 
   const refreshProfile = async () => {
@@ -52,94 +128,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Check MFA status on initial load (page refresh)
-  const checkMfaStatusOnLoad = async (currentUser: User) => {
-    try {
-      // Check if we already verified MFA in this browser session
-      const mfaVerifiedAt = sessionStorage.getItem(MFA_VERIFIED_KEY);
-      const mfaRequired = sessionStorage.getItem(MFA_REQUIRED_KEY);
-
-      // If already verified in this session, don't ask again
-      if (mfaVerifiedAt) {
-        setNeedsMfaChallenge(false);
-        return;
-      }
-
-      // Check if MFA is enabled for this user
-      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", {
-        body: { action: "status" },
-      });
-
-      if (mfaStatus?.enabled) {
-        // MFA is enabled, but we haven't verified it yet in this session
-        sessionStorage.setItem(MFA_REQUIRED_KEY, "true");
-        setNeedsMfaChallenge(true);
-      } else {
-        // No MFA required
-        sessionStorage.removeItem(MFA_REQUIRED_KEY);
-        setNeedsMfaChallenge(false);
-      }
-    } catch (e) {
-      console.error("MFA status check failed:", e);
-      // Fail safe: if we can't check, assume no MFA required to prevent lockout
-      setNeedsMfaChallenge(false);
-    }
-  };
-
   useEffect(() => {
-    // Handle auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-
-      if (currentSession?.user) {
-        // Check if MFA was previously required but not verified
-        const mfaRequired = sessionStorage.getItem(MFA_REQUIRED_KEY);
-        const mfaVerified = sessionStorage.getItem(MFA_VERIFIED_KEY);
-
-        if (mfaRequired && !mfaVerified) {
-          // User refreshed page but hasn't completed MFA yet
-          setNeedsMfaChallenge(true);
-        } else if (!mfaVerified) {
-          // First time checking this session, verify MFA status
-          await checkMfaStatusOnLoad(currentSession.user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
         }
-
-        setTimeout(() => {
-          fetchProfile(currentSession.user.id);
-        }, 0);
-      } else {
-        setProfile(null);
-        if (event === "SIGNED_OUT") {
-          // Clear MFA state on logout
-          sessionStorage.removeItem(MFA_REQUIRED_KEY);
-          sessionStorage.removeItem(MFA_VERIFIED_KEY);
-          setNeedsMfaChallenge(false);
-        }
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
-    // Initial session check on page load
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
       if (session?.user) {
-        const mfaRequired = sessionStorage.getItem(MFA_REQUIRED_KEY);
-        const mfaVerified = sessionStorage.getItem(MFA_VERIFIED_KEY);
-
-        if (mfaRequired && !mfaVerified) {
-          // Refresh happened mid-MFA flow
-          setNeedsMfaChallenge(true);
-        } else if (!mfaVerified) {
-          // Check MFA status for this new session
-          await checkMfaStatusOnLoad(session.user);
-        }
-
         fetchProfile(session.user.id);
+        // Check MFA status on session restore (prevents bypass via reload)
+        try {
+          const { data: mfaStatus } = await supabase.functions.invoke('mfa-setup', {
+            body: { action: 'status' }
+          });
+          if (mfaStatus?.enabled) {
+            setNeedsMfaChallenge(true);
+          }
+        } catch (e) {
+          console.error('MFA status check on restore failed:', e);
+        }
       }
       setLoading(false);
     });
@@ -148,68 +169,116 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, username?: string, fullName?: string) => {
-    // ... existing signUp logic ...
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth?verified=true`,
+          data: {
+            username: username,
+            full_name: fullName || '',
+            role: 'panel_owner'
+          }
+        }
+      });
+      
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Sign Up Error",
+          description: error.message
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Please check your email to confirm your account."
+        });
+      }
+      
+      return { error };
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Sign Up Error",
+        description: error.message
+      });
+      return { error };
+    }
   };
 
   const signIn = async (identifier: string, password: string) => {
     try {
       let loginEmail = identifier.trim();
-
-      if (!identifier.includes("@")) {
-        const { data: email, error: lookupError } = await supabase.rpc("lookup_email_by_username", {
-          p_username: identifier.trim(),
-        });
-
+      
+      if (!identifier.includes('@')) {
+        const { data: email, error: lookupError } = await supabase
+          .rpc('lookup_email_by_username', { p_username: identifier.trim() });
+        
         if (lookupError || !email) {
           toast({
             variant: "destructive",
             title: "Sign In Error",
-            description: "Username not found. Please check and try again.",
+            description: "Username not found. Please check and try again."
           });
-          return { error: { message: "Username not found" } };
+          return { error: { message: 'Username not found' } };
         }
-
+        
         loginEmail = email;
       }
-
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginEmail,
-        password,
+        password
       });
-
+      
       if (error) {
-        // ... existing error handling ...
+        if (error.message?.toLowerCase().includes('email not confirmed') || 
+            error.message?.toLowerCase().includes('email_not_confirmed')) {
+          return { error, emailNotVerified: true, email: loginEmail };
+        }
+        
+        let friendlyMessage = error.message;
+        const lowerMsg = error.message?.toLowerCase() || '';
+        
+        if (lowerMsg.includes('invalid login credentials') || lowerMsg.includes('invalid_credentials')) {
+          friendlyMessage = 'Invalid email/username or password. Please check and try again.';
+        } else if (lowerMsg.includes('too many requests') || lowerMsg.includes('rate limit')) {
+          friendlyMessage = 'Too many login attempts. Please wait a moment and try again.';
+        } else if (lowerMsg.includes('user not found')) {
+          friendlyMessage = 'No account found with this email. Please sign up first.';
+        } else if (lowerMsg.includes('network') || lowerMsg.includes('fetch')) {
+          friendlyMessage = 'Network error. Please check your connection and try again.';
+        }
+        
+        toast({
+          variant: "destructive",
+          title: "Sign In Failed",
+          description: friendlyMessage
+        });
         return { error };
       }
 
-      // Check MFA status immediately after successful password login
+      // Check MFA status after successful login
       if (data?.user) {
         try {
-          const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", {
-            body: { action: "status" },
+          const { data: mfaStatus } = await supabase.functions.invoke('mfa-setup', {
+            body: { action: 'status' }
           });
-
           if (mfaStatus?.enabled) {
-            // MFA is enabled - mark as required but not yet verified
-            sessionStorage.setItem(MFA_REQUIRED_KEY, "true");
             setNeedsMfaChallenge(true);
-          } else {
-            // No MFA needed
-            sessionStorage.removeItem(MFA_REQUIRED_KEY);
-            setNeedsMfaChallenge(false);
           }
         } catch (e) {
-          console.error("MFA status check failed:", e);
-          setNeedsMfaChallenge(false);
+          console.error('MFA status check failed:', e);
         }
       }
-
+      
       return { error };
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Sign In Error",
-        description: error.message,
+        description: error.message
       });
       return { error };
     }
@@ -218,38 +287,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      // Clear MFA state on logout
-      sessionStorage.removeItem(MFA_REQUIRED_KEY);
-      sessionStorage.removeItem(MFA_VERIFIED_KEY);
       setUser(null);
       setSession(null);
       setProfile(null);
       setNeedsMfaChallenge(false);
       toast({
-        title: "Signed out successfully",
+        title: "Signed out successfully"
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error signing out",
-        description: error.message,
+        description: error.message
       });
     }
   };
 
   const handleMfaVerified = () => {
-    // Mark MFA as verified for this browser session
-    sessionStorage.setItem(MFA_VERIFIED_KEY, Date.now().toString());
-    sessionStorage.removeItem(MFA_REQUIRED_KEY);
     setNeedsMfaChallenge(false);
-    if (user) fetchProfile(user.id);
   };
 
   const handleMfaCancelled = () => {
-    // Clear session and MFA state if they cancel
-    sessionStorage.removeItem(MFA_REQUIRED_KEY);
-    sessionStorage.removeItem(MFA_VERIFIED_KEY);
-    signOut();
+    setNeedsMfaChallenge(false);
+    setUser(null);
+    setSession(null);
+    setProfile(null);
   };
 
   const value = {
@@ -260,13 +322,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signIn,
     signOut,
-    refreshProfile,
+    refreshProfile
   };
 
   return (
     <AuthContext.Provider value={value}>
       {needsMfaChallenge ? (
-        <TwoFactorChallenge open={true} onVerified={handleMfaVerified} onCancel={handleMfaCancelled} />
+        <TwoFactorChallenge 
+          open={true} 
+          onVerified={handleMfaVerified}
+          onCancel={handleMfaCancelled}
+        />
       ) : (
         children
       )}
@@ -277,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
