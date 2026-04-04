@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
-import {
+import { 
   ShoppingCart,
   Clock,
   CheckCircle,
@@ -25,10 +25,12 @@ import {
   Users,
   Activity,
   Search,
+  Filter,
   Eye,
   RefreshCw,
   Calendar,
-  ExternalLink,
+  ArrowUpDown,
+  ExternalLink
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -42,17 +44,19 @@ interface Order {
   provider_id?: string;
   provider_order_id?: string;
   notes?: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled" | "partial" | "processing";
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial' | 'processing' | 'awaiting_payment';
   start_count: number;
   remains: number;
   progress: number;
   created_at: string;
   updated_at: string;
-  panel_id?: string; // Added for ownership checks
   service?: {
     name: string;
     category: string;
-    provider?: { name: string } | null;
+    provider_cost?: number;
+    provider?: {
+      name: string;
+    } | null;
   };
   buyer?: {
     email: string;
@@ -68,138 +72,135 @@ const OrderManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [currentPanelId, setCurrentPanelId] = useState<string | null>(null);
 
-  // Fetch panel ID securely first
   useEffect(() => {
-    const getPanelId = async () => {
-      if (!user || !profile) return;
-
-      try {
-        const { data, error } = await supabase.from("panels").select("id").eq("owner_id", profile.id).maybeSingle();
-
-        if (error) throw error;
-        if (data) setCurrentPanelId(data.id);
-      } catch (err) {
-        console.error("Error fetching panel:", err);
-      }
-    };
-
-    getPanelId();
+    if (user) {
+      fetchOrders();
+    }
   }, [user, profile]);
 
-  const fetchOrders = useCallback(async () => {
-    // SECURITY: Only fetch if we have confirmed panel ownership
-    if (!user || !currentPanelId) {
-      setOrders([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+  const fetchOrders = async () => {
     try {
-      const { data: ordersData, error } = await supabase
-        .from("orders")
-        .select(
-          `
-          id, order_number, target_url, quantity, price, provider_cost, 
-          provider_id, provider_order_id, notes, status, start_count, 
-          remains, progress, created_at, updated_at, panel_id,
-          service:services!inner(name, category, provider:providers(name)),
-          buyer:client_users!inner(email, full_name)
-        `,
-        )
-        .eq("panel_id", currentPanelId) // ALWAYS filter by panel
-        .order("created_at", { ascending: false })
+      let query = (supabase as any).from('orders').select(`
+        *, provider_cost, provider_id, provider_order_id, notes,
+        service:services(name, category, provider_cost, provider:providers(name)),
+        buyer:client_users!orders_buyer_id_fkey(email, full_name)
+      `);
+
+      // If panel owner, only show orders for their panel
+      if (profile?.role === 'panel_owner') {
+        const { data: panelData } = await supabase
+          .from('panels')
+          .select('id')
+          .eq('owner_id', profile.id)
+          .single();
+
+        if (panelData) {
+          query = query.eq('panel_id', panelData.id);
+        }
+      }
+
+      const { data: ordersData } = await query
+        .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
       setOrders(ordersData || []);
-    } catch (error: any) {
-      console.error("Error fetching orders:", error);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to load orders",
+        description: "Failed to load orders"
       });
-      setOrders([]);
     } finally {
       setLoading(false);
     }
-  }, [user, currentPanelId, toast]);
+  };
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
-  // SECURITY: Verify order belongs to panel before updating
-  const updateOrderStatus = async (orderId: string, newStatus: Order["status"]) => {
-    if (!currentPanelId) return;
-
+  const updateOrderStatus = async (orderId: string, newStatus: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'partial') => {
     try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq("id", orderId)
-        .eq("panel_id", currentPanelId); // Critical: Ensure ownership
-
-      if (error) throw error;
+      await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
 
       fetchOrders();
-      toast({ title: "Status Updated", description: "Order status has been updated successfully" });
-    } catch (error: any) {
-      console.error("Error updating order status:", error);
+      toast({
+        title: "Status Updated",
+        description: "Order status has been updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to update order status",
+        description: "Failed to update order status"
       });
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.target_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.service?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.buyer?.email.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.target_url.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.service?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Statistics (memoized for performance)
-  const stats = useMemo(() => {
-    const total = orders.length;
-    const completed = orders.filter((o) => o.status === "completed").length;
-    const pending = orders.filter((o) => ["pending", "processing", "in_progress"].includes(o.status)).length;
-    const totalAmount = orders.reduce((sum, o) => sum + (o.price || 0), 0);
-    const profit = orders.reduce((sum, o) => sum + ((o.price || 0) - (o.provider_cost || 0)), 0);
-    return { total, completed, pending, totalAmount, profit, conversion: total > 0 ? (completed / total) * 100 : 0 };
-  }, [orders]);
+  const totalOrders = orders.length;
+  const completedOrders = orders.filter(o => o.status === 'completed').length;
+  const pendingOrders = orders.filter(o => ['pending', 'processing', 'awaiting_payment', 'in_progress'].includes(o.status || '')).length;
+  const totalOrderAmount = orders.reduce((sum, order) => sum + (order.price || 0), 0);
+  const profitFromOrders = orders.reduce((sum, order) => {
+    const cost = order.provider_cost || order.service?.provider_cost || 0;
+    return sum + ((order.price || 0) - cost);
+  }, 0);
+  const conversionRate = totalOrders > 0 ? ((completedOrders / totalOrders) * 100) : 0;
 
   const getStatusIcon = (status: string) => {
-    const icons = {
-      completed: CheckCircle,
-      in_progress: Activity,
-      pending: Clock,
-      cancelled: XCircle,
-      partial: AlertCircle,
-      processing: Clock,
-    };
-    const Icon = icons[status as keyof typeof icons] || Clock;
-    return <Icon className="w-3 h-3" />;
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-3 h-3" />;
+      case 'in_progress':
+        return <Activity className="w-3 h-3" />;
+      case 'pending':
+        return <Clock className="w-3 h-3" />;
+      case 'cancelled':
+        return <XCircle className="w-3 h-3" />;
+      case 'partial':
+        return <AlertCircle className="w-3 h-3" />;
+      default:
+        return <Clock className="w-3 h-3" />;
+    }
   };
 
   const getStatusColor = (status: string) => {
-    const colors = {
-      completed: "bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30",
-      in_progress: "bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30",
-      pending: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30",
-      cancelled: "bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30",
-      partial: "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30",
-      processing: "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500/20 text-green-400';
+      case 'in_progress':
+        return 'bg-blue-500/20 text-blue-400';
+      case 'pending':
+        return 'bg-yellow-500/20 text-yellow-400';
+      case 'cancelled':
+        return 'bg-red-500/20 text-red-400';
+      case 'partial':
+        return 'bg-orange-500/20 text-orange-400';
+      default:
+        return 'bg-gray-500/20 text-gray-400';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    const icons = {
+      instagram: '📸',
+      youtube: '🎥', 
+      tiktok: '🎵',
+      twitter: '🐦',
+      facebook: '👥',
+      linkedin: '💼'
     };
-    return colors[status as keyof typeof colors] || "bg-gray-500/20 text-gray-700 dark:text-gray-400";
+    return icons[category] || '🌟';
   };
 
   if (!user) {
@@ -226,7 +227,7 @@ const OrderManagement = () => {
       </Helmet>
 
       <Navigation />
-
+      
       <section className="pt-20 pb-12">
         <div className="container mx-auto px-4">
           <div className="space-y-6">
@@ -236,46 +237,97 @@ const OrderManagement = () => {
                 <p className="text-muted-foreground">Track and manage all your SMM orders</p>
               </div>
               <Button onClick={fetchOrders} variant="outline" className="gap-2">
-                <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                <RefreshCw className="w-4 h-4" />
                 Refresh
               </Button>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                { label: "Total Orders", value: stats.total, icon: ShoppingCart },
-                { label: "Completed", value: stats.completed, icon: CheckCircle },
-                { label: "Pending", value: stats.pending, icon: Clock },
-                { label: "Total Revenue", value: `$${stats.totalAmount.toFixed(2)}`, icon: DollarSign },
-                { label: "Profit", value: `$${stats.profit.toFixed(2)}`, icon: TrendingUp },
-                { label: "Conversion", value: `${stats.conversion.toFixed(1)}%`, icon: Activity },
-              ].map((stat, idx) => (
-                <Card key={idx} className="bg-card/80 backdrop-blur border-border/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-                        <p className="text-xl font-bold text-primary">{stat.value}</p>
-                      </div>
-                      <stat.icon className="w-5 h-5 text-primary/60" />
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Total Orders</p>
+                      <p className="text-xl font-bold text-primary">{totalOrders}</p>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <ShoppingCart className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Completed</p>
+                      <p className="text-xl font-bold text-primary">{completedOrders}</p>
+                    </div>
+                    <CheckCircle className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Pending</p>
+                      <p className="text-xl font-bold text-primary">{pendingOrders}</p>
+                    </div>
+                    <Clock className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Total Order Amount</p>
+                      <p className="text-xl font-bold text-primary">${totalOrderAmount.toFixed(2)}</p>
+                    </div>
+                    <DollarSign className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Profit from Orders</p>
+                      <p className="text-xl font-bold text-primary">${profitFromOrders.toFixed(2)}</p>
+                    </div>
+                    <TrendingUp className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-card border-border shadow-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">Conversion Rate</p>
+                      <p className="text-xl font-bold text-primary">{conversionRate.toFixed(1)}%</p>
+                    </div>
+                    <Activity className="w-6 h-6 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Orders Table - Wrapped in overflow-x-auto for mobile */}
-            <Card className="bg-card/80 backdrop-blur border-border/50">
+            {/* Orders Table */}
+            <Card className="bg-gradient-card border-border shadow-card">
               <CardHeader>
-                <CardTitle>Orders ({filteredOrders.length})</CardTitle>
+                <CardTitle>Orders</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search orders..."
+                      placeholder="Search orders by number, service, or URL..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-9"
@@ -288,7 +340,6 @@ const OrderManagement = () => {
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -297,100 +348,124 @@ const OrderManagement = () => {
                   </Select>
                 </div>
 
-                {/* Mobile scroll wrapper */}
-                <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <ShoppingCart className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
-                      <p className="text-muted-foreground">Loading orders...</p>
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[100px]">Order #</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead className="hidden md:table-cell">Customer</TableHead>
-                          <TableHead className="hidden lg:table-cell">Target</TableHead>
-                          <TableHead className="text-right">Qty</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="w-[80px]">Progress</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredOrders.map((order) => (
-                          <TableRow
-                            key={order.id}
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => setSelectedOrder(order)}
-                          >
-                            <TableCell className="font-mono text-xs">{order.order_number}</TableCell>
-                            <TableCell>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <ShoppingCart className="w-8 h-8 animate-pulse mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">Loading orders...</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order #</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Target URL</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Progress</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell>
+                            <div className="font-mono text-sm">{order.order_number}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">
+                                {getCategoryIcon(order.service?.category || '')}
+                              </span>
                               <div>
-                                <p className="font-medium text-sm line-clamp-1">{order.service?.name}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{order.service?.category}</p>
+                                <p className="font-medium">{order.service?.name}</p>
+                                <p className="text-sm text-muted-foreground capitalize">
+                                  {order.service?.category}
+                                </p>
                               </div>
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              <div className="text-sm">{order.buyer?.full_name || "N/A"}</div>
-                              <div className="text-xs text-muted-foreground truncate max-w-[120px]">
-                                {order.buyer?.email}
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">
-                              <div className="flex items-center gap-1">
-                                <span className="text-xs truncate max-w-[150px] font-mono">{order.target_url}</span>
-                                <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">{order.quantity?.toLocaleString()}</TableCell>
-                            <TableCell className="text-right font-medium">${order.price?.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={cn("text-xs", getStatusColor(order.status))}>
-                                {getStatusIcon(order.status)}
-                                <span className="ml-1 capitalize hidden sm:inline">
-                                  {order.status.replace("_", " ")}
-                                </span>
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Progress value={order.progress || 0} className="h-1.5 w-12" />
-                                <span className="text-xs text-muted-foreground">
-                                  {Math.round(order.progress || 0)}%
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {order.service?.provider?.name || '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[120px]">
+                              <p className="font-medium truncate">{order.buyer?.full_name || 'No Name'}</p>
+                              <p className="text-sm text-muted-foreground truncate">{order.buyer?.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-sm truncate max-w-[200px]">
+                                {order.target_url}
+                              </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedOrder(order);
-                                }}
+                                className="h-6 w-6 p-0"
+                                onClick={() => window.open(order.target_url, '_blank')}
                               >
-                                <Eye className="w-4 h-4" />
+                                <ExternalLink className="w-3 h-3" />
                               </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{order.quantity?.toLocaleString()}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">${order.price?.toFixed(2)}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(order.status)}>
+                              {getStatusIcon(order.status)}
+                              <span className="ml-1 capitalize">{order.status.replace('_', ' ')}</span>
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="w-20">
+                              <Progress value={order.progress || 0} className="h-2" />
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round(order.progress || 0)}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(order.created_at).toLocaleDateString()}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              onClick={() => setSelectedOrder(order)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
 
                 {!loading && filteredOrders.length === 0 && (
                   <div className="text-center py-12">
                     <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-semibold mb-2">No orders found</h3>
                     <p className="text-muted-foreground">
-                      {orders.length === 0
-                        ? "No orders have been placed yet"
-                        : "Try adjusting your search or filter criteria"}
+                      {orders.length === 0 
+                        ? "No orders have been placed yet" 
+                        : "Try adjusting your search or filter criteria"
+                      }
                     </p>
                   </div>
                 )}
@@ -402,57 +477,133 @@ const OrderManagement = () => {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 text-primary" />
-              Order #{selectedOrder?.order_number}
+              Order Details
             </DialogTitle>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 text-sm">
-              {/* ... (Keep your existing dialog content structure) ... */}
-              {/* Simplified for brevity - ensure provider_cost is displayed correctly */}
+              {/* Row 1: Order # + Status */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-muted/30 border">
-                  <p className="text-xs text-muted-foreground uppercase">Revenue</p>
-                  <p className="text-lg font-bold text-green-600">${selectedOrder.price?.toFixed(2)}</p>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Order #</p>
+                  <p className="font-mono text-xs font-semibold break-all">{selectedOrder.order_number}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/30 border">
-                  <p className="text-xs text-muted-foreground uppercase">Cost</p>
-                  <p className="text-lg font-bold text-red-500">${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Status</p>
+                  <Badge className={cn("mt-0.5", getStatusColor(selectedOrder.status))}>
+                    {getStatusIcon(selectedOrder.status)}
+                    <span className="ml-1 capitalize">{selectedOrder.status.replace('_', ' ')}</span>
+                  </Badge>
                 </div>
               </div>
 
-              {selectedOrder.provider_cost !== undefined && (
-                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Net Profit</span>
-                    <span
-                      className={cn(
-                        "text-lg font-bold",
-                        selectedOrder.price - selectedOrder.provider_cost >= 0 ? "text-green-600" : "text-red-500",
-                      )}
-                    >
-                      ${(selectedOrder.price - selectedOrder.provider_cost).toFixed(2)}
-                    </span>
+              {/* Row 2: Service + Provider */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Service</p>
+                  <p className="font-medium text-xs leading-snug">{selectedOrder.service?.name || 'Deleted service'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider</p>
+                  <p className="text-xs">{selectedOrder.service?.provider?.name || '—'}</p>
+                </div>
+              </div>
+
+              {/* Row 3: Customer + Quantity */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Customer</p>
+                  <p className="font-medium text-xs">{selectedOrder.buyer?.full_name || 'N/A'}</p>
+                  <p className="text-muted-foreground text-[10px] break-all">{selectedOrder.buyer?.email}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Quantity / Start</p>
+                  <p className="font-medium text-xs">{selectedOrder.quantity?.toLocaleString()}</p>
+                  <p className="text-muted-foreground text-[10px]">Start: {selectedOrder.start_count ?? '—'}</p>
+                </div>
+              </div>
+
+              {/* Target URL */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Target URL</p>
+                <div className="flex items-center gap-2">
+                  <p className="break-all text-xs flex-1">{selectedOrder.target_url}</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 shrink-0"
+                    onClick={() => {
+                      const url = selectedOrder.target_url;
+                      const finalUrl = url.startsWith('http') ? url : (url.startsWith('@') ? `https://instagram.com/${url.replace('@', '')}` : `https://${url}`);
+                      window.open(finalUrl, '_blank');
+                    }}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Earnings Breakdown */}
+              <div className="p-3 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Earnings Breakdown</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Customer Paid</p>
+                    <p className="text-sm font-bold text-green-500">${selectedOrder.price?.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Provider Cost</p>
+                    <p className="text-sm font-bold text-red-500">-${(selectedOrder.provider_cost || 0).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground">Your Profit</p>
+                    <p className={cn(
+                      "text-sm font-bold",
+                      (selectedOrder.price - (selectedOrder.provider_cost || 0)) >= 0 ? "text-green-500" : "text-red-500"
+                    )}>
+                      ${(selectedOrder.price - (selectedOrder.provider_cost || 0)).toFixed(2)}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
-              <div className="flex gap-2 pt-2">
-                {["pending", "in_progress", "completed", "cancelled"].map((status) => (
-                  <Button
-                    key={status}
-                    variant={selectedOrder.status === status ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => updateOrderStatus(selectedOrder.id, status as Order["status"])}
-                    disabled={selectedOrder.status === status}
-                    className="capitalize flex-1"
-                  >
-                    {status.replace("_", " ")}
-                  </Button>
-                ))}
+              {/* Progress */}
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Progress</p>
+                <Progress value={selectedOrder.progress || 0} className="h-2 mt-1" />
+                <span className="text-xs text-muted-foreground">{Math.round(selectedOrder.progress || 0)}%</span>
+              </div>
+
+              {/* Provider Order ID + Notes */}
+              <div className="grid grid-cols-2 gap-3">
+                {selectedOrder.provider_order_id && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Provider Order ID</p>
+                    <p className="font-mono text-xs">{selectedOrder.provider_order_id}</p>
+                  </div>
+                )}
+                {selectedOrder.notes && (
+                  <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                    <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Notes</p>
+                    <p className="text-xs">{selectedOrder.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Timestamps */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Created</p>
+                  <p className="text-xs">{new Date(selectedOrder.created_at).toLocaleString()}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/40">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-medium mb-1">Updated</p>
+                  <p className="text-xs">{new Date(selectedOrder.updated_at).toLocaleString()}</p>
+                </div>
               </div>
             </div>
           )}
