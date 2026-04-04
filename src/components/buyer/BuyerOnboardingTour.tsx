@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { 
-  X, 
-  ChevronRight, 
-  ChevronLeft, 
+import {
+  X,
+  ChevronRight,
+  ChevronLeft,
   LayoutDashboard,
   Package,
   ShoppingCart,
@@ -15,7 +15,7 @@ import {
   Sparkles,
   Hand,
   Check,
-  HeadphonesIcon
+  HeadphonesIcon,
 } from "lucide-react";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 
@@ -46,7 +46,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Your main hub! View your balance, recent orders, and quick stats at a glance.",
     icon: LayoutDashboard,
     target: "buyer-dashboard",
-    selector: "[href='/dashboard']",
+    selector: "[data-tour='mobile-dashboard']",
     position: "top",
     action: "Tap to view your dashboard",
   },
@@ -56,7 +56,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Top up your balance using various payment methods to place orders.",
     icon: Wallet,
     target: "buyer-deposit",
-    selector: "[href='/deposit']",
+    selector: "[data-tour='mobile-deposit']",
     position: "top",
     action: "Tap to add funds",
   },
@@ -66,7 +66,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Browse services and place new orders for social media growth!",
     icon: ShoppingCart,
     target: "buyer-new-order",
-    selector: "[href='/new-order']",
+    selector: "[data-tour='mobile-new-order']",
     position: "top",
     action: "Tap to create an order",
   },
@@ -76,7 +76,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Need help? Contact our support team for assistance with your orders.",
     icon: HeadphonesIcon,
     target: "buyer-support",
-    selector: "[href='/support']",
+    selector: "[data-tour='mobile-support']",
     position: "top",
     action: "Tap for support",
   },
@@ -111,7 +111,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
   // Only run on mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   // Listen for tour restart event
   useEffect(() => {
@@ -122,17 +122,17 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
       }
     };
 
-    window.addEventListener('restartBuyerTour', handleRestartTour);
-    return () => window.removeEventListener('restartBuyerTour', handleRestartTour);
+    window.addEventListener("restartBuyerTour", handleRestartTour);
+    return () => window.removeEventListener("restartBuyerTour", handleRestartTour);
   }, [isMobile]);
 
   // Check localStorage for tour completion
   useEffect(() => {
     if (!buyer?.id || !isMobile) return;
-    
+
     const tourKey = `buyer_tour_completed_${buyer.id}`;
     const hasCompleted = localStorage.getItem(tourKey);
-    
+
     // Auto-start for first-time users (optional - uncomment if desired)
     // if (!hasCompleted) {
     //   setIsOpen(true);
@@ -163,10 +163,10 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
   useEffect(() => {
     if (isOpen) {
       const timeout = setTimeout(updateTargetRect, 100);
-      window.addEventListener('resize', updateTargetRect);
+      window.addEventListener("resize", updateTargetRect);
       return () => {
         clearTimeout(timeout);
-        window.removeEventListener('resize', updateTargetRect);
+        window.removeEventListener("resize", updateTargetRect);
       };
     }
   }, [isOpen, currentStep, updateTargetRect]);
@@ -187,7 +187,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
 
   const completeTour = () => {
     if (buyer?.id) {
-      localStorage.setItem(`buyer_tour_completed_${buyer.id}`, 'true');
+      localStorage.setItem(`buyer_tour_completed_${buyer.id}`, "true");
     }
     setIsOpen(false);
     setCurrentStep(0);
@@ -199,7 +199,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
   };
 
   // Check if this is a centered step
-  const isCenteredStep = step?.id === 'welcome' || step?.id === 'complete';
+  const isCenteredStep = step?.id === "welcome" || step?.id === "complete";
 
   // Positioning for mobile
   const getPositionStyles = useMemo(() => {
@@ -250,7 +250,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
               animate={{ opacity: 1 }}
               className="fixed inset-0 z-[99] pointer-events-none"
               style={{
-                background: 'rgba(0, 0, 0, 0.75)',
+                background: "rgba(0, 0, 0, 0.75)",
                 clipPath: `polygon(
                   0% 0%, 
                   0% 100%, 
@@ -262,7 +262,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
                   ${targetRect.left - 4}px 100%, 
                   100% 100%, 
                   100% 0%
-                )`
+                )`,
               }}
             />
             <motion.div
@@ -274,7 +274,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
                 top: targetRect.top - 4,
                 width: targetRect.width + 8,
                 height: targetRect.height + 8,
-                boxShadow: '0 0 0 4px hsl(var(--primary) / 0.3)',
+                boxShadow: "0 0 0 4px hsl(var(--primary) / 0.3)",
               }}
             />
           </>
@@ -284,17 +284,14 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
         {targetRect && step.action && (
           <motion.div
             className="fixed pointer-events-none z-[102]"
-            style={{ 
-              left: targetRect.left + targetRect.width / 2, 
-              top: targetRect.top + targetRect.height / 2 
+            style={{
+              left: targetRect.left + targetRect.width / 2,
+              top: targetRect.top + targetRect.height / 2,
             }}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
           >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            >
+            <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 1, repeat: Infinity }}>
               <Hand className="w-6 h-6 text-primary drop-shadow-lg -rotate-12" />
             </motion.div>
           </motion.div>
@@ -308,10 +305,10 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.3 }}
-            style={{ 
-              width: "100%", 
-              maxWidth: "340px", 
-              pointerEvents: "auto" 
+            style={{
+              width: "100%",
+              maxWidth: "340px",
+              pointerEvents: "auto",
             }}
           >
             <Card className="bg-card/95 backdrop-blur-xl border-primary/30 shadow-2xl p-4 space-y-3">
@@ -320,12 +317,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
                 <span className="px-2 py-1 text-[10px] font-medium bg-primary/10 text-primary rounded-full">
                   Step {currentStep + 1} of {buyerTourSteps.length}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSkip}
-                  className="h-7 w-7 text-muted-foreground"
-                >
+                <Button variant="ghost" size="icon" onClick={handleSkip} className="h-7 w-7 text-muted-foreground">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -348,9 +340,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
               {/* Content */}
               <div className="text-center space-y-1.5">
                 <h2 className="text-lg font-bold">{step.title}</h2>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {step.description}
-                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{step.description}</p>
                 {step.action && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-medium bg-primary/10 text-primary rounded-full mt-2">
                     <Hand className="w-3 h-3" />
@@ -365,9 +355,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
                   <div
                     key={index}
                     className={`h-1.5 rounded-full transition-all ${
-                      index <= currentStep 
-                        ? "bg-primary w-4" 
-                        : "bg-muted w-1.5"
+                      index <= currentStep ? "bg-primary w-4" : "bg-muted w-1.5"
                     }`}
                   />
                 ))}
@@ -375,17 +363,12 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
 
               {/* Navigation */}
               <div className="flex items-center gap-2 pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSkip}
-                  className="text-xs text-muted-foreground h-8"
-                >
+                <Button variant="ghost" size="sm" onClick={handleSkip} className="text-xs text-muted-foreground h-8">
                   Skip
                 </Button>
-                
+
                 <div className="flex-1" />
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -395,12 +378,8 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={handleNext}
-                  className="h-8 gap-1 min-w-[80px]"
-                >
+
+                <Button size="sm" onClick={handleNext} className="h-8 gap-1 min-w-[80px]">
                   {currentStep === buyerTourSteps.length - 1 ? (
                     <>
                       <Check className="w-3 h-3" />
