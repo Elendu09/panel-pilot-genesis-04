@@ -1909,7 +1909,7 @@ async function handleCloseTicket(supabaseAdmin: any, body: any) {
     .from('support_tickets')
     .update({ status: 'closed', updated_at: new Date().toISOString() })
     .eq('id', ticketId)
-    .eq('user_id', buyerId);
+    .eq('buyer_id', buyerId);
 
   if (error) {
     console.error('Failed to close ticket:', error);

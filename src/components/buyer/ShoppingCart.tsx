@@ -428,25 +428,33 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Bulk Add Tab */}
-          <TabsContent value="bulk" className="flex-1 m-0 p-6 pt-4 overflow-auto">
-            <BulkAddForm
-              services={services}
-              getEffectivePrice={getEffectivePrice}
-              formatPrice={formatPrice}
-              onAddToCart={handleBulkAdd}
-              disabled={syncing}
-            />
+          <TabsContent value="bulk" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="flex-1">
+              <div className="p-6 pt-4">
+                <BulkAddForm
+                  services={services}
+                  getEffectivePrice={getEffectivePrice}
+                  formatPrice={formatPrice}
+                  onAddToCart={handleBulkAdd}
+                  disabled={syncing}
+                />
+              </div>
+            </ScrollArea>
           </TabsContent>
 
           {/* Quick Repeat Tab */}
-          <TabsContent value="repeat" className="flex-1 m-0 p-6 pt-4 overflow-auto">
-            <QuickRepeatOrder
-              services={services}
-              getEffectivePrice={getEffectivePrice}
-              formatPrice={formatPrice}
-              onAddToCart={handleBulkAdd}
-              disabled={syncing}
-            />
+          <TabsContent value="repeat" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="flex-1">
+              <div className="p-6 pt-4">
+                <QuickRepeatOrder
+                  services={services}
+                  getEffectivePrice={getEffectivePrice}
+                  formatPrice={formatPrice}
+                  onAddToCart={handleBulkAdd}
+                  disabled={syncing}
+                />
+              </div>
+            </ScrollArea>
           </TabsContent>
         </Tabs>
       </SheetContent>

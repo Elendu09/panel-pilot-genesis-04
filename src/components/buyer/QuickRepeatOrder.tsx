@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Repeat, Package, Link as LinkIcon, Hash, Zap, Info } from "lucide-react";
+import { Repeat, Package, Link as LinkIcon, Hash, Zap, Info, AlertTriangle } from "lucide-react";
 import { SOCIAL_ICONS_MAP } from "@/components/icons/SocialIcons";
 import { cn } from "@/lib/utils";
 import { SpeedGauge } from "@/components/buyer/SpeedGauge";

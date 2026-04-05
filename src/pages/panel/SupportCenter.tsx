@@ -491,35 +491,67 @@ const SupportCenter = () => {
     </div>
   );
 
+  // Normalize message format — tenant tickets use sender/timestamp, platform tickets use sender_type/created_at
+  const normalizeMessage = (msg: any) => {
+    const senderType = msg.sender_type || (msg.sender === "buyer" || msg.sender === "user" ? "user" : msg.sender === "support" || msg.sender === "panel_owner" ? "panel_owner" : msg.sender === "admin" ? "admin" : "user");
+    const senderName = msg.sender || msg.senderName || (senderType === "panel_owner" ? "Panel Owner" : senderType === "admin" ? "Admin" : "Customer");
+    const createdAt = msg.created_at || msg.timestamp || new Date().toISOString();
+    return { ...msg, sender_type: senderType, sender: senderName, created_at: createdAt, id: msg.id || createdAt };
+  };
+
   // Ticket Details Content
   const TicketDetailsContent = ({ ticket, isPlatformTicket }: { ticket: Ticket; isPlatformTicket: boolean }) => (
     <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-4">
+        <Badge variant={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+        {!isPlatformTicket && ticket.status !== "closed" && ticket.status !== "resolved" && (
+          <Select
+            value={ticket.status}
+            onValueChange={(val) => handleUpdateTicketStatus(ticket.id, val)}
+          >
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
       <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-1">
         {ticket.messages?.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">No messages yet</div>
         ) : (
-          ticket.messages?.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender_type === "panel_owner" ? "justify-end" : "justify-start"}`}
-            >
+          ticket.messages?.map((rawMsg) => {
+            const message = normalizeMessage(rawMsg);
+            const isOwner = message.sender_type === "panel_owner";
+            const isAdmin = message.sender_type === "admin";
+            return (
               <div
-                className={`max-w-[85%] px-4 py-2 rounded-2xl ${
-                  message.sender_type === "panel_owner"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : message.sender_type === "admin"
-                      ? "bg-violet-500/20 text-violet-400 rounded-bl-sm"
-                      : "bg-muted rounded-bl-sm"
-                }`}
+                key={message.id}
+                className={`flex ${isOwner ? "justify-end" : "justify-start"}`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">{message.sender}</span>
-                  <span className="text-xs opacity-70">{formatDate(message.created_at)}</span>
+                <div
+                  className={`max-w-[85%] px-4 py-2 rounded-2xl ${
+                    isOwner
+                      ? "bg-primary text-primary-foreground rounded-br-sm"
+                      : isAdmin
+                        ? "bg-violet-500/20 text-violet-400 rounded-bl-sm"
+                        : "bg-muted rounded-bl-sm"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium">{message.sender}{message.senderEmail ? ` (${message.senderEmail})` : ''}</span>
+                    <span className="text-xs opacity-70">{formatDate(message.created_at)}</span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
