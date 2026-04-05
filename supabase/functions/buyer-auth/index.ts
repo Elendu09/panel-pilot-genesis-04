@@ -1870,12 +1870,12 @@ async function handleReplyTicket(supabaseAdmin: any, body: any) {
     return jsonResponse({ error: 'Missing required fields' });
   }
 
-  // Fetch current ticket
+  // Fetch current ticket - check both buyer_id and user_id for backwards compatibility
   const { data: ticket, error: fetchErr } = await supabaseAdmin
     .from('support_tickets')
     .select('*')
     .eq('id', ticketId)
-    .eq('user_id', buyerId)
+    .eq('buyer_id', buyerId)
     .single();
 
   if (fetchErr || !ticket) {
