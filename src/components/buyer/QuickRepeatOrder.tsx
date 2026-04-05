@@ -209,6 +209,14 @@ export const QuickRepeatOrder = ({
             {urls.length} valid URL{urls.length !== 1 ? "s" : ""} detected
           </span>
         </div>
+        {urls.length > 0 && (
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-600 dark:text-yellow-400">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              Some providers may reject duplicate orders for the same URL while a previous order is still active (pending/processing). Ensure prior orders are completed before reordering the same link.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Summary */}
