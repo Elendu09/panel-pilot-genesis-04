@@ -248,7 +248,7 @@ const ShoppingCart = ({
           </TabsList>
 
           {/* Cart Tab */}
-          <TabsContent value="cart" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+          <TabsContent value="cart" className="flex-1 min-h-0 flex flex-col m-0 data-[state=active]:flex">
             {cart.length === 0 ? (
               <div className="flex-1 flex items-center justify-center px-6">
                 <div className="text-center">
@@ -428,8 +428,8 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Bulk Add Tab */}
-          <TabsContent value="bulk" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1">
+          <TabsContent value="bulk" className="flex-1 min-h-0 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="h-0 flex-1">
               <div className="p-6 pt-4">
                 <BulkAddForm
                   services={services}
@@ -443,8 +443,8 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Quick Repeat Tab */}
-          <TabsContent value="repeat" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1">
+          <TabsContent value="repeat" className="flex-1 min-h-0 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="h-0 flex-1">
               <div className="p-6 pt-4">
                 <QuickRepeatOrder
                   services={services}
