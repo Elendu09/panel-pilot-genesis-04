@@ -41,6 +41,7 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Bot } from "lucide-react";
+import { ChatMarkdown } from "@/components/chat/ChatMarkdown";
 
 interface Ticket {
   id: string;
