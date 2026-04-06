@@ -699,7 +699,7 @@ const BuyerDeposit = () => {
                   </div>
                   <div>
                     <p className="text-xs md:text-sm text-muted-foreground">Current Balance</p>
-                    <p className="text-2xl md:text-3xl font-bold" data-testid="text-current-balance">${(buyer?.balance || 0).toFixed(2)}</p>
+                    <p className="text-2xl md:text-3xl font-bold" data-testid="text-current-balance">{formatPrice(buyer?.balance || 0)}</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs md:text-sm">
