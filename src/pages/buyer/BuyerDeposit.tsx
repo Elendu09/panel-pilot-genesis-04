@@ -729,7 +729,7 @@ const BuyerDeposit = () => {
                     : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
                 )}
               >
-                ${quickAmount}
+                {formatPrice(quickAmount)}
               </motion.button>
             ))}
           </div>
