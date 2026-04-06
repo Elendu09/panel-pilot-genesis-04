@@ -439,7 +439,7 @@ const BuyerDeposit = () => {
             if (verifyRetry?.status === 'completed') {
               toast({ 
                 title: "Payment Successful!", 
-                description: `$${Number(verifyRetry.amount).toFixed(2)} has been added to your balance.` 
+                description: `${formatPrice(Number(verifyRetry.amount))} has been added to your balance.` 
               });
               refreshBuyer();
               fetchTransactions();
