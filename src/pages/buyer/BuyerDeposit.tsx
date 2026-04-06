@@ -739,7 +739,7 @@ const BuyerDeposit = () => {
         <motion.div variants={itemVariants} className="space-y-2">
           <Label className="text-sm">Custom Amount</Label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm md:text-base text-muted-foreground font-medium">{currencyConfig.symbol}</span>
             <Input
               type="number"
               placeholder="Enter amount"
