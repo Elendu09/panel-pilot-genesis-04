@@ -132,6 +132,7 @@ const BuyerDeposit = () => {
   const { buyer, refreshBuyer, loading: authLoading, getToken } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
+  const { currency, currencyConfig, formatPrice, convertFromUSD } = useCurrency();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
