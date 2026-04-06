@@ -100,7 +100,7 @@ serve(async (req) => {
       );
     }
 
-    const { event, payload, webhookId, panelId }: WebhookPayload = await req.json();
+    const { event, payload, webhookId, panelId, webhookUrl: directWebhookUrl }: WebhookPayload & { webhookUrl?: string } = await req.json();
 
     if (!event) {
       return new Response(
