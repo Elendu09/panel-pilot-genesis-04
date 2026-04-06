@@ -231,7 +231,7 @@ const ShoppingCart = ({
           </SheetTitle>
         </SheetHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="mx-4 sm:mx-6 mt-4 grid grid-cols-3 text-[10px] sm:text-xs">
             <TabsTrigger value="cart" className="gap-1 sm:gap-1.5 px-1 sm:px-2">
               <CartIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
