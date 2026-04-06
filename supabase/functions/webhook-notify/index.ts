@@ -152,9 +152,12 @@ serve(async (req) => {
 
       webhookUrl = webhook.url;
       webhookSecret = webhook.secret;
+    } else if (directWebhookUrl) {
+      // Direct URL mode — for panel owner webhook testing without admin_webhooks record
+      webhookUrl = directWebhookUrl;
     } else {
       return new Response(
-        JSON.stringify({ success: false, error: "Webhook ID is required" }),
+        JSON.stringify({ success: false, error: "Webhook ID or URL is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
