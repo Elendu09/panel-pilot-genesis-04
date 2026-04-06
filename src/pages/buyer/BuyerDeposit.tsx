@@ -345,7 +345,7 @@ const BuyerDeposit = () => {
           refreshBuyer();
           toast({
             title: "Payment Successful!",
-            description: `$${Number(tx.amount).toFixed(2)} has been added to your balance.`
+            description: `${formatPrice(Number(tx.amount))} has been added to your balance.`
           });
         }
         if (tx.status === 'failed' && prevTx.status !== 'failed') {
