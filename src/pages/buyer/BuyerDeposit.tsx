@@ -35,6 +35,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Link } from "react-router-dom";
@@ -131,6 +132,7 @@ const BuyerDeposit = () => {
   const { buyer, refreshBuyer, loading: authLoading, getToken } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
+  const { currency, currencyConfig, formatPrice } = useCurrency();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -343,7 +345,7 @@ const BuyerDeposit = () => {
           refreshBuyer();
           toast({
             title: "Payment Successful!",
-            description: `$${Number(tx.amount).toFixed(2)} has been added to your balance.`
+            description: `${formatPrice(Number(tx.amount))} has been added to your balance.`
           });
         }
         if (tx.status === 'failed' && prevTx.status !== 'failed') {
@@ -407,7 +409,7 @@ const BuyerDeposit = () => {
           if (verifyResult?.status === 'completed') {
             toast({ 
               title: "Payment Successful!", 
-              description: `$${Number(verifyResult.amount).toFixed(2)} has been added to your balance.` 
+              description: `${formatPrice(Number(verifyResult.amount))} has been added to your balance.` 
             });
             refreshBuyer();
             fetchTransactions();
@@ -437,7 +439,7 @@ const BuyerDeposit = () => {
             if (verifyRetry?.status === 'completed') {
               toast({ 
                 title: "Payment Successful!", 
-                description: `$${Number(verifyRetry.amount).toFixed(2)} has been added to your balance.` 
+                description: `${formatPrice(Number(verifyRetry.amount))} has been added to your balance.` 
               });
               refreshBuyer();
               fetchTransactions();
@@ -511,7 +513,7 @@ const BuyerDeposit = () => {
           panelId: panel.id,
           buyerId: buyer.id,
           returnUrl: window.location.origin + '/deposit',
-          currency: 'usd',
+          currency: currency.toLowerCase(),
           description: `Deposit via ${methodName}`
         }
       });
@@ -697,7 +699,7 @@ const BuyerDeposit = () => {
                   </div>
                   <div>
                     <p className="text-xs md:text-sm text-muted-foreground">Current Balance</p>
-                    <p className="text-2xl md:text-3xl font-bold" data-testid="text-current-balance">${(buyer?.balance || 0).toFixed(2)}</p>
+                    <p className="text-2xl md:text-3xl font-bold" data-testid="text-current-balance">{formatPrice(buyer?.balance || 0)}</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs md:text-sm">
@@ -727,7 +729,7 @@ const BuyerDeposit = () => {
                     : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
                 )}
               >
-                ${quickAmount}
+                {formatPrice(quickAmount)}
               </motion.button>
             ))}
           </div>
@@ -737,7 +739,7 @@ const BuyerDeposit = () => {
         <motion.div variants={itemVariants} className="space-y-2">
           <Label className="text-sm">Custom Amount</Label>
           <div className="relative">
-            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm md:text-base text-muted-foreground font-medium">{currencyConfig.symbol}</span>
             <Input
               type="number"
               placeholder="Enter amount"

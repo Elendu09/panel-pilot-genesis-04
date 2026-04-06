@@ -41,6 +41,7 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Bot } from "lucide-react";
+import { ChatMarkdown } from "@/components/chat/ChatMarkdown";
 
 interface Ticket {
   id: string;
@@ -1074,7 +1075,11 @@ const BuyerSupport = () => {
                                 {msg.sender_type === "ai" && (
                                   <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
                                 )}
-                                <p className="whitespace-pre-wrap">{msg.content}</p>
+                                {msg.sender_type === "ai" ? (
+                                  <ChatMarkdown content={msg.content} />
+                                ) : (
+                                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                                )}
                                 <p
                                   className={cn(
                                     "text-[10px] mt-1",
@@ -1157,7 +1162,11 @@ const BuyerSupport = () => {
                                   {msg.sender_type === "ai" && (
                                     <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
                                   )}
-                                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                                  {msg.sender_type === "ai" ? (
+                                    <ChatMarkdown content={msg.content} />
+                                  ) : (
+                                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                                  )}
                                   <p
                                     className={cn(
                                       "text-[10px] mt-1",

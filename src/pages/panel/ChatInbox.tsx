@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { ChatMarkdown } from "@/components/chat/ChatMarkdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -710,7 +711,11 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
               {msg.sender_type === "ai" && (
                 <p className="text-[10px] font-medium text-violet-500 mb-0.5">AI Assistant</p>
               )}
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              {msg.sender_type === "ai" ? (
+                <ChatMarkdown content={msg.content} />
+              ) : (
+                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              )}
               <div className={cn("flex items-center gap-1 mt-1", msg.sender_type === "owner" ? "justify-end" : "")}>
                 <span
                   className={cn("text-[10px]", msg.sender_type === "owner" ? "text-white/60" : "text-muted-foreground")}
