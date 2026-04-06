@@ -409,7 +409,7 @@ const BuyerDeposit = () => {
           if (verifyResult?.status === 'completed') {
             toast({ 
               title: "Payment Successful!", 
-              description: `$${Number(verifyResult.amount).toFixed(2)} has been added to your balance.` 
+              description: `${formatPrice(Number(verifyResult.amount))} has been added to your balance.` 
             });
             refreshBuyer();
             fetchTransactions();
