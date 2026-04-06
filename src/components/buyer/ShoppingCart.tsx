@@ -428,8 +428,8 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Bulk Add Tab */}
-          <TabsContent value="bulk" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1">
+          <TabsContent value="bulk" className="h-0 flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="flex-1 h-full">
               <div className="p-6 pt-4">
                 <BulkAddForm
                   services={services}
