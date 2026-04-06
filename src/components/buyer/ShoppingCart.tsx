@@ -443,8 +443,8 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Quick Repeat Tab */}
-          <TabsContent value="repeat" className="flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1">
+          <TabsContent value="repeat" className="h-0 flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
+            <ScrollArea className="flex-1 h-full">
               <div className="p-6 pt-4">
                 <QuickRepeatOrder
                   services={services}
