@@ -513,7 +513,7 @@ const BuyerDeposit = () => {
           panelId: panel.id,
           buyerId: buyer.id,
           returnUrl: window.location.origin + '/deposit',
-          currency: 'usd',
+          currency: currency.toLowerCase(),
           description: `Deposit via ${methodName}`
         }
       });
