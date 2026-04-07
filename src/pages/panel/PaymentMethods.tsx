@@ -750,6 +750,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
       const updatedSettings = {
         ...currentSettings,
         payments: {
+          ...(currentSettings.payments || {}),
           enabledMethods,
           configuredAt: new Date().toISOString()
         }
@@ -797,6 +798,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
           settings: { 
             ...currentSettings, 
             payments: { 
+              ...(currentSettings.payments || {}),
               enabledMethods, 
               configuredAt: new Date().toISOString() 
             } 
@@ -823,20 +825,6 @@ const gatewaySetupSteps: Record<string, string[]> = {
 
     try {
       const gatewayId = selectedGateway.id.toLowerCase();
-      let gateway: 'stripe' | 'paypal' | 'coinbase' | null = null;
-      
-      if (gatewayId === 'stripe') gateway = 'stripe';
-      else if (gatewayId === 'paypal') gateway = 'paypal';
-      else if (gatewayId === 'coinbase') gateway = 'coinbase';
-
-      if (!gateway) {
-        // For unsupported gateways, simulate success
-        await new Promise(r => setTimeout(r, 1500));
-        setTestResult({ success: true, message: 'Connection test simulated (gateway not yet supported for real testing)' });
-        toast({ title: "Test Simulated", description: "This gateway doesn't support real API validation yet" });
-        setTesting(false);
-        return;
-      }
 
       const response = await fetch(
         'https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/validate-payment-gateway',
@@ -844,7 +832,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            gateway,
+            gateway: gatewayId,
             apiKey: formData.apiKey,
             secretKey: formData.secretKey || undefined,
           }),
@@ -1258,7 +1246,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
             <div className="space-y-2">
               <Label>Webhook URL (auto-generated)</Label>
               <div className="flex items-center gap-2">
-                <Input readOnly value={`${panel?.custom_domain ? `https://${panel.custom_domain}` : panel?.subdomain ? `https://${panel.subdomain}.smmpilot.online` : window.location.origin}/api/payments/${selectedGateway?.id}/webhook`} className="bg-muted/50 font-mono text-xs flex-1" />
+                <Input readOnly value={`https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=${selectedGateway?.id}&panel_id=${panel?.id}`} className="bg-muted/50 font-mono text-xs flex-1" />
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0 text-[10px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
                   Live
