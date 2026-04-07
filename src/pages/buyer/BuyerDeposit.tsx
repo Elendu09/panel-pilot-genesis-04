@@ -718,23 +718,27 @@ const BuyerDeposit = () => {
         <motion.div variants={itemVariants} className="space-y-2 md:space-y-3">
           <Label className="text-sm md:text-base font-semibold">Quick Select Amount</Label>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
-            {quickAmounts.map((quickAmount, index) => (
-              <motion.button
-                key={quickAmount}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 + index * 0.03 }}
-                onClick={() => setAmount(quickAmount.toString())}
-                className={cn(
-                  "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm md:text-base",
-                  amount === quickAmount.toString()
-                    ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/20"
-                    : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
-                )}
-              >
-                {formatPrice(quickAmount)}
-              </motion.button>
-            ))}
+            {quickAmountsUSD.map((quickAmountUSD, index) => {
+              const displayAmount = convertPrice(quickAmountUSD);
+              const displayFormatted = formatPrice(quickAmountUSD);
+              return (
+                <motion.button
+                  key={quickAmountUSD}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 + index * 0.03 }}
+                  onClick={() => setAmount(Math.round(displayAmount * 100) / 100 + '')}
+                  className={cn(
+                    "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm md:text-base",
+                    amount === (Math.round(displayAmount * 100) / 100 + '')
+                      ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/20"
+                      : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
+                  )}
+                >
+                  {displayFormatted}
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
 
