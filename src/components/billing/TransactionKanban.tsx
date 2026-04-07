@@ -187,7 +187,7 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
       toast({
         title: actionLabels[action],
         description: (action === 'approve' || action === 'mark_completed')
-          ? `$${tx.amount.toFixed(2)} has been credited to ${tx.buyer_name || tx.buyer_email}'s account.`
+          ? `$${((tx.currency && tx.currency !== 'USD' && tx.amount_usd) ? Number(tx.amount_usd) : tx.amount).toFixed(2)} has been credited to ${tx.buyer_name || tx.buyer_email}'s account.${tx.currency && tx.currency !== 'USD' ? ` (Paid: ${tx.currency} ${tx.amount.toFixed(2)})` : ''}`
           : 'The transaction has been marked as failed.'
       });
 
