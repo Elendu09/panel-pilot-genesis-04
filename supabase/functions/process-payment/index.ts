@@ -9,6 +9,7 @@ const corsHeaders = {
 interface PaymentRequest {
   gateway: string;
   amount: number;
+  amountUsd?: number;
   panelId: string;
   buyerId: string;
   transactionId?: string;
@@ -331,7 +332,7 @@ serve(async (req) => {
     }
 
     // === STANDARD PAYMENT FLOW ===
-    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
+    const { gateway, amount, amountUsd, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
@@ -513,6 +514,8 @@ serve(async (req) => {
           ...(isOwnerPayment ? {} : { buyer_id: buyerId }),
           panel_id: panelId,
           amount: amount,
+          currency: currency.toUpperCase(),
+          amount_usd: amountUsd || (currency.toUpperCase() === 'USD' ? amount : null),
           type: txType,
           payment_method: gateway,
           status: 'pending',
@@ -521,6 +524,8 @@ serve(async (req) => {
           metadata: {
             ...(metadata || {}),
             ...(orderId ? { orderId } : {}),
+            currency: currency.toUpperCase(),
+            ...(amountUsd ? { amountUsd } : {}),
           }
         })
         .select('id')

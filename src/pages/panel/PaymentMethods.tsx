@@ -1245,14 +1245,27 @@ const gatewaySetupSteps: Record<string, string[]> = {
             {/* Webhook URL */}
             <div className="space-y-2">
               <Label>Webhook URL (auto-generated)</Label>
-              <div className="flex items-center gap-2">
-                <Input readOnly value={`https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=${selectedGateway?.id}&panel_id=${panel?.id}`} className="bg-muted/50 font-mono text-xs flex-1" />
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0 text-[10px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
-                  Live
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">Configure this URL in your {selectedGateway?.name} dashboard</p>
+              {(() => {
+                const tenantDomain = panel?.custom_domain || (panel?.subdomain ? `${panel.subdomain}.${window.location.hostname.split('.').slice(-2).join('.')}` : null);
+                const webhookUrl = tenantDomain 
+                  ? `https://${tenantDomain}/api/payments/${selectedGateway?.id}/webhook`
+                  : `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=${selectedGateway?.id}&panel_id=${panel?.id}`;
+                const supabaseWebhookUrl = `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=${selectedGateway?.id}&panel_id=${panel?.id}`;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Input readOnly value={supabaseWebhookUrl} className="bg-muted/50 font-mono text-xs flex-1" />
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0 text-[10px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
+                        Live
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Configure this webhook URL in your <strong>{selectedGateway?.name}</strong> dashboard. This endpoint receives payment callbacks in real-time.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

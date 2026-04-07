@@ -31,6 +31,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Transaction {
   id: string;
   amount: number;
+  amount_usd?: number | null;
+  currency?: string | null;
   payment_method: string;
   created_at: string;
   buyer_id: string | null;
@@ -161,7 +163,11 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
 
         if (fetchError) throw fetchError;
 
-        const newBalance = (buyer?.balance || 0) + tx.amount;
+        // Credit USD amount (balance is always in USD)
+        const creditAmount = (tx.currency && tx.currency !== 'USD' && tx.amount_usd) 
+          ? Number(tx.amount_usd) 
+          : tx.amount;
+        const newBalance = (buyer?.balance || 0) + creditAmount;
 
         const { error: balanceError } = await supabase
           .from('client_users')
@@ -181,7 +187,7 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
       toast({
         title: actionLabels[action],
         description: (action === 'approve' || action === 'mark_completed')
-          ? `$${tx.amount.toFixed(2)} has been credited to ${tx.buyer_name || tx.buyer_email}'s account.`
+          ? `$${((tx.currency && tx.currency !== 'USD' && tx.amount_usd) ? Number(tx.amount_usd) : tx.amount).toFixed(2)} has been credited to ${tx.buyer_name || tx.buyer_email}'s account.${tx.currency && tx.currency !== 'USD' ? ` (Paid: ${tx.currency} ${tx.amount.toFixed(2)})` : ''}`
           : 'The transaction has been marked as failed.'
       });
 
@@ -240,7 +246,17 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg">${tx.amount.toFixed(2)}</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg">
+              {tx.currency && tx.currency !== 'USD' 
+                ? `${tx.currency} ${tx.amount.toFixed(2)}`
+                : `$${tx.amount.toFixed(2)}`
+              }
+            </span>
+            {tx.currency && tx.currency !== 'USD' && tx.amount_usd && (
+              <span className="text-[10px] text-muted-foreground">≈ ${Number(tx.amount_usd).toFixed(2)} USD</span>
+            )}
+          </div>
           {tx.is_manual && (
             <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
               <Banknote className="w-3 h-3 mr-1" />
@@ -451,7 +467,7 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
             <DialogDescription className="space-y-2">
               {(confirmDialog.action === 'approve' || confirmDialog.action === 'mark_completed') ? (
                 <>
-                  <p>This will credit <strong>${confirmDialog.tx?.amount.toFixed(2)}</strong> to <strong>{confirmDialog.tx?.buyer_name || confirmDialog.tx?.buyer_email}</strong>'s balance.</p>
+                  <p>This will credit <strong>{confirmDialog.tx?.currency && confirmDialog.tx.currency !== 'USD' ? `${confirmDialog.tx.currency} ${confirmDialog.tx.amount.toFixed(2)} (≈ $${Number(confirmDialog.tx.amount_usd || confirmDialog.tx.amount).toFixed(2)} USD)` : `$${confirmDialog.tx?.amount.toFixed(2)}`}</strong> to <strong>{confirmDialog.tx?.buyer_name || confirmDialog.tx?.buyer_email}</strong>'s balance.</p>
                   <p className="text-amber-600">This action cannot be undone.</p>
                 </>
               ) : (

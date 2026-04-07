@@ -118,7 +118,7 @@ interface PaymentMethod {
   instructions?: string;
 }
 
-const quickAmounts = [10, 25, 50, 100, 250, 500];
+const quickAmountsUSD = [10, 25, 50, 100, 250, 500];
 
 interface Transaction {
   id: string;
@@ -132,7 +132,7 @@ const BuyerDeposit = () => {
   const { buyer, refreshBuyer, loading: authLoading, getToken } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
-  const { currency, currencyConfig, formatPrice } = useCurrency();
+  const { currency, currencyConfig, formatPrice, convertPrice, convertToUSD } = useCurrency();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -500,6 +500,8 @@ const BuyerDeposit = () => {
 
     try {
       const depositAmount = parseFloat(amount);
+      // Convert to USD for storage if not USD
+      const depositAmountUSD = currency === 'USD' ? depositAmount : convertToUSD(depositAmount);
       // Look in both paymentMethods and allManualMethods
       const selectedPaymentMethod = paymentMethods.find(m => m.id === methodToUse) 
         || allManualMethods.find(m => m.id === methodToUse);
@@ -510,6 +512,7 @@ const BuyerDeposit = () => {
         body: {
           gateway: methodToUse,
           amount: depositAmount,
+          amountUsd: depositAmountUSD,
           panelId: panel.id,
           buyerId: buyer.id,
           returnUrl: window.location.origin + '/deposit',
@@ -715,23 +718,27 @@ const BuyerDeposit = () => {
         <motion.div variants={itemVariants} className="space-y-2 md:space-y-3">
           <Label className="text-sm md:text-base font-semibold">Quick Select Amount</Label>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3">
-            {quickAmounts.map((quickAmount, index) => (
-              <motion.button
-                key={quickAmount}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1 + index * 0.03 }}
-                onClick={() => setAmount(quickAmount.toString())}
-                className={cn(
-                  "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm md:text-base",
-                  amount === quickAmount.toString()
-                    ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/20"
-                    : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
-                )}
-              >
-                {formatPrice(quickAmount)}
-              </motion.button>
-            ))}
+            {quickAmountsUSD.map((quickAmountUSD, index) => {
+              const displayAmount = convertPrice(quickAmountUSD);
+              const displayFormatted = formatPrice(quickAmountUSD);
+              return (
+                <motion.button
+                  key={quickAmountUSD}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 + index * 0.03 }}
+                  onClick={() => setAmount(Math.round(displayAmount * 100) / 100 + '')}
+                  className={cn(
+                    "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 font-semibold text-sm md:text-base",
+                    amount === (Math.round(displayAmount * 100) / 100 + '')
+                      ? "border-primary bg-primary/10 text-primary shadow-lg shadow-primary/20"
+                      : "border-border/50 bg-card/50 hover:border-primary/50 hover:bg-primary/5"
+                  )}
+                >
+                  {displayFormatted}
+                </motion.button>
+              );
+            })}
           </div>
         </motion.div>
 
@@ -839,7 +846,7 @@ const BuyerDeposit = () => {
             ) : (
               <>
                 <Wallet className="w-4 h-4 md:w-5 md:h-5" />
-                Deposit ${amount || "0.00"}
+                Deposit {currencyConfig.symbol}{amount || "0.00"}
                 <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
               </>
             )}
@@ -895,7 +902,17 @@ const BuyerDeposit = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
+                                <p className="font-medium text-sm md:text-base">
+                                  {(tx as any).currency && (tx as any).currency !== 'USD' 
+                                    ? `${(tx as any).currency} ${tx.amount.toFixed(2)}`
+                                    : `$${tx.amount.toFixed(2)}`
+                                  }
+                                </p>
+                                {(tx as any).amount_usd && (tx as any).currency !== 'USD' && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    (≈ ${Number((tx as any).amount_usd).toFixed(2)} USD)
+                                  </span>
+                                )}
                                 {/* Transaction ID with copy */}
                                 <button 
                                   onClick={() => copyToClipboard(tx.id)}
@@ -908,6 +925,7 @@ const BuyerDeposit = () => {
                               </div>
                               <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                                 {tx.payment_method || 'Payment'} • {new Date(tx.created_at).toLocaleDateString()}
+                                {(tx as any).currency && ` • ${(tx as any).currency}`}
                               </p>
                             </div>
                           </div>
@@ -948,7 +966,7 @@ const BuyerDeposit = () => {
               {manualPaymentDetails?.title || 'Manual Payment'}
             </DialogTitle>
             <DialogDescription>
-              Complete your deposit of ${manualPaymentDetails?.amount?.toFixed(2)}
+              Complete your deposit of {currencyConfig.symbol}{manualPaymentDetails?.amount?.toFixed(2)} {currency}
             </DialogDescription>
           </DialogHeader>
           
@@ -973,7 +991,8 @@ const BuyerDeposit = () => {
             {/* Amount */}
             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-center">
               <p className="text-sm text-muted-foreground">Amount to Transfer</p>
-              <p className="text-3xl font-bold text-primary">${manualPaymentDetails?.amount?.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-primary">{currencyConfig.symbol}{manualPaymentDetails?.amount?.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{currency}</p>
             </div>
 
             {/* Bank Details */}
@@ -1130,7 +1149,7 @@ const BuyerDeposit = () => {
               Select Payment Method
             </DialogTitle>
             <DialogDescription>
-              Choose your preferred transfer method for ${amount}
+              Choose your preferred transfer method for {currencyConfig.symbol}{amount}
             </DialogDescription>
           </DialogHeader>
           
