@@ -825,20 +825,6 @@ const gatewaySetupSteps: Record<string, string[]> = {
 
     try {
       const gatewayId = selectedGateway.id.toLowerCase();
-      let gateway: 'stripe' | 'paypal' | 'coinbase' | null = null;
-      
-      if (gatewayId === 'stripe') gateway = 'stripe';
-      else if (gatewayId === 'paypal') gateway = 'paypal';
-      else if (gatewayId === 'coinbase') gateway = 'coinbase';
-
-      if (!gateway) {
-        // For unsupported gateways, simulate success
-        await new Promise(r => setTimeout(r, 1500));
-        setTestResult({ success: true, message: 'Connection test simulated (gateway not yet supported for real testing)' });
-        toast({ title: "Test Simulated", description: "This gateway doesn't support real API validation yet" });
-        setTesting(false);
-        return;
-      }
 
       const response = await fetch(
         'https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/validate-payment-gateway',
