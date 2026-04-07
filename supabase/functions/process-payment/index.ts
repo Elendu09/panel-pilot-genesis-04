@@ -332,7 +332,7 @@ serve(async (req) => {
     }
 
     // === STANDARD PAYMENT FLOW ===
-    const { gateway, amount, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
+    const { gateway, amount, amountUsd, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
