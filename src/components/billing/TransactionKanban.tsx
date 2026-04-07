@@ -242,7 +242,17 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-lg">${tx.amount.toFixed(2)}</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg">
+              {tx.currency && tx.currency !== 'USD' 
+                ? `${tx.currency} ${tx.amount.toFixed(2)}`
+                : `$${tx.amount.toFixed(2)}`
+              }
+            </span>
+            {tx.currency && tx.currency !== 'USD' && tx.amount_usd && (
+              <span className="text-[10px] text-muted-foreground">≈ ${Number(tx.amount_usd).toFixed(2)} USD</span>
+            )}
+          </div>
           {tx.is_manual && (
             <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
               <Banknote className="w-3 h-3 mr-1" />
