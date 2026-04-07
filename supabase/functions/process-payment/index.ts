@@ -9,6 +9,7 @@ const corsHeaders = {
 interface PaymentRequest {
   gateway: string;
   amount: number;
+  amountUsd?: number;
   panelId: string;
   buyerId: string;
   transactionId?: string;
