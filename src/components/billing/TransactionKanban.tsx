@@ -463,7 +463,7 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
             <DialogDescription className="space-y-2">
               {(confirmDialog.action === 'approve' || confirmDialog.action === 'mark_completed') ? (
                 <>
-                  <p>This will credit <strong>${confirmDialog.tx?.amount.toFixed(2)}</strong> to <strong>{confirmDialog.tx?.buyer_name || confirmDialog.tx?.buyer_email}</strong>'s balance.</p>
+                  <p>This will credit <strong>{confirmDialog.tx?.currency && confirmDialog.tx.currency !== 'USD' ? `${confirmDialog.tx.currency} ${confirmDialog.tx.amount.toFixed(2)} (≈ $${Number(confirmDialog.tx.amount_usd || confirmDialog.tx.amount).toFixed(2)} USD)` : `$${confirmDialog.tx?.amount.toFixed(2)}`}</strong> to <strong>{confirmDialog.tx?.buyer_name || confirmDialog.tx?.buyer_email}</strong>'s balance.</p>
                   <p className="text-amber-600">This action cannot be undone.</p>
                 </>
               ) : (
