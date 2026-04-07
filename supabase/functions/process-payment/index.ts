@@ -514,6 +514,8 @@ serve(async (req) => {
           ...(isOwnerPayment ? {} : { buyer_id: buyerId }),
           panel_id: panelId,
           amount: amount,
+          currency: currency.toUpperCase(),
+          amount_usd: amountUsd || (currency.toUpperCase() === 'USD' ? amount : null),
           type: txType,
           payment_method: gateway,
           status: 'pending',
@@ -522,6 +524,8 @@ serve(async (req) => {
           metadata: {
             ...(metadata || {}),
             ...(orderId ? { orderId } : {}),
+            currency: currency.toUpperCase(),
+            ...(amountUsd ? { amountUsd } : {}),
           }
         })
         .select('id')
