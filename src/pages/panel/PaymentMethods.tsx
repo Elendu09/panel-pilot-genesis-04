@@ -750,6 +750,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
       const updatedSettings = {
         ...currentSettings,
         payments: {
+          ...(currentSettings.payments || {}),
           enabledMethods,
           configuredAt: new Date().toISOString()
         }
