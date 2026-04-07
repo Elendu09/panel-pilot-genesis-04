@@ -1,65 +1,44 @@
 
 
-# Plan: Fix Shopping Cart Tab Layout, AI Markdown Rendering, Webhook 404, and Currency in Deposits
+# Plan: Fix Webhook URLs, Manual Methods Clearing, Test Connection, and KoraPay Deposit Error
 
-## 1. Shopping Cart Mass Order / Repeat Tab Positioning
+## Issues Found
 
-**Problem**: The `TabsContent` for "bulk" and "repeat" tabs are being pushed below the viewport. The `Tabs` container uses `flex-1 flex flex-col` but the tab content needs explicit height constraints to fill the available space above, not below.
+### 1. Webhook URL Shows Fake SPA Path (Returns 404)
+**Problem**: The config dialog (line 1261) generates a webhook URL like `https://{tenant-domain}/api/payments/{gateway}/webhook`. This is a client-side SPA route that doesn't exist on the server -- it returns 404 when payment providers hit it. The actual working webhook endpoint is the Supabase edge function: `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway={id}`.
 
-**Fix**: Add `min-h-0` to the `Tabs` container and `h-0 flex-1` to the bulk/repeat `TabsContent` so flexbox allocates space from the top. The `ScrollArea` inside already handles overflow.
+**Fix**: Change the displayed webhook URL to point to the real Supabase edge function endpoint. For tenant panel owners, the webhook URL must be `https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway={gatewayId}`. This is the actual endpoint that receives and processes payment callbacks.
 
-**File**: `src/components/buyer/ShoppingCart.tsx`
-- Line 234: Add `min-h-0` to `Tabs` className
-- Lines 431, 446: Change `TabsContent` className to include `h-0` so content anchors to the top of available space
+### 2. Saving a Payment Gateway Clears All Manual Methods
+**Problem**: In `saveGatewayConfig` (line 749-755), the code builds `updatedSettings.payments` as `{ enabledMethods, configuredAt }` -- this completely overwrites the existing `payments` object, including `manualPayments`. Same issue exists in `toggleGateway` (line 796-803).
 
----
+**Fix**: Preserve `manualPayments` when saving gateway configs by spreading the existing `payments` sub-object:
+```
+payments: { ...currentSettings.payments, enabledMethods, configuredAt }
+```
 
-## 2. AI Response Markdown Rendering (Bold, Paragraphs, Lists)
-
-**Problem**: AI responses use `**bold**`, bullet points, and numbered lists, but both `BuyerSupport.tsx` (line 1077) and `ChatInbox.tsx` (line 713) render with `<p className="whitespace-pre-wrap">{msg.content}</p>` — raw text that shows literal `**` asterisks instead of bold formatting.
+### 3. "Test Connection" Shows "Gateway Not Yet Supported for Real Testing"
+**Problem**: The `testConnection` function (line 825-838) only supports real API validation for Stripe, PayPal, and Coinbase. It calls a `validate-payment-gateway` edge function that doesn't exist in the codebase. For all other gateways (200+), it simulates success with the misleading message.
 
 **Fix**: 
-- Install `react-markdown` package
-- Create a small `ChatMarkdown` component that renders AI messages through `ReactMarkdown` with `prose prose-sm` styling
-- Use it for `sender_type === 'ai'` messages in both files; keep plain text rendering for visitor/owner messages
+- Create the `validate-payment-gateway` edge function with real API validation for the most common gateways: Stripe (GET /v1/account), PayPal (POST /v1/oauth2/token), Paystack (GET /transaction/verify), Flutterwave (GET /v3/transactions), KoraPay (GET /merchant/api/v1/misc/banks), Razorpay (GET /v1/payments), Coinbase (GET /charges)
+- Expand the client-side `testConnection` to pass all gateway types to this edge function
+- For gateways without a test endpoint, display "Credentials saved -- connection will be validated on first payment" instead of the fake "simulated" message
 
-**Files**: 
-- `package.json` — add `react-markdown`
-- `src/components/chat/ChatMarkdown.tsx` — new component
-- `src/pages/buyer/BuyerSupport.tsx` — replace `<p>` with `<ChatMarkdown>` for AI messages (2 locations around lines 1077 and 1160)
-- `src/pages/panel/ChatInbox.tsx` — replace `<p>` with `<ChatMarkdown>` for AI messages (line 713)
+### 4. KoraPay (and Other Gateways) Deposit Fails with "Issue with Input"
+**Problem**: In `process-payment` (line 372-378), the buyer email is fetched from the `profiles` table using `user_id = buyerId`. But tenant buyers are stored in `client_users`, not `profiles`. The query returns null, and the fallback email `user-{uuid}@platform.local` is used. KoraPay (and many other gateways) reject this fake email, causing the "issue with your input" error.
 
----
-
-## 3. Panel Owner Webhook Test Returns 404
-
-**Problem**: The `testWebhook` function in `use-webhooks.tsx` (line 131) calls `webhook-notify` edge function with `{ event, payload, webhookUrl }` — but the edge function requires a `webhookId` parameter (line 156: "Webhook ID is required"). When no `webhookId` is sent, it returns 400. The panel owner's API Management page only has a URL input, not an `admin_webhooks` table record.
-
-**Fix**: Update the `webhook-notify` edge function to support a `webhookUrl` fallback when `webhookId` is not provided. If `webhookUrl` is passed directly (for panel owner webhook testing), skip the `admin_webhooks` lookup and send directly to that URL. This restores the original direct-URL test flow for panel owners while keeping the admin webhook system intact.
-
-**File**: `supabase/functions/webhook-notify/index.ts` — lines 155-160: instead of returning error when no `webhookId`, check if `webhookUrl` was provided in the body and use it directly.
-
-Also update `use-webhooks.tsx` to pass `webhookUrl` in the body correctly (it currently does, but the edge function ignores it).
-
----
-
-## 4. Currency Integration in Tenant Add Funds (BuyerDeposit)
-
-**Problem**: `BuyerDeposit.tsx` hardcodes USD (`$` symbols, `currency: 'usd'` on line 514). The `CurrencyContext` is already used in New Order but not in the deposit page.
-
-**Fix**:
-- Import `useCurrency` in `BuyerDeposit.tsx`
-- Replace `$` hardcoded symbols with `currencyConfig.symbol`
-- Pass selected `currency` code to `process-payment` edge function instead of hardcoded `'usd'`
-- Display amounts using `formatPrice` from currency context
-- Add `CurrencySelector` dropdown next to the "Add Funds" header so buyers can choose their deposit currency
-- In the payment record and process-payment call, include the currency code and the conversion rate so panel owner sees the USD equivalent
-
-**Panel Owner Visibility**: In the panel owner's transaction history / billing page, show the original currency alongside the USD equivalent using the exchange rate at time of deposit. This is display-only — the stored amount remains in USD for consistency.
-
-**Files**:
-- `src/pages/buyer/BuyerDeposit.tsx` — integrate `useCurrency`, dynamic currency display, pass currency to payment
-- `src/components/billing/QuickDeposit.tsx` — same currency integration for panel owner deposits (this uses admin gateways, keep USD default but allow selection)
+**Fix**: Add a fallback query to `client_users` when `profiles` returns no result:
+```typescript
+if (!buyerEmail || buyerEmail.includes('@platform.local')) {
+  const { data: clientUser } = await supabase
+    .from('client_users')
+    .select('email, full_name')
+    .eq('id', buyerId)
+    .single();
+  buyerEmail = clientUser?.email || buyerEmail;
+}
+```
 
 ---
 
@@ -67,11 +46,7 @@ Also update `use-webhooks.tsx` to pass `webhookUrl` in the body correctly (it cu
 
 | File | Changes |
 |------|---------|
-| `src/components/buyer/ShoppingCart.tsx` | Add `min-h-0` to Tabs, `h-0` to bulk/repeat TabsContent |
-| `src/components/chat/ChatMarkdown.tsx` | New — ReactMarkdown wrapper for AI messages |
-| `src/pages/buyer/BuyerSupport.tsx` | Use ChatMarkdown for AI sender_type messages |
-| `src/pages/panel/ChatInbox.tsx` | Use ChatMarkdown for AI sender_type messages |
-| `supabase/functions/webhook-notify/index.ts` | Support direct `webhookUrl` fallback when no `webhookId` |
-| `src/pages/buyer/BuyerDeposit.tsx` | Integrate CurrencyContext, dynamic symbols, pass currency to payment |
-| `package.json` | Add `react-markdown` dependency |
+| `src/pages/panel/PaymentMethods.tsx` | Fix webhook URL to use real Supabase endpoint; preserve `manualPayments` in `saveGatewayConfig` and `toggleGateway`; expand `testConnection` to pass all gateways to validation function; update simulated message text |
+| `supabase/functions/validate-payment-gateway/index.ts` | New edge function -- validates API credentials by making lightweight test calls to each gateway's API |
+| `supabase/functions/process-payment/index.ts` | Add `client_users` email fallback when `profiles` query returns no result for buyer email resolution |
 
