@@ -991,7 +991,8 @@ const BuyerDeposit = () => {
             {/* Amount */}
             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-center">
               <p className="text-sm text-muted-foreground">Amount to Transfer</p>
-              <p className="text-3xl font-bold text-primary">${manualPaymentDetails?.amount?.toFixed(2)}</p>
+              <p className="text-3xl font-bold text-primary">{currencyConfig.symbol}{manualPaymentDetails?.amount?.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground mt-1">{currency}</p>
             </div>
 
             {/* Bank Details */}
