@@ -500,6 +500,8 @@ const BuyerDeposit = () => {
 
     try {
       const depositAmount = parseFloat(amount);
+      // Convert to USD for storage if not USD
+      const depositAmountUSD = currency === 'USD' ? depositAmount : convertToUSD(depositAmount);
       // Look in both paymentMethods and allManualMethods
       const selectedPaymentMethod = paymentMethods.find(m => m.id === methodToUse) 
         || allManualMethods.find(m => m.id === methodToUse);
@@ -510,6 +512,7 @@ const BuyerDeposit = () => {
         body: {
           gateway: methodToUse,
           amount: depositAmount,
+          amountUsd: depositAmountUSD,
           panelId: panel.id,
           buyerId: buyer.id,
           returnUrl: window.location.origin + '/deposit',
