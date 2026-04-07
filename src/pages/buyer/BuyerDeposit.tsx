@@ -846,7 +846,7 @@ const BuyerDeposit = () => {
             ) : (
               <>
                 <Wallet className="w-4 h-4 md:w-5 md:h-5" />
-                Deposit ${amount || "0.00"}
+                Deposit {currencyConfig.symbol}{amount || "0.00"}
                 <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />
               </>
             )}
