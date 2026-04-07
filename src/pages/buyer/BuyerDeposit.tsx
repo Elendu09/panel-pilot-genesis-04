@@ -118,7 +118,7 @@ interface PaymentMethod {
   instructions?: string;
 }
 
-const quickAmounts = [10, 25, 50, 100, 250, 500];
+const quickAmountsUSD = [10, 25, 50, 100, 250, 500];
 
 interface Transaction {
   id: string;
