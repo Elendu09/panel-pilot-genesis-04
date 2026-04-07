@@ -543,6 +543,11 @@ serve(async (req) => {
             // STOP
           } else {
             // === REGULAR BUYER DEPOSIT — credit client_users.balance ===
+            // Balance is always in USD — use amount_usd if available for foreign currency deposits
+            const txCurrency = (tx?.currency || txMetadata?.currency || 'USD') as string;
+            const amountUsd = tx?.amount_usd || txMetadata?.amountUsd;
+            const creditAmount = (txCurrency !== 'USD' && amountUsd) ? Number(amountUsd) : depositAmount;
+            
             const { data: buyer } = await supabase
               .from('client_users')
               .select('balance, total_spent')
@@ -550,7 +555,7 @@ serve(async (req) => {
               .single();
 
             if (buyer) {
-              const newBalance = (buyer.balance || 0) + depositAmount;
+              const newBalance = (buyer.balance || 0) + creditAmount;
               
               await supabase
                 .from('client_users')
@@ -559,7 +564,7 @@ serve(async (req) => {
                 })
                 .eq('id', userId);
 
-              console.log(`[payment-webhook] Credited $${depositAmount} to buyer ${userId}, new balance: ${newBalance}`);
+              console.log(`[payment-webhook] Credited $${creditAmount} USD to buyer ${userId} (paid ${txCurrency} ${depositAmount}), new balance: ${newBalance}`);
 
               await supabase
                 .from('buyer_notifications')
