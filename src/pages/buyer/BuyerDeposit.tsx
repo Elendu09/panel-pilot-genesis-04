@@ -966,7 +966,7 @@ const BuyerDeposit = () => {
               {manualPaymentDetails?.title || 'Manual Payment'}
             </DialogTitle>
             <DialogDescription>
-              Complete your deposit of ${manualPaymentDetails?.amount?.toFixed(2)}
+              Complete your deposit of {currencyConfig.symbol}{manualPaymentDetails?.amount?.toFixed(2)} {currency}
             </DialogDescription>
           </DialogHeader>
           
