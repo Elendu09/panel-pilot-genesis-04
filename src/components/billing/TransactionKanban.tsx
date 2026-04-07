@@ -31,6 +31,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Transaction {
   id: string;
   amount: number;
+  amount_usd?: number | null;
+  currency?: string | null;
   payment_method: string;
   created_at: string;
   buyer_id: string | null;
