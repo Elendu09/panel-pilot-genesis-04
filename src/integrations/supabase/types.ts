@@ -4173,8 +4173,10 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          amount_usd: number | null
           buyer_id: string | null
           created_at: string
+          currency: string | null
           description: string | null
           external_id: string | null
           id: string
@@ -4189,8 +4191,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_usd?: number | null
           buyer_id?: string | null
           created_at?: string
+          currency?: string | null
           description?: string | null
           external_id?: string | null
           id?: string
@@ -4205,8 +4209,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_usd?: number | null
           buyer_id?: string | null
           created_at?: string
+          currency?: string | null
           description?: string | null
           external_id?: string | null
           id?: string
