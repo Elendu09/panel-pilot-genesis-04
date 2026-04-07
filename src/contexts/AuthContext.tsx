@@ -8,8 +8,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: any | null;
-  loading: boolean; // used primarily for initial auth restore
-  isInitialRestore: boolean; // explicit “still restoring session” flag (can be used by layout to avoid flicker)
+  loading: boolean;
   signUp: (email: string, password: string, username?: string, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any; emailNotVerified?: boolean; email?: string }>;
   signOut: () => Promise<void>;
@@ -18,11 +17,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// MFA per-login-session marker
 const MFA_STORAGE_PREFIX = "mfa_verified_";
-const MFA_MARKER_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+const MFA_MARKER_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours (adjust depending on your security policy)
 
 function getMfaKey(userId: string, refreshToken?: string | null) {
+  // Keep key relatively stable: refresh_token prefix prevents long keys but still binds to session
   const rt = (refreshToken || "").slice(0, 16) || "no_rt";
   return `${MFA_STORAGE_PREFIX}${userId}_${rt}`;
 }
@@ -50,28 +49,17 @@ function markMfaVerified(key: string) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
-  // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
-
-  // Loading: control loading timing for better UX after browser focus
   const [loading, setLoading] = useState(true);
-  const [isInitialRestore, setIsInitialRestore] = useState(true);
 
-  // MFA gating state
   const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
-  const [isMfaEnforcing, setIsMfaEnforcing] = useState(false);
-  const [mfaChallengeError, setMfaChallengeError] = useState<string | null>(null);
+  const [mfaOpen, setMfaOpen] = useState(false); // controlled open to keep UI stable
+  const [mfaError, setMfaError] = useState<string | null>(null); // surface errors to TwoFactorChallenge (via prop you can implement)
+  const [pendingSignInSuccess, setPendingSignInSuccess] = useState(false); // ensures sign-in success toast only after MFA success (when enabled)
 
-  // During sign-in, we may need to hold state until MFA completes (so we don’t show “success” too early)
-  const [pendingSignInState, setPendingSignInState] = useState<{
-    user: User | null;
-    session: Session | null;
-    didShowSignInToast: boolean;
-  }>({ user: null, session: null, didShowSignInToast: false });
-
-  // refs to avoid memo-chasing
+  // Latest refs (used during recovery + MFA callbacks)
   const sessionRef = useRef<Session | null>(null);
   const userRef = useRef<User | null>(null);
 
@@ -81,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // Handle incomplete OAuth profiles (role, username, avatar)
+      // Ensure role/username/avatar for OAuth users or new users
       if (data && (!data.role || !data.username)) {
         const {
           data: { user: authUser },
@@ -126,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setProfile(data);
 
-      // Pending panel creation (helps OAuth flows + first-time setup)
+      // Pending panel creation (after user first signs up/OAuth)
       const pendingPanel = localStorage.getItem("pendingPanelCreation");
       if (pendingPanel && data.role === "panel_owner") {
         const panelData = JSON.parse(pendingPanel);
@@ -182,237 +170,272 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /**
-   * Enforce MFA if enabled for this user/session.
-   * Returns a boolean that is true when MFA is satisfied (or MFA not enabled).
-   */
-  const enforceMfaIfEnabled = async (sess: Session): Promise<boolean> => {
+  // Core MFA enforcement on any session restore / state change
+  const enforceMfaIfEnabled = async (sess: Session) => {
     const u = sess.user;
-    if (!u) return true;
+    if (!u) return;
 
-    setIsMfaEnforcing(true);
-    setMfaChallengeError(null);
-
+    // Check whether MFA is enabled for this user (edge function is decoupled to avoid exposing internals)
+    let enabled = false;
     try {
-      const { data: mfaStatus, error: mfaErr } = await supabase.functions.invoke("mfa-setup", {
+      const { data: mfaStatus, error } = await supabase.functions.invoke("mfa-setup", {
         body: { action: "status" },
       });
-
-      if (mfaErr || !mfaStatus) {
-        console.error("MFA status lookup failed:", mfaErr || "empty response");
-        setNeedsMfaChallenge(false);
-        return true;
-      }
-
-      const enabled = !!mfaStatus?.enabled;
-      if (!enabled) {
-        setNeedsMfaChallenge(false);
-        return true;
-      }
-
-      const key = getMfaKey(u.id, sess.refresh_token);
-      const alreadyVerified = isMfaMarkedVerified(key);
-
-      if (alreadyVerified) {
-        setNeedsMfaChallenge(false);
-        return true;
-      }
-
-      setNeedsMfaChallenge(true);
-      return false;
-    } catch (e) {
-      console.error("enforceMfaIfEnabled failed:", e);
-      setNeedsMfaChallenge(false);
-      return true;
-    } finally {
-      setIsMfaEnforcing(false);
-    }
-  };
-
-  const handleMfaVerified = async (codeOrBackupCode: string) => {
-    try {
-      setIsMfaEnforcing(true);
-      setMfaChallengeError(null);
-
-      const { data, error } = await supabase.functions.invoke("mfa-verify", {
-        body: { code: codeOrBackupCode, type: "totp" },
-      });
-
-      if (error || !data?.valid) {
-        const errorMsg = error?.message || data?.error || "Invalid or expired MFA code";
-        setMfaChallengeError(errorMsg || "Invalid or expired MFA code");
-        toast({
-          variant: "destructive",
-          title: "MFA Verification Failed",
-          description: errorMsg,
-        });
+      if (error) {
+        console.error("MFA status check error:", error);
+        // Fail-closed: require verification in case of uncertainty (safer)
+        enabled = true;
         return;
       }
-
-      const sess = sessionRef.current;
-      if (sess?.user) {
-        const key = getMfaKey(sess.user.id, sess.refresh_token);
-        markMfaVerified(key);
-      }
-
-      setNeedsMfaChallenge(false);
-
-      if (sess?.user?.id) {
-        await fetchProfile(sess.user.id);
-      }
-
-      if (pendingSignInState.user && pendingSignInState.session && !pendingSignInState.didShowSignInToast) {
-        toast({
-          title: "Signed in successfully",
-          description: "Welcome to your dashboard",
-        });
-
-        setPendingSignInState({
-          user: null,
-          session: null,
-          didShowSignInToast: true,
-        });
-      }
-    } catch (e) {
-      console.error("MFA verify failed:", e);
-      setMfaChallengeError("Verification request failed. Please try again.");
-      toast({
-        variant: "destructive",
-        title: "MFA Error",
-        description: "Verification request failed. Please try again.",
-      });
-    } finally {
-      setIsMfaEnforcing(false);
+      enabled = !!mfaStatus?.enabled;
+    } catch (err) {
+      // Fail-closed on unexpected errors
+      console.error("MFA status check failed:", err);
+      enabled = true;
     }
+
+    if (!enabled) {
+      // No MFA enabled, just ensure dialog is gone
+      setNeedsMfaChallenge(false);
+      setMfaOpen(false);
+      setMfaError(null);
+      return;
+    }
+
+    const key = getMfaKey(u.id, sess.refresh_token);
+    const alreadyVerified = isMfaMarkedVerified(key);
+
+    // If not already verified, show the MFA challenge and ensure loading is finalized before forcing the block
+    if (!alreadyVerified) {
+      setNeedsMfaChallenge(true);
+      setMfaOpen(true);
+      setMfaError(null);
+      return; // leave loading as-is until resolved (onVerified / onCancel)
+    }
+
+    // Already verified for this session
+    setNeedsMfaChallenge(false);
+    setMfaOpen(false);
+    setMfaError(null);
   };
 
-  const handleMfaCancelled = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.warn("Sign out error on MFA cancel:", err);
+  /**
+   * Called after MFA is successfully verified (from TwoFactorChallenge onVerified)
+   * This will release access and trigger the appropriate post-auth success flow.
+   */
+  const handleMfaVerified = async () => {
+    const sess = sessionRef.current;
+    if (sess?.user) {
+      const key = getMfaKey(sess.user.id, sess.refresh_token);
+      markMfaVerified(key);
     }
 
     setNeedsMfaChallenge(false);
-    setMfaChallengeError(null);
+    setMfaOpen(false);
+    setMfaError(null);
+
+    // Refresh profile to ensure role / panel access is ready
+    if (sess?.user?.id) {
+      await fetchProfile(sess.user.id);
+    }
+
+    // If sign-in was performed just before MFA, show the success toast now
+    if (pendingSignInSuccess) {
+      toast({
+        title: "Signed in successfully",
+        description: "Welcome back!",
+      });
+      setPendingSignInSuccess(false);
+    }
+
+    // Make sure loading is fully completed so returning users don’t get stuck loading
+    setLoading(false);
+  };
+
+  /**
+   * Called when user cancels MFA verification
+   * Fail-closed: clear authenticated state and mark unauthorized
+   */
+  const handleMfaCancelled = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+
+    setNeedsMfaChallenge(false);
+    setMfaOpen(false);
+    setMfaError(null);
     setUser(null);
     setSession(null);
     setProfile(null);
+    setPendingSignInSuccess(false);
 
+    // Clear marker (optional cleanup; clearing means user will need to verify on next login)
     const sess = sessionRef.current;
     if (sess?.user) {
       const key = getMfaKey(sess.user.id, sess.refresh_token);
       localStorage.removeItem(key);
     }
 
-    setPendingSignInState({ user: null, session: null, didShowSignInToast: false });
+    setLoading(false);
 
     toast({
-      title: "Sign-in interrupted",
-      description: "You cancelled the MFA verification. Please sign in again.",
-      variant: "default",
+      variant: "destructive",
+      title: "Authentication required",
+      description: "MFA verification was required to continue. You were signed out for security.",
+    });
+  };
+
+  /**
+   * Optional: Called when TwoFactorChallenge reports an error during verify (invalid code, used backup, rate limited, locked)
+   * This sets mfaError so your UI can display it and keeps the dialog open.
+   */
+  const handleMfaError = (message: string) => {
+    setMfaError(message);
+
+    // Example friendly messages (adjust to your backend responses)
+    const friendly = message.toLowerCase().includes("locked")
+      ? "Your account is temporarily locked. Please wait a few minutes and try again."
+      : message.toLowerCase().includes("rate limit")
+        ? "Too many attempts. Please wait to try again."
+        : message.toLowerCase().includes("used")
+          ? "Backup code already used. Please use a different code."
+          : "Invalid verification code. Please try again.";
+
+    toast({
+      variant: "destructive",
+      title: "MFA verification failed",
+      description: friendly,
     });
   };
 
   useEffect(() => {
+    // Auth state change handler — this is your main session driver
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      // Keep latest current state in refs first to avoid stale values in MFA callbacks
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       sessionRef.current = currentSession;
       userRef.current = currentSession?.user ?? null;
 
       if (!currentSession?.user) {
+        // Logged out / no session — clean up and stop loading
         setProfile(null);
         setNeedsMfaChallenge(false);
-        setMfaChallengeError(null);
-
-        if (event === "SIGNED_OUT") {
-          setPendingSignInState({ user: null, session: null, didShowSignInToast: false });
-        }
-
+        setMfaOpen(false);
+        setMfaError(null);
+        setPendingSignInSuccess(false);
         setLoading(false);
-        setIsInitialRestore(false);
         return;
       }
 
-      if (event !== "SIGNED_IN") {
-        setLoading(true);
-      }
+      // User is authenticated — start with intentional loading
+      // Why: we must check MFA + fetch profile before we can say “ready”
+      setLoading(true);
 
-      const fetchedProfile = await fetchProfile(currentSession.user.id);
+      try {
+        // 1) Fetch profile (best-effort; failure won’t block MFA enforcement, but we log it)
+        await fetchProfile(currentSession.user.id);
 
-      let accessGranted = true;
-      // FIX 1: Changed "TOKEN_REFRESH" to "TOKEN_REFRESHED" (Supabase v2 correct event name)
-      if (event !== "TOKEN_REFRESHED") {
-        accessGranted = await enforceMfaIfEnabled(currentSession);
-      } else {
-        const key = getMfaKey(currentSession.user.id, currentSession.refresh_token);
-        const alreadyVerified = isMfaMarkedVerified(key);
-        if (alreadyVerified) {
-          setNeedsMfaChallenge(false);
-          accessGranted = true;
-        } else {
-          accessGranted = await enforceMfaIfEnabled(currentSession);
+        // 2) Enforce MFA if enabled — this can block and stay open with dialog
+        await enforceMfaIfEnabled(currentSession);
+
+        // 3) If we reach here without opening MFA, user is fully authenticated: complete loading
+        if (!needsMfaChallenge) {
+          setLoading(false);
         }
-      }
 
-      if (event === "SIGNED_IN") {
-        if (accessGranted && fetchedProfile) {
+        // If signIn caused pendingSignInSuccess, and MFA is not required, toast will be shown after profile load.
+        if (!needsMfaChallenge && pendingSignInSuccess) {
           toast({
             title: "Signed in successfully",
-            description: "Welcome to your dashboard",
+            description: "Welcome back!",
           });
-          setPendingSignInState({
-            user: null,
-            session: null,
-            didShowSignInToast: true,
-          });
-        } else {
-          setPendingSignInState({
-            user: currentSession.user,
-            session: currentSession,
-            didShowSignInToast: false,
-          });
+          setPendingSignInSuccess(false);
         }
-      }
-
-      setLoading(false);
-
-      if (isInitialRestore) {
-        setIsInitialRestore(false);
+      } catch (err) {
+        console.error("Auth state change processing failed:", err);
+        // Fail-open cautiously: we won’t lock everyone forever, but we’ll stop loading and present state cleanly
+        setLoading(false);
+        setNeedsMfaChallenge(false);
+        setMfaOpen(false);
       }
     });
 
-    const restoreInitialSession = async () => {
+    // Initial session restore (handles page reload, tab return, PW resets, deep links)
+    const restoreSession = async () => {
       try {
-        setLoading(true);
-
-        const {
-          data: { session: sess },
-        } = await supabase.auth.getSession();
-
+        const { data } = await supabase.auth.getSession();
+        const sess = data?.session || null;
         setSession(sess);
         setUser(sess?.user ?? null);
         sessionRef.current = sess;
         userRef.current = sess?.user ?? null;
 
         if (sess?.user) {
+          setLoading(true);
           await fetchProfile(sess.user.id);
           await enforceMfaIfEnabled(sess);
+
+          if (!needsMfaChallenge) {
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
         }
       } catch (err) {
-        console.error("Initial session restore error:", err);
-      } finally {
+        console.error("Session restore failed:", err);
         setLoading(false);
-        setIsInitialRestore(false);
       }
     };
 
-    restoreInitialSession();
+    restoreSession();
 
-    return () => subscription.unsubscribe();
+    // Optional: handle tab visibility changes and window focus
+    // These events often expose the “stuck loading” problem. Refreshing stale state helps.
+    const handleVisibility = async () => {
+      if (document.visibilityState === "visible") {
+        try {
+          // Revalidate the session in case it expired in the background
+          const { data } = await supabase.auth.getSession();
+          const newSession = data.session;
+
+          if (
+            (!sessionRef.current && newSession) ||
+            (sessionRef.current && newSession && sessionRef.current.access_token !== newSession.access_token)
+          ) {
+            // Trigger the onAuthStateChange flow to process MFA again (safe)
+            supabase.auth.setSession({
+              access_token: newSession.access_token,
+              refresh_token: newSession.refresh_token,
+            });
+          }
+
+          // Force re-check MFA state when resuming, to prevent loaded-locked UI
+          if (sessionRef.current?.user) {
+            setLoading(true);
+            await enforceMfaIfEnabled(sessionRef.current);
+            if (!needsMfaChallenge) {
+              setLoading(false);
+            }
+          }
+        } catch (err) {
+          console.error("Visibility change session check failed:", err);
+          setLoading(false);
+        }
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const signUp = async (email: string, password: string, username?: string, fullName?: string) => {
@@ -431,14 +454,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        toast({ variant: "destructive", title: "Sign Up Error", description: error.message });
+        toast({
+          variant: "destructive",
+          title: "Sign Up Error",
+          description: error.message,
+        });
       } else {
-        toast({ title: "Success", description: "Please check your email to confirm your account." });
+        toast({
+          title: "Success",
+          description: "Please check your email to confirm your account.",
+        });
       }
 
       return { error };
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Sign Up Error", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Sign Up Error",
+        description: err.message,
+      });
       return { error: err };
     }
   };
@@ -490,13 +524,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           friendlyMessage = "Network error. Please check your connection and try again.";
         }
 
-        toast({ variant: "destructive", title: "Sign In Failed", description: friendlyMessage });
+        toast({
+          variant: "destructive",
+          title: "Sign In Failed",
+          description: friendlyMessage,
+        });
         return { error };
       }
 
+      // IMPORTANT: do NOT show sign-in success toast here anymore.
+      // Instead, we set a pending flag so success is shown only after MFA is verified (when enabled),
+      // or immediately after a successful sign-in if MFA is not enabled.
+      setPendingSignInSuccess(true);
       return { error };
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Sign In Error", description: err.message });
+      toast({
+        variant: "destructive",
+        title: "Sign In Error",
+        description: err.message,
+      });
       return { error: err };
     }
   };
@@ -509,39 +555,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setProfile(null);
       setNeedsMfaChallenge(false);
+      setMfaOpen(false);
+      setMfaError(null);
+      setPendingSignInSuccess(false);
 
       const sess = sessionRef.current;
       if (sess?.user) {
         const key = getMfaKey(sess.user.id, sess.refresh_token);
         localStorage.removeItem(key);
       }
-    }
 
-    toast({ title: "Signed out successfully" });
+      setLoading(false);
+
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out.",
+      });
+    }
   };
 
-  // FIX 2: Added `isInitialRestore` to the context value object
   const value: AuthContextType = useMemo(
     () => ({
       user,
       session,
       profile,
       loading,
-      isInitialRestore,
       signUp,
       signIn,
       signOut,
       refreshProfile,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, session, profile, loading, isInitialRestore],
+    [user, session, profile, loading],
   );
 
   return (
     <AuthContext.Provider value={value}>
       {needsMfaChallenge ? (
-        // FIX 3: Cast to `any` to satisfy type mismatch between TwoFactorChallenge's expected signature and handleMfaVerified
-        <TwoFactorChallenge open={true} onVerified={handleMfaVerified as any} onCancel={handleMfaCancelled} />
+        <TwoFactorChallenge
+          open={mfaOpen}
+          onVerified={handleMfaVerified}
+          onCancel={handleMfaCancelled}
+          onError={handleMfaError} // make sure your TwoFactorChallenge accepts this prop to enable error reporting
+          errorMessage={mfaError} // optional: allow your dialog to display inline errors
+        />
       ) : (
         children
       )}
