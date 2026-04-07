@@ -832,7 +832,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            gateway,
+            gateway: gatewayId,
             apiKey: formData.apiKey,
             secretKey: formData.secretKey || undefined,
           }),
