@@ -1246,7 +1246,7 @@ const gatewaySetupSteps: Record<string, string[]> = {
             <div className="space-y-2">
               <Label>Webhook URL (auto-generated)</Label>
               <div className="flex items-center gap-2">
-                <Input readOnly value={`${panel?.custom_domain ? `https://${panel.custom_domain}` : panel?.subdomain ? `https://${panel.subdomain}.smmpilot.online` : window.location.origin}/api/payments/${selectedGateway?.id}/webhook`} className="bg-muted/50 font-mono text-xs flex-1" />
+                <Input readOnly value={`https://tooudgubuhxjbbvzjcgx.supabase.co/functions/v1/payment-webhook?gateway=${selectedGateway?.id}&panel_id=${panel?.id}`} className="bg-muted/50 font-mono text-xs flex-1" />
                 <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 shrink-0 text-[10px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse" />
                   Live

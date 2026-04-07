@@ -375,7 +375,21 @@ serve(async (req) => {
         .select('email, full_name')
         .eq('user_id', buyerId)
         .single();
-      buyerEmail = profileData?.email || `user-${buyerId}@platform.local`;
+      buyerEmail = profileData?.email || '';
+    }
+    // Fallback to client_users for tenant buyers
+    if (!buyerEmail || buyerEmail.includes('@platform.local')) {
+      const { data: clientUser } = await supabase
+        .from('client_users')
+        .select('email, full_name')
+        .eq('id', buyerId)
+        .single();
+      if (clientUser?.email) {
+        buyerEmail = clientUser.email;
+      }
+    }
+    if (!buyerEmail) {
+      buyerEmail = `user-${buyerId}@platform.local`;
     }
 
     let gatewayConfig: any = null;
