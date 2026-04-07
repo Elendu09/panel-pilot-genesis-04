@@ -573,7 +573,9 @@ serve(async (req) => {
                   panel_id: txPanelId,
                   type: 'deposit',
                   title: 'Deposit Successful',
-                  message: `$${depositAmount.toFixed(2)} has been added to your account via ${gateway}`,
+                  message: txCurrency !== 'USD' 
+                    ? `${txCurrency} ${depositAmount.toFixed(2)} (≈ $${creditAmount.toFixed(2)} USD) has been added to your account via ${gateway}`
+                    : `$${creditAmount.toFixed(2)} has been added to your account via ${gateway}`,
                 });
 
               if (txPanelId) {
