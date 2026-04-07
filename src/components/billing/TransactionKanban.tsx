@@ -163,7 +163,11 @@ export const TransactionKanban = ({ panelId }: TransactionKanbanProps) => {
 
         if (fetchError) throw fetchError;
 
-        const newBalance = (buyer?.balance || 0) + tx.amount;
+        // Credit USD amount (balance is always in USD)
+        const creditAmount = (tx.currency && tx.currency !== 'USD' && tx.amount_usd) 
+          ? Number(tx.amount_usd) 
+          : tx.amount;
+        const newBalance = (buyer?.balance || 0) + creditAmount;
 
         const { error: balanceError } = await supabase
           .from('client_users')
