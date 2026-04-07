@@ -1149,7 +1149,7 @@ const BuyerDeposit = () => {
               Select Payment Method
             </DialogTitle>
             <DialogDescription>
-              Choose your preferred transfer method for ${amount}
+              Choose your preferred transfer method for {currencyConfig.symbol}{amount}
             </DialogDescription>
           </DialogHeader>
           
