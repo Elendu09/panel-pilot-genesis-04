@@ -902,7 +902,17 @@ const BuyerDeposit = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-medium text-sm md:text-base">${tx.amount.toFixed(2)}</p>
+                                <p className="font-medium text-sm md:text-base">
+                                  {(tx as any).currency && (tx as any).currency !== 'USD' 
+                                    ? `${(tx as any).currency} ${tx.amount.toFixed(2)}`
+                                    : `$${tx.amount.toFixed(2)}`
+                                  }
+                                </p>
+                                {(tx as any).amount_usd && (tx as any).currency !== 'USD' && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    (≈ ${Number((tx as any).amount_usd).toFixed(2)} USD)
+                                  </span>
+                                )}
                                 {/* Transaction ID with copy */}
                                 <button 
                                   onClick={() => copyToClipboard(tx.id)}
@@ -915,6 +925,7 @@ const BuyerDeposit = () => {
                               </div>
                               <p className="text-[10px] md:text-xs text-muted-foreground truncate">
                                 {tx.payment_method || 'Payment'} • {new Date(tx.created_at).toLocaleDateString()}
+                                {(tx as any).currency && ` • ${(tx as any).currency}`}
                               </p>
                             </div>
                           </div>
