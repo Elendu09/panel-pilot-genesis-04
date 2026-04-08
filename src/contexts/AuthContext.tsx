@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TwoFactorChallenge } from "@/components/auth/TwoFactorChallenge";
@@ -45,6 +45,14 @@ function markMfaVerified(key: string) {
   localStorage.setItem(key, JSON.stringify({ verifiedAt: Date.now(), expiresAt }));
 }
 
+// Events that should NOT trigger loading spinner
+function isSilentEvent(event: AuthChangeEvent): boolean {
+  // TOKEN_REFRESHED fires on tab return, timer-based refresh, etc.
+  // INITIAL_SESSION fires alongside getSession — we handle init separately
+  const silentEvents: string[] = ["TOKEN_REFRESHED", "INITIAL_SESSION"];
+  return silentEvents.includes(event);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
 
@@ -56,7 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const sessionRef = useRef<Session | null>(null);
   const userRef = useRef<User | null>(null);
+  
+  // Track initialization to prevent race conditions
   const initializedRef = useRef(false);
+  // Track if getSession is currently running to prevent onAuthStateChange from racing
+  const initInProgressRef = useRef(true);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -126,12 +138,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const enforceMfaIfEnabled = async (sess: Session) => {
     const u = sess.user;
     if (!u) return;
-    const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
-    const enabled = !!mfaStatus?.enabled;
-    if (!enabled) { setNeedsMfaChallenge(false); return; }
-    const key = getMfaKey(u.id, sess.refresh_token);
-    const alreadyVerified = isMfaMarkedVerified(key);
-    setNeedsMfaChallenge(!alreadyVerified);
+    
+    try {
+      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
+      const enabled = !!mfaStatus?.enabled;
+      if (!enabled) { setNeedsMfaChallenge(false); return; }
+      const key = getMfaKey(u.id, sess.refresh_token);
+      const alreadyVerified = isMfaMarkedVerified(key);
+      setNeedsMfaChallenge(!alreadyVerified);
+    } catch (e) {
+      console.error("MFA check failed:", e);
+      setNeedsMfaChallenge(false);
+    }
   };
 
   const handleMfaVerified = () => {
@@ -141,10 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markMfaVerified(key);
     }
     setNeedsMfaChallenge(false);
-
-    // Show welcome back toast on successful MFA
-    toast({ title: "Welcome back! 🎉", description: "Two-factor authentication verified successfully." });
-
+    toast({ title: "Welcome back!", description: "Two-factor authentication verified successfully." });
     if (sessionRef.current?.user?.id) {
       fetchProfile(sessionRef.current.user.id);
     }
@@ -164,12 +179,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // 1. Register onAuthStateChange FIRST (Supabase requirement)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      // Always keep refs and state in sync
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       sessionRef.current = currentSession;
       userRef.current = currentSession?.user ?? null;
 
+      // No user = signed out
       if (!currentSession?.user) {
         setProfile(null);
         setNeedsMfaChallenge(false);
@@ -177,9 +195,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // TOKEN_REFRESHED after init: silently refresh without loading spinner
-      if (event === "TOKEN_REFRESHED" && initializedRef.current) {
-        // Silently refresh profile + MFA in background — no loading state
+      // If initial getSession() is still running, let it handle everything.
+      // onAuthStateChange events during init (like INITIAL_SESSION) are deferred.
+      if (initInProgressRef.current) {
+        return;
+      }
+
+      // After initialization, handle events:
+      if (isSilentEvent(event)) {
+        // TOKEN_REFRESHED / INITIAL_SESSION after init:
+        // Silently refresh profile + MFA in background. NO loading spinner.
         fetchProfile(currentSession.user.id).catch(() => {});
         enforceMfaIfEnabled(currentSession).catch((e) => {
           console.error("Silent MFA check failed:", e);
@@ -187,38 +212,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // For SIGNED_IN or initial events, show loading
-      setLoading(true);
-      await fetchProfile(currentSession.user.id);
-      try {
-        await enforceMfaIfEnabled(currentSession);
-      } catch (e) {
-        console.error("enforceMfaIfEnabled failed:", e);
-        setNeedsMfaChallenge(false);
-      }
-      setLoading(false);
-    });
-
-    // Initial restore
-    supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
-      if (initializedRef.current) return; // guard double-init
-      
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      sessionRef.current = sess;
-      userRef.current = sess?.user ?? null;
-
-      if (sess?.user) {
+      // SIGNED_IN (explicit login): show loading, fetch profile, enforce MFA
+      if (event === "SIGNED_IN") {
         setLoading(true);
-        await fetchProfile(sess.user.id);
-        await enforceMfaIfEnabled(sess);
+        await fetchProfile(currentSession.user.id);
+        await enforceMfaIfEnabled(currentSession);
         setLoading(false);
-      } else {
+        return;
+      }
+
+      // SIGNED_OUT handled above. Any other event: just sync state, no loading.
+    });
+
+    // 2. Initial session restore via getSession()
+    // This is the ONLY path that controls the initial loading state.
+    const restoreSession = async () => {
+      try {
+        const { data: { session: sess } } = await supabase.auth.getSession();
+        
+        // Set state from getSession result
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        sessionRef.current = sess;
+        userRef.current = sess?.user ?? null;
+
+        if (sess?.user) {
+          await fetchProfile(sess.user.id);
+          await enforceMfaIfEnabled(sess);
+        }
+      } catch (err) {
+        console.error("Initial session restore error:", err);
+      } finally {
+        // Mark initialization complete BEFORE clearing loading
+        // This prevents any queued onAuthStateChange from re-setting loading
+        initializedRef.current = true;
+        initInProgressRef.current = false;
         setLoading(false);
       }
-      
-      initializedRef.current = true;
-    });
+    };
+
+    restoreSession();
 
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -300,6 +333,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextType = useMemo(() => ({
     user, session, profile, loading, signUp, signIn, signOut, refreshProfile,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [user, session, profile, loading]);
 
   return (
