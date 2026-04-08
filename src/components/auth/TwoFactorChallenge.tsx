@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Shield, Loader2, Key, AlertCircle } from 'lucide-react';
+import { Shield, Loader2, Key } from 'lucide-react';
 
 interface TwoFactorChallengeProps {
   open: boolean;
@@ -18,12 +18,10 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
   const [loading, setLoading] = useState(false);
   const [useBackup, setUseBackup] = useState(false);
   const [backupCode, setBackupCode] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
 
   const handleVerify = async () => {
     if (code.length !== 6) return;
     setLoading(true);
-    setErrorMessage('');
     try {
       const { data, error } = await supabase.functions.invoke('mfa-setup', {
         body: { action: 'validate', token: code }
@@ -33,12 +31,10 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
       if (data?.valid) {
         onVerified();
       } else {
-        setErrorMessage('Invalid code. Please check your authenticator app and try again.');
         toast({ variant: 'destructive', title: 'Invalid code', description: 'Please check your authenticator app and try again.' });
         setCode('');
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Verification failed. Please try again.');
       toast({ variant: 'destructive', title: 'Verification failed', description: err.message });
       setCode('');
     } finally {
@@ -49,7 +45,6 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
   const handleBackupCode = async () => {
     if (!backupCode.trim()) return;
     setLoading(true);
-    setErrorMessage('');
     try {
       const { data, error } = await supabase.functions.invoke('mfa-setup', {
         body: { action: 'use_backup', backup_code: backupCode.trim() }
@@ -60,12 +55,10 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
         toast({ title: 'Backup code accepted', description: `${data.remaining} codes remaining.` });
         onVerified();
       } else {
-        setErrorMessage('Invalid backup code. Please check and try again.');
         toast({ variant: 'destructive', title: 'Invalid backup code' });
         setBackupCode('');
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to verify backup code.');
       toast({ variant: 'destructive', title: 'Failed', description: err.message });
       setBackupCode('');
     } finally {
@@ -74,18 +67,9 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
   };
 
   const handleCancel = async () => {
+    // Sign out since they can't pass MFA
     await supabase.auth.signOut();
     onCancel();
-  };
-
-  const handleCodeChange = (val: string) => {
-    setCode(val);
-    if (errorMessage) setErrorMessage('');
-  };
-
-  const handleBackupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBackupCode(e.target.value);
-    if (errorMessage) setErrorMessage('');
   };
 
   return (
@@ -107,7 +91,7 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
           {!useBackup ? (
             <>
               <div className="flex justify-center">
-                <InputOTP maxLength={6} value={code} onChange={handleCodeChange}>
+                <InputOTP maxLength={6} value={code} onChange={setCode}>
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
@@ -118,15 +102,6 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-              
-              {/* Inline error message */}
-              {errorMessage && (
-                <div className="flex items-center gap-2 text-destructive text-sm justify-center">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
               <Button onClick={handleVerify} disabled={loading || code.length !== 6} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Verify
@@ -136,19 +111,10 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
             <>
               <Input
                 value={backupCode}
-                onChange={handleBackupChange}
+                onChange={(e) => setBackupCode(e.target.value)}
                 placeholder="XXXX-XXXX"
                 className="text-center font-mono tracking-wider"
               />
-              
-              {/* Inline error message */}
-              {errorMessage && (
-                <div className="flex items-center gap-2 text-destructive text-sm justify-center">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
               <Button onClick={handleBackupCode} disabled={loading || !backupCode.trim()} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Use Backup Code
@@ -157,7 +123,7 @@ export function TwoFactorChallenge({ open, onVerified, onCancel }: TwoFactorChal
           )}
 
           <div className="flex items-center justify-between pt-2">
-            <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={() => { setUseBackup(!useBackup); setCode(''); setBackupCode(''); setErrorMessage(''); }}>
+            <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={() => { setUseBackup(!useBackup); setCode(''); setBackupCode(''); }}>
               <Key className="w-3 h-3 mr-1" />
               {useBackup ? 'Use authenticator app' : 'Use backup code'}
             </Button>
