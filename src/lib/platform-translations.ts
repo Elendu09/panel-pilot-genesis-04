@@ -1363,7 +1363,7 @@ export const platformTranslations = {
     "home.title.line1": "Kendi",
     "home.title.line2": "smm panelinizi başlatın",
     "home.cta.create": "Panel oluştur",
-    "home.cta.tools": "Araçlar",
+    "home.cta.tools": "Sosyal Güçlendir",
     "home.animated.profit": "kâr için",
     "home.animated.clients": "müşteriler için",
     "home.animated.ease": "kolayca",
