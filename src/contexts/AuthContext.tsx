@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -53,57 +53,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsMfaChallenge, setNeedsMfaChallenge] = useState(false);
-  const [mfaError, setMfaError] = useState<string | null>(null);
 
   const sessionRef = useRef<Session | null>(null);
   const userRef = useRef<User | null>(null);
-  const profileRef = useRef<any | null>(null);
   const initializedRef = useRef(false);
-  const isFetchingProfileRef = useRef(false);
-  const pendingSignInSuccessRef = useRef(false);
+  const profileRef = useRef<any | null>(null);
+  const isFetchingRef = useRef(false);
 
   const fetchProfile = async (userId: string) => {
-    if (isFetchingProfileRef.current) return profileRef.current;
-    isFetchingProfileRef.current = true;
+    // Guard against concurrent fetches
+    if (isFetchingRef.current) {
+      return profileRef.current;
+    }
+    isFetchingRef.current = true;
 
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
-
       if (error) throw error;
 
       if (data && (!data.role || !data.username)) {
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
         const metadata = authUser?.user_metadata || {};
         const updates: Record<string, any> = {};
 
         if (!data.role) updates.role = metadata.role || "panel_owner";
         if (!data.username) {
-          const emailPrefix = (data.email || "")
-            .split("@")[0]
-            .replace(/[^a-zA-Z0-9_]/g, "")
-            .slice(0, 20);
-          const namePrefix = (metadata.full_name || "")
-            .replace(/\s+/g, "")
-            .replace(/[^a-zA-Z0-9_]/g, "")
-            .slice(0, 20);
+          const emailPrefix = (data.email || "").split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
+          const namePrefix = (metadata.full_name || "").replace(/\s+/g, "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20);
           updates.username = namePrefix || emailPrefix || `user_${Date.now().toString(36)}`;
         }
         if (!data.full_name && metadata.full_name) updates.full_name = metadata.full_name;
         if (!data.avatar_url && metadata.avatar_url) updates.avatar_url = metadata.avatar_url;
 
         if (Object.keys(updates).length > 0) {
-          const { data: updated } = await supabase
-            .from("profiles")
-            .update(updates)
-            .eq("user_id", userId)
-            .select("*")
-            .single();
+          const { data: updated } = await supabase.from("profiles").update(updates).eq("user_id", userId).select("*").single();
           if (updated) {
             setProfile(updated);
             profileRef.current = updated;
-            isFetchingProfileRef.current = false;
+            isFetchingRef.current = false;
             return updated;
           }
         }
@@ -113,162 +100,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profileRef.current = data;
 
       const pendingPanel = localStorage.getItem("pendingPanelCreation");
-      if (pendingPanel && data?.role === "panel_owner") {
-        try {
-          const panelData = JSON.parse(pendingPanel);
-          if (panelData.userId === userId) {
-            await createPanel(panelData.panelName, data.id);
-            localStorage.removeItem("pendingPanelCreation");
-          }
-        } catch (e) {
-          console.error("Pending panel error:", e);
+      if (pendingPanel && data.role === "panel_owner") {
+        const panelData = JSON.parse(pendingPanel);
+        if (panelData.userId === userId) {
+          await createPanel(panelData.panelName, data.id);
+          localStorage.removeItem("pendingPanelCreation");
         }
       }
 
-      isFetchingProfileRef.current = false;
+      isFetchingRef.current = false;
       return data;
     } catch (err: any) {
-      console.error("Profile fetch error:", err);
-      if (profileRef.current) setProfile(profileRef.current);
-      isFetchingProfileRef.current = false;
+      console.error("Error fetching profile:", err);
+      
+      // On AbortError or network failure, fall back to cached profile
+      const isAbort = err?.name === "AbortError" || err?.message?.includes("AbortError") || err?.message?.includes("Lock broken");
+      if (isAbort && profileRef.current) {
+        console.warn("Profile fetch aborted (lock contention), using cached profile");
+        setProfile(profileRef.current);
+        isFetchingRef.current = false;
+        return profileRef.current;
+      }
+      
+      // For other errors, still keep cached profile if available
+      if (profileRef.current) {
+        setProfile(profileRef.current);
+      }
+      
+      isFetchingRef.current = false;
       return profileRef.current || null;
     }
   };
 
   const createPanel = async (panelName: string, ownerId: string) => {
     try {
-      const { error } = await supabase.from("panels").insert([
-        {
-          name: panelName,
-          owner_id: ownerId,
-          status: "active" as const,
-          is_approved: true,
-          theme_type: "dark_gradient" as const,
-          subdomain:
-            panelName
-              .toLowerCase()
-              .replace(/[^a-zA-Z0-9]/g, "")
-              .substring(0, 20) || "panel",
-        },
-      ]);
+      const { error } = await supabase.from("panels").insert([{
+        name: panelName,
+        owner_id: ownerId,
+        status: "active" as const,
+        is_approved: true,
+        theme_type: "dark_gradient" as const,
+        subdomain: panelName.toLowerCase().replace(/[^a-zA-Z0-9]/g, "").substring(0, 20) || "panel",
+      }]);
       if (error) throw error;
-      toast({ title: "Panel Created", description: "Your subdomain is live now." });
+      toast({ title: "Panel Created", description: "Your subdomain is live now. Configure services to start selling." });
     } catch (err) {
-      console.error(err);
-      toast({ variant: "destructive", title: "Panel Creation Error", description: "Failed to create panel." });
+      console.error("Error creating panel:", err);
+      toast({ variant: "destructive", title: "Panel Creation Error", description: "Failed to create your panel. Please contact support." });
     }
   };
 
   const refreshProfile = async () => {
-    if (userRef.current?.id) await fetchProfile(userRef.current.id);
+    if (userRef.current) await fetchProfile(userRef.current.id);
   };
 
-  const enforceMfaIfEnabled = async (sess: Session): Promise<boolean> => {
+  const enforceMfaIfEnabled = async (sess: Session) => {
     const u = sess.user;
-    if (!u) return false;
-
+    if (!u) return;
     try {
-      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", {
-        body: { action: "status" },
-      });
+      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
       const enabled = !!mfaStatus?.enabled;
-      if (!enabled) {
-        setNeedsMfaChallenge(false);
-        setMfaError(null);
-        return false;
-      }
-
+      if (!enabled) { setNeedsMfaChallenge(false); return; }
       const key = getMfaKey(u.id, sess.refresh_token);
       const alreadyVerified = isMfaMarkedVerified(key);
       setNeedsMfaChallenge(!alreadyVerified);
-      setMfaError(null);
-      return !alreadyVerified;
     } catch (err) {
-      console.error("MFA check failed:", err);
-      setNeedsMfaChallenge(false);
-      setMfaError(null);
-      return false;
+      console.error("MFA check error:", err);
+      // On error, don't block the UI - keep existing MFA state
     }
   };
 
-  const handleMfaVerified = async () => {
+  const handleMfaVerified = () => {
     const sess = sessionRef.current;
-    if (sess?.user) markMfaVerified(getMfaKey(sess.user.id, sess.refresh_token));
-
-    setNeedsMfaChallenge(false);
-    setMfaError(null);
-
-    if (sess?.user?.id) await fetchProfile(sess.user.id);
-
-    if (pendingSignInSuccessRef.current) {
-      toast({ title: "Signed in successfully", description: "Welcome back!" });
-      pendingSignInSuccessRef.current = false;
+    if (sess?.user) {
+      const key = getMfaKey(sess.user.id, sess.refresh_token);
+      markMfaVerified(key);
     }
-    setLoading(false);
+    setNeedsMfaChallenge(false);
+    toast({ title: "Welcome back! 🎉", description: "Two-factor authentication verified successfully." });
+    if (sessionRef.current?.user?.id) {
+      fetchProfile(sessionRef.current.user.id);
+    }
   };
 
   const handleMfaCancelled = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {}
+    try { await supabase.auth.signOut(); } catch {}
     setNeedsMfaChallenge(false);
-    setMfaError(null);
-    pendingSignInSuccessRef.current = false;
     setUser(null);
     setSession(null);
     setProfile(null);
     profileRef.current = null;
-    setLoading(false);
-
     const sess = sessionRef.current;
-    if (sess?.user) localStorage.removeItem(getMfaKey(sess.user.id, sess.refresh_token));
-
-    toast({ variant: "destructive", title: "Signed out", description: "MFA was cancelled." });
-  };
-
-  const handleMfaError = (message: string) => {
-    setMfaError(message);
-  };
-
-  const handleTabReenter = useCallback(async () => {
-    if (document.visibilityState !== "visible" || needsMfaChallenge) return;
-
-    try {
-      const {
-        data: { session: fresh },
-      } = await supabase.auth.getSession();
-      if (!fresh) {
-        setLoading(false);
-        return;
-      }
-
-      if (fresh.access_token !== sessionRef.current?.access_token) {
-        setSession(fresh);
-        setUser(fresh.user);
-        sessionRef.current = fresh;
-        userRef.current = fresh.user;
-      }
-
-      if (fresh.user) {
-        await fetchProfile(fresh.user.id);
-        const needsMfa = await enforceMfaIfEnabled(fresh);
-        if (!needsMfa) setLoading(false);
-      } else {
-        setLoading(false);
-      }
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
+    if (sess?.user) {
+      const key = getMfaKey(sess.user.id, sess.refresh_token);
+      localStorage.removeItem(key);
     }
-  }, [needsMfaChallenge]);
+  };
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    let isInitialLoad = true;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       sessionRef.current = currentSession;
@@ -278,34 +210,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
         profileRef.current = null;
         setNeedsMfaChallenge(false);
-        setMfaError(null);
-        pendingSignInSuccessRef.current = false;
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+          isInitialLoad = false;
+        }
         return;
       }
 
+      // TOKEN_REFRESHED: silent background refresh, NEVER show loading
       if (event === "TOKEN_REFRESHED") {
-        fetchProfile(currentSession.user.id).catch(console.error);
+        fetchProfile(currentSession.user.id).catch(() => {});
+        enforceMfaIfEnabled(currentSession).catch(console.error);
+        if (isInitialLoad) {
+          setLoading(false);
+          isInitialLoad = false;
+          initializedRef.current = true;
+        }
+        return;
+      }
+
+      // Skip duplicate INITIAL_SESSION if already initialized
+      if (event === "INITIAL_SESSION" && initializedRef.current) {
+        // Already initialized, just do a silent refresh
+        fetchProfile(currentSession.user.id).catch(() => {});
         enforceMfaIfEnabled(currentSession).catch(console.error);
         return;
       }
 
-      if (event === "INITIAL_SESSION" && initializedRef.current) return;
+      // Handle initial load or explicit sign-in
+      if (isInitialLoad || event === "SIGNED_IN") {
+        if (isInitialLoad) setLoading(true);
+        await fetchProfile(currentSession.user.id);
+        await enforceMfaIfEnabled(currentSession);
 
-      setLoading(true);
-      await fetchProfile(currentSession.user.id);
-      const requiresMfa = await enforceMfaIfEnabled(currentSession);
-
-      if (!requiresMfa) {
-        setLoading(false);
-        if (pendingSignInSuccessRef.current) {
-          toast({ title: "Signed in successfully", description: "Welcome back!" });
-          pendingSignInSuccessRef.current = false;
+        if (isInitialLoad) {
+          setLoading(false);
+          isInitialLoad = false;
+          initializedRef.current = true;
         }
       }
     });
 
+    // Fallback for initial session
     supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
+      if (!isInitialLoad) return;
+
       setSession(sess);
       setUser(sess?.user ?? null);
       sessionRef.current = sess;
@@ -315,34 +264,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         await fetchProfile(sess.user.id);
         await enforceMfaIfEnabled(sess);
-        setLoading(false);
-      } else {
-        setLoading(false);
       }
+      setLoading(false);
+      isInitialLoad = false;
+      initializedRef.current = true;
     });
 
-    document.addEventListener("visibilitychange", handleTabReenter);
-    window.addEventListener("focus", handleTabReenter);
-
-    return () => {
-      subscription.unsubscribe();
-      document.removeEventListener("visibilitychange", handleTabReenter);
-      window.removeEventListener("focus", handleTabReenter);
-    };
-  }, [handleTabReenter]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const signUp = async (email: string, password: string, username?: string, fullName?: string) => {
     try {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email, password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth?verified=true`,
           data: { username, full_name: fullName || "", role: "panel_owner" },
         },
       });
-      if (error) toast({ variant: "destructive", title: "Sign Up Error", description: error.message });
-      else toast({ title: "Success", description: "Please check your email." });
+      if (error) {
+        toast({ variant: "destructive", title: "Sign Up Error", description: error.message });
+      } else {
+        toast({ title: "Success", description: "Please check your email to confirm your account." });
+      }
       return { error };
     } catch (err: any) {
       toast({ variant: "destructive", title: "Sign Up Error", description: err.message });
@@ -354,31 +298,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       let loginEmail = identifier.trim();
       if (!identifier.includes("@")) {
-        const { data: email, error: lookupError } = await supabase.rpc("lookup_email_by_username", {
-          p_username: identifier.trim(),
-        });
+        const { data: email, error: lookupError } = await supabase.rpc("lookup_email_by_username", { p_username: identifier.trim() });
         if (lookupError || !email) {
-          toast({ variant: "destructive", title: "Sign In Error", description: "Username not found." });
+          toast({ variant: "destructive", title: "Sign In Error", description: "Username not found. Please check and try again." });
           return { error: { message: "Username not found" } };
         }
         loginEmail = email;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
       if (error) {
-        if (error.message?.toLowerCase().includes("email not confirmed")) {
+        if (error.message?.toLowerCase().includes("email not confirmed") || error.message?.toLowerCase().includes("email_not_confirmed")) {
           return { error, emailNotVerified: true, email: loginEmail };
         }
-        let msg = error.message;
-        const lower = error.message.toLowerCase();
-        if (lower.includes("invalid")) msg = "Invalid credentials.";
-        else if (lower.includes("too many")) msg = "Too many attempts. Please wait.";
-        toast({ variant: "destructive", title: "Sign In Failed", description: msg });
+        let friendlyMessage = error.message;
+        const lowerMsg = error.message?.toLowerCase() || "";
+        if (lowerMsg.includes("invalid login credentials") || lowerMsg.includes("invalid_credentials")) {
+          friendlyMessage = "Invalid email/username or password. Please check and try again.";
+        } else if (lowerMsg.includes("too many requests") || lowerMsg.includes("rate limit")) {
+          friendlyMessage = "Too many login attempts. Please wait a moment and try again.";
+        } else if (lowerMsg.includes("user not found")) {
+          friendlyMessage = "No account found with this email. Please sign up first.";
+        } else if (lowerMsg.includes("network") || lowerMsg.includes("fetch")) {
+          friendlyMessage = "Network error. Please check your connection and try again.";
+        }
+        toast({ variant: "destructive", title: "Sign In Failed", description: friendlyMessage });
         return { error };
       }
-
-      pendingSignInSuccessRef.current = true;
       return { error };
     } catch (err: any) {
       toast({ variant: "destructive", title: "Sign In Error", description: err.message });
@@ -387,51 +333,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } finally {
+    try { await supabase.auth.signOut(); } finally {
       setUser(null);
       setSession(null);
       setProfile(null);
       profileRef.current = null;
       setNeedsMfaChallenge(false);
-      setMfaError(null);
-      pendingSignInSuccessRef.current = false;
-      setLoading(false);
-
       const sess = sessionRef.current;
-      if (sess?.user) localStorage.removeItem(getMfaKey(sess.user.id, sess.refresh_token));
+      if (sess?.user) {
+        const key = getMfaKey(sess.user.id, sess.refresh_token);
+        localStorage.removeItem(key);
+      }
     }
     toast({ title: "Signed out successfully" });
   };
 
-  const value: AuthContextType = useMemo(
-    () => ({
-      user,
-      session,
-      profile,
-      loading,
-      signUp,
-      signIn,
-      signOut,
-      refreshProfile,
-    }),
-    [user, session, profile, loading],
-  );
+  const value: AuthContextType = useMemo(() => ({
+    user, session, profile, loading, signUp, signIn, signOut, refreshProfile,
+  }), [user, session, profile, loading]);
 
   return (
     <AuthContext.Provider value={value}>
       {needsMfaChallenge ? (
-        <TwoFactorChallenge
-          open={true}
-          onVerified={handleMfaVerified}
-          onCancel={handleMfaCancelled}
-          onError={handleMfaError}
-          errorMessage={mfaError}
-        />
-      ) : (
-        children
-      )}
+        <TwoFactorChallenge open={true} onVerified={handleMfaVerified as any} onCancel={handleMfaCancelled} />
+      ) : children}
     </AuthContext.Provider>
   );
 }
