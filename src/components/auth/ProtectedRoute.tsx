@@ -40,32 +40,27 @@ export function ProtectedRoute({
     }
 
     const timer = setTimeout(async () => {
-      if (!retryAttempted.current) {
-        retryAttempted.current = true;
-        // Try one more profile fetch
-        try {
-          await refreshProfile();
-        } catch {
-          // ignore
-        }
-        // If still no profile after retry, create a minimal fallback
-        setTimeout(async () => {
-          if (!profile) {
-            try {
-              const { data } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
-              if (data) {
-                setFallbackProfile(data);
-              } else {
-                setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
-              }
-            } catch {
-              setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
-            }
-            setTimedOut(true);
-          }
-        }, 2000);
-        }, 2000);
+      if (retryAttempted.current) return;
+      retryAttempted.current = true;
+
+      // Try one more profile fetch
+      try {
+        await refreshProfile();
+      } catch {
+        // ignore
       }
+
+      // Wait a bit then check again
+      setTimeout(async () => {
+        if (profile) return; // profile arrived
+        try {
+          const { data } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+          setFallbackProfile(data || { role: 'panel_owner', id: user.id, user_id: user.id });
+        } catch {
+          setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
+        }
+        setTimedOut(true);
+      }, 2000);
     }, PROFILE_TIMEOUT_MS);
 
     return () => clearTimeout(timer);
