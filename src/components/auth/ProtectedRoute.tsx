@@ -49,24 +49,21 @@ export function ProtectedRoute({
           // ignore
         }
         // If still no profile after retry, create a minimal fallback
-        setTimeout(() => {
+        setTimeout(async () => {
           if (!profile) {
-            // Last resort: fetch directly
-            supabase.from("profiles").select("*").eq("user_id", user.id).single()
-              .then(({ data }) => {
-                if (data) {
-                  setFallbackProfile(data);
-                } else {
-                  // Absolute fallback - minimal profile to prevent infinite loading
-                  setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
-                }
-                setTimedOut(true);
-              })
-              .catch(() => {
+            try {
+              const { data } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+              if (data) {
+                setFallbackProfile(data);
+              } else {
                 setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
-                setTimedOut(true);
-              });
+              }
+            } catch {
+              setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
+            }
+            setTimedOut(true);
           }
+        }, 2000);
         }, 2000);
       }
     }, PROFILE_TIMEOUT_MS);
