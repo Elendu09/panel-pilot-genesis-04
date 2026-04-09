@@ -16,59 +16,38 @@ export const HeroSection = memo(() => {
   const { t } = useLanguage();
 
   // Memoize static data to prevent recreation on each render
-  const leftCards = useMemo(
-    () => [
-      { title: t("home.card.ultrafast"), subtitle: t("home.card.ultrafast.sub"), delay: 0.8 },
-      { title: t("home.card.design"), subtitle: t("home.card.design.sub"), delay: 1.2 },
-    ],
-    [t],
-  );
+  const leftCards = useMemo(() => [
+    { title: t('home.card.ultrafast'), subtitle: t('home.card.ultrafast.sub'), delay: 0.8 },
+    { title: t('home.card.design'), subtitle: t('home.card.design.sub'), delay: 1.2 },
+  ], [t]);
 
-  const rightCards = useMemo(
-    () => [
-      { title: t("home.card.functions"), subtitle: t("home.card.functions.sub"), delay: 1.0 },
-      { title: t("home.card.ecosystem"), subtitle: t("home.card.ecosystem.sub"), delay: 1.4 },
-    ],
-    [t],
-  );
+  const rightCards = useMemo(() => [
+    { title: t('home.card.functions'), subtitle: t('home.card.functions.sub'), delay: 1.0 },
+    { title: t('home.card.ecosystem'), subtitle: t('home.card.ecosystem.sub'), delay: 1.4 },
+  ], [t]);
 
   // Panel showcase services with SVG icons - memoized
-  const showcaseServices = useMemo(
-    () => [
-      {
-        icon: TelegramIcon,
-        name: "Telegram Subscribers",
-        price: "$0.3",
-        discount: "-50%",
-        gradient: "from-blue-500 to-cyan-500",
-      },
-      {
-        icon: VoteIcon,
-        name: "Premium Votes",
-        price: "$1",
-        discount: "-30%",
-        gradient: "from-amber-400 to-yellow-500",
-      },
-      { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
-      { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
-    ],
-    [],
-  );
+  const showcaseServices = useMemo(() => [
+    { icon: TelegramIcon, name: "Telegram Subscribers", price: "$0.3", discount: "-50%", gradient: "from-blue-500 to-cyan-500" },
+    { icon: VoteIcon, name: "Premium Votes", price: "$1", discount: "-30%", gradient: "from-amber-400 to-yellow-500" },
+    { icon: ViewsIcon, name: "Channel Viewers", price: "$0.5", gradient: "from-green-500 to-emerald-500" },
+    { icon: HeartIcon, name: "Real Likes", price: "$20", gradient: "from-red-500 to-pink-500" },
+  ], []);
 
   return (
     <section className="relative min-h-[50vh] sm:min-h-[60vh] md:min-h-[75vh] lg:min-h-screen bg-gradient-hero overflow-hidden perspective-1000 pb-4 md:pb-8 lg:pb-12">
       {/* Grid, Bubbles & Particles - optimized for performance */}
       <BackgroundEffects variant="hero" showGrid showBubbles showParticles bubbleCount={6} particleCount={10} />
-
+      
       {/* Static Background Effects - CSS-based for better performance */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
-        <div
+        <div 
           className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary rounded-full blur-[120px] animate-pulse-float"
-          style={{ animationDuration: "10s" }}
+          style={{ animationDuration: '10s' }}
         />
-        <div
+        <div 
           className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-primary/50 rounded-full blur-[150px] animate-pulse-float"
-          style={{ animationDuration: "12s", animationDelay: "2s" }}
+          style={{ animationDuration: '12s', animationDelay: '2s' }}
         />
       </div>
 
@@ -87,7 +66,7 @@ export const HeroSection = memo(() => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
               <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
               <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
-              <motion.div
+              <motion.div 
                 className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
                 whileHover={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
@@ -112,7 +91,7 @@ export const HeroSection = memo(() => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg" />
               <h3 className="font-bold text-lg text-foreground relative z-10">{card.title}</h3>
               <p className="text-sm text-muted-foreground mt-1 relative z-10">{card.subtitle}</p>
-              <motion.div
+              <motion.div 
                 className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-primary/20 to-primary/50 rounded-lg opacity-0 blur-sm"
                 whileHover={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
@@ -124,14 +103,14 @@ export const HeroSection = memo(() => {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 text-center relative z-10 pt-24 lg:pt-32">
-        <motion.div
+        <motion.div 
           className="max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           {/* Badge */}
-          <motion.div
+          <motion.div 
             className="inline-flex items-center space-x-2 bg-card/80 backdrop-blur-xl border border-border/50 rounded-full px-6 py-2 mb-8"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -139,70 +118,57 @@ export const HeroSection = memo(() => {
             whileHover={{ scale: 1.05, boxShadow: "0 0 30px hsl(var(--primary) / 0.3)" }}
           >
             <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm font-medium">{t("home.badge")}</span>
+            <span className="text-sm font-medium">{t('home.badge')}</span>
           </motion.div>
 
           {/* Main Heading */}
-          <motion.h1
+          <motion.h1 
             className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            {t("home.title.line1")}
+            {t('home.title.line1')}
             <br />
-            <motion.span
+            <motion.span 
               className="bg-gradient-primary bg-clip-text text-transparent inline-block"
-              animate={{
-                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+              animate={{ 
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"]
               }}
               transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
               style={{ backgroundSize: "200% 200%" }}
             >
-              {t("home.title.line2")}
+              {t('home.title.line2')}
             </motion.span>
           </motion.h1>
 
           {/* Hidden SEO subtitle for search engines */}
           <p className="sr-only">
-            Launch your own SMM panel with Home of SMM. Create, manage, and scale your social media marketing business
-            with custom branding, automated orders, and real-time analytics.
+            Launch your own SMM panel with Home of SMM. Create, manage, and scale your social media marketing business with custom branding, automated orders, and real-time analytics.
           </p>
 
           {/* CTA Buttons */}
-          <motion.div
+          <motion.div 
             className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
           >
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                asChild
-                size="lg"
-                className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full"
-              >
+              <Button asChild size="lg" className="bg-gradient-primary hover:shadow-glow text-lg px-8 py-6 rounded-full">
                 <Link to="/auth">
-                  {t("home.cta.create")} <ArrowRight className="ml-2 w-5 h-5" />
+                  {t('home.cta.create')} <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm"
-              >
+              <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
                 <a href="https://soc.smmpilot.online" target="_blank" rel="noopener noreferrer">
                   <span className="flex items-center gap-1.5">
-                    {t("home.cta.tools")}
+                    {t('home.cta.tools')}
                     <span className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span
-                        className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
-                        style={{ animationDelay: "0.3s" }}
-                      />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" style={{ animationDelay: '0.3s' }} />
                     </span>
                   </span>
                 </a>
@@ -212,7 +178,7 @@ export const HeroSection = memo(() => {
         </motion.div>
 
         {/* Animated Text */}
-        <motion.div
+        <motion.div 
           className="mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -220,9 +186,9 @@ export const HeroSection = memo(() => {
         >
           <AnimatedText
             phrases={[
-              { static: "build an smm panel", bold: t("home.animated.profit") },
-              { static: "build an smm panel", bold: t("home.animated.clients") },
-              { static: "build an smm panel", bold: t("home.animated.ease") },
+              { static: "build an smm panel", bold: t('home.animated.profit') },
+              { static: "build an smm panel", bold: t('home.animated.clients') },
+              { static: "build an smm panel", bold: t('home.animated.ease') }
             ]}
           />
         </motion.div>
@@ -238,21 +204,14 @@ export const HeroSection = memo(() => {
             {/* Panel Header */}
             <div className="flex items-center justify-between p-2 sm:p-4 border-b border-border/50 bg-muted/30 gap-2 flex-wrap sm:flex-nowrap">
               <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide">
-                <span className="font-bold text-sm sm:text-lg bg-gradient-primary bg-clip-text text-transparent shrink-0">
-                  PANEL
-                </span>
-                <Button size="sm" variant="default" className="bg-primary/90 text-xs shrink-0">
-                  New order
-                </Button>
+                <span className="font-bold text-sm sm:text-lg bg-gradient-primary bg-clip-text text-transparent shrink-0">PANEL</span>
+                <Button size="sm" variant="default" className="bg-primary/90 text-xs shrink-0">New order</Button>
                 <Button size="sm" variant="outline" className="text-xs shrink-0 hidden sm:inline-flex">
-                  My orders{" "}
-                  <Badge variant="secondary" className="ml-1 text-xs">
-                    1
-                  </Badge>
+                  My orders <Badge variant="secondary" className="ml-1 text-xs">1</Badge>
                 </Button>
               </div>
               <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                <motion.span
+                <motion.span 
                   className="text-primary font-bold text-lg sm:text-xl"
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -264,7 +223,7 @@ export const HeroSection = memo(() => {
 
             {/* Category Tabs */}
             <div className="flex gap-2 p-2 sm:p-4 border-b border-border/50 overflow-x-auto scrollbar-hide">
-              {["All", "VK", "Telegram", "Instagram", "More"].map((cat, i) => (
+              {['All', 'VK', 'Telegram', 'Instagram', 'More'].map((cat, i) => (
                 <motion.div
                   key={cat}
                   initial={{ opacity: 0, scale: 0.8 }}
@@ -272,8 +231,8 @@ export const HeroSection = memo(() => {
                   transition={{ delay: 1 + i * 0.1 }}
                   className="shrink-0"
                 >
-                  <Button
-                    size="sm"
+                  <Button 
+                    size="sm" 
                     variant={i === 0 ? "default" : "outline"}
                     className={cn("text-xs sm:text-sm", i === 0 ? "bg-primary" : "")}
                   >
@@ -300,24 +259,22 @@ export const HeroSection = memo(() => {
                       <motion.div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         style={{
-                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.1) 0%, transparent 70%)`,
+                          background: `radial-gradient(circle at center, hsl(var(--primary) / 0.1) 0%, transparent 70%)`
                         }}
                       />
-
+                      
                       {/* Discount badge */}
                       {service.discount && (
                         <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs">
                           {service.discount}
                         </Badge>
                       )}
-
+                      
                       {/* Premium SVG Icon */}
-                      <div
-                        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg`}
-                      >
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-3 shadow-lg`}>
                         <service.icon className="text-white" size={24} />
                       </div>
-
+                      
                       <h3 className="font-semibold text-sm mb-2 line-clamp-2">{service.name}</h3>
                       <div className="flex items-center justify-between">
                         <span className="text-xl font-bold text-primary">{service.price}</span>
@@ -332,17 +289,17 @@ export const HeroSection = memo(() => {
         </motion.div>
 
         {/* Bottom Stats */}
-        <motion.div
+        <motion.div 
           className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto mt-6 sm:mt-8 lg:mt-12 mb-4 sm:mb-6 lg:mb-8"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.5, duration: 0.6 }}
         >
           {[
-            { value: "200+", label: t("home.stats.payment"), icon: Zap },
-            { value: t("home.stats.easy"), label: t("home.stats.easy.sub"), icon: Star },
-            { value: "20+", label: t("home.stats.languages"), icon: MessageCircle },
-            { value: t("home.stats.nocode"), label: t("home.stats.nocode.sub"), icon: TrendingUp },
+            { value: "200+", label: t('home.stats.payment'), icon: Zap },
+            { value: t('home.stats.easy'), label: t('home.stats.easy.sub'), icon: Star },
+            { value: "20+", label: t('home.stats.languages'), icon: MessageCircle },
+            { value: t('home.stats.nocode'), label: t('home.stats.nocode.sub'), icon: TrendingUp },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -366,4 +323,4 @@ export const HeroSection = memo(() => {
   );
 });
 
-HeroSection.displayName = "HeroSection";
+HeroSection.displayName = 'HeroSection';
