@@ -358,7 +358,7 @@ const Auth = () => {
                     <Label htmlFor="resetEmail">Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input id="resetEmail" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Enter your email" className="pl-10 h-11" required data-testid="input-reset-email" />
+                      <Input id="resetEmail" type="text" inputMode="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Enter your email" className="pl-10 h-11" required data-testid="input-reset-email" />
                     </div>
                   </div>
                   <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading} data-testid="button-send-reset">

@@ -45,8 +45,9 @@ export function ProtectedRoute({
         // Try one more profile fetch
         try {
           await refreshProfile();
-        } catch {}
-        
+        } catch {
+          // ignore
+        }
         // If still no profile after retry, create a minimal fallback
         setTimeout(() => {
           if (!profile) {

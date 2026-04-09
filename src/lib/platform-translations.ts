@@ -2741,7 +2741,7 @@ export const platformTranslations = {
     "home.title.line1": "अपना खुद का",
     "home.title.line2": "SMM पैनल लॉन्च करें",
     "home.cta.create": "पैनल बनाएं",
-    "home.cta.tools": "उपकरण",
+    "home.cta.tools": "सोशल बूस्ट",
     "home.animated.profit": "लाभ के लिए",
     "home.animated.clients": "ग्राहकों के लिए",
     "home.animated.ease": "आसानी से",
