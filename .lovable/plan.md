@@ -1,91 +1,86 @@
 
 
-# Plan: Fix Auth Loading on Tab Switch, MFA Error Handling, and Revamp Analytics Dashboard
+# Plan: Homepage Boost Social Button, Auth Tab-Return Loading Fix, Analytics Mobile Responsiveness, Live Activity Filter, and Forgot Password Fix
 
-## 1. Fix Loading Spinner on Tab Return (AuthContext.tsx)
+## 1. Rename "Service Tools" to "Boost Social" with Green Active Dots
 
-**Root Cause**: When the user switches tabs and returns, Supabase fires a `TOKEN_REFRESHED` event through `onAuthStateChange`. The handler sets `loading = true` on line 244, then awaits `fetchProfile` + `enforceMfaIfEnabled` (edge function call). If the network is slow or the call hangs, the app shows a loading spinner indefinitely.
-
-Additionally, both `getSession()` (line 262) and `onAuthStateChange` (line 230) race each other -- both set loading and fetch profile, causing duplicate work and potential stuck states.
+**Current**: The hero CTA button uses `t('home.cta.tools')` ("Service Tools") and links to `/services` via React Router `<Link>`.
 
 **Fix**:
-- Add an `initializedRef` flag. The `getSession()` block handles the initial load. Once initialized, `onAuthStateChange` should NOT set `loading = true` for `TOKEN_REFRESHED` events -- only for `SIGNED_IN` / `SIGNED_OUT`.
-- For `TOKEN_REFRESHED`, silently refresh profile and MFA status without showing a loading spinner (user is already authenticated).
-- Guard against double-initialization by checking `initializedRef.current` before the initial `getSession` block runs its profile/MFA fetch.
+- In `src/components/sections/HeroSection.tsx` (line 164-169): Replace the `<Link to="/services">` with an `<a href="https://soc.smmpilot.online" target="_blank" rel="noopener noreferrer">` so it opens in a new tab
+- Change the button text to "Boost Social" with two green pulsing dots between the words: `Boost` `●` `●` `Social` using small `<span>` elements with `bg-emerald-500 rounded-full w-1.5 h-1.5 animate-pulse`
+- Update all 10 language translations in `src/lib/platform-translations.ts` for `home.cta.tools` to their localized equivalent of "Boost Social"
 
-**File**: `src/contexts/AuthContext.tsx`
+**Files**: `src/components/sections/HeroSection.tsx`, `src/lib/platform-translations.ts`
 
-## 2. MFA Dialog Error Handling
+## 2. Fix Auth Tab-Return Loading/Blank Screen Issue
 
-**Current State**: The `TwoFactorChallenge` component already has error toasts on lines 34 and 38 for invalid TOTP codes and backup codes. However, the error messages could be clearer.
+**Root Cause**: The console logs reveal the core problem: Supabase's lock mechanism (`lock:sb-*-auth-token`) is timing out (5000ms), then being forcefully acquired with the `steal` option. This breaks the in-flight `fetchProfile` call with an `AbortError: Lock broken by another request with the 'steal' option`. The profile fetch fails, leaving `profile` as `null`, which causes the `ProtectedRoute` to show an infinite loading spinner (`loading || (user && !profile)`).
+
+Additionally, `onAuthStateChange` and `getSession()` race each other on tab return. Both can fire `TOKEN_REFRESHED` / `INITIAL_SESSION`, causing duplicate profile fetches that compound the lock contention.
+
+**Fix in `src/contexts/AuthContext.tsx`**:
+- Wrap `fetchProfile` with error resilience: if the fetch fails with an AbortError, do NOT clear the existing profile -- keep the stale profile data so the UI remains functional
+- Add a `profileRef` to cache the last successful profile. On AbortError, fall back to the cached profile instead of leaving it `null`
+- In `onAuthStateChange`, skip processing if `initializedRef.current` is true AND event is `INITIAL_SESSION` (prevents duplicate processing on tab return)
+- Add a debounce/guard: if a profile fetch is already in-flight, don't start another one (use an `isFetchingRef`)
+- For `TOKEN_REFRESHED`: already handled correctly (silent refresh), but add the same AbortError guard
+
+**Fix in `src/components/auth/ProtectedRoute.tsx`**:
+- Add a timeout fallback: if `user` exists but `profile` is `null` for more than 5 seconds, attempt to re-fetch the profile once, and if that also fails, proceed with a minimal profile object rather than showing infinite loading
+
+**Files**: `src/contexts/AuthContext.tsx`, `src/components/auth/ProtectedRoute.tsx`
+
+## 3. Make Order Pipeline Kanban Mobile Responsive
+
+**Current**: Uses `grid-cols-2 lg:grid-cols-4` which works on tablets but on small mobile screens (< 640px), the 2-column layout makes each card too narrow.
+
+**Fix in `src/components/analytics/OrderPipelineKanban.tsx`**:
+- Change grid to `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` so on mobile phones each column stacks vertically
+- Add horizontal scroll wrapper as an alternative: on mobile, display columns in a horizontal scrollable container with `flex overflow-x-auto snap-x` so users can swipe between pipeline stages
+- Reduce padding and font sizes slightly on mobile with responsive classes
+
+**File**: `src/components/analytics/OrderPipelineKanban.tsx`
+
+## 4. Filter Cancelled Orders from Live Activity Feed
+
+**Current**: `LiveActivityFeed` maps ALL orders including cancelled ones into the feed.
+
+**Fix in `src/components/analytics/LiveActivityFeed.tsx`**:
+- Add `.filter(o => o.status !== 'cancelled')` before the `.slice(0, 50)` in the `allItems` computation (line 31)
+- Remove the `'cancelled'` type from the `ActivityItem` type union and `typeConfig` since cancelled orders won't appear
+
+**File**: `src/components/analytics/LiveActivityFeed.tsx`
+
+## 5. Fix Forgot Password Issues and Email Restrictions
+
+**Forgot Password**: The current implementation (line 170-181) looks correct -- it calls `supabase.auth.resetPasswordForEmail`. Potential issues:
+- The `redirectTo` uses `window.location.origin + '/auth?type=recovery'` which is correct
+- If emails aren't arriving for non-Gmail addresses, this is a Supabase auth email delivery issue, not a code issue
+
+**Email Restrictions**: Supabase by default allows all email domains for sign-up. The "some emails are not allowed" error likely comes from:
+1. Supabase's built-in email validation rejecting malformed or disposable email domains
+2. The `resetPasswordForEmail` returning an error for emails not in the system
 
 **Fix**:
-- Add a visible inline error message below the OTP input (red text, e.g., "Invalid code. Please try again.") that resets when the user types a new code, in addition to the toast.
-- Keep the "Welcome back" toast after successful MFA verification (already handled by `handleMfaVerified` -> profile fetch -> app renders).
-- Add the welcome toast explicitly in `handleMfaVerified` in AuthContext.tsx.
+- In `handleForgotPassword`: improve error messaging to differentiate between "email not found" vs "email service error"
+- Add a client-side email validation that accepts all standard email formats (not just common providers)
+- Check if the Input `type="email"` is rejecting valid email formats -- the HTML5 email validation can be overly strict for some TLDs. Add a `pattern` attribute or switch to `type="text"` with custom validation
+- In the sign-up form, ensure the email input doesn't have implicit restrictions
 
-**Files**: `src/components/auth/TwoFactorChallenge.tsx`, `src/contexts/AuthContext.tsx`
+**Files**: `src/pages/Auth.tsx`
 
-## 3. Revamped Analytics Dashboard (Above Existing Sections)
+---
 
-**Requirement**: Add new sections ABOVE the existing deposit funnel and analytics cards. Existing sections stay intact below. The new sections match the uploaded reference images (dark glassmorphic style, theme-aware).
-
-**New Components to Create** (all in `src/components/analytics/`):
-
-| Component | Description |
-|-----------|-------------|
-| `OrderAnalyticsCard.tsx` | 3/5 grid: dual-line area chart (orders + revenue) with gradient fills, donut chart for order status breakdown, filter tabs (All/Completed/Processing/Pending/Cancelled) |
-| `RecentOrdersPanel.tsx` | 2/5 grid: live order list with colored status dots, service name, order ID, quantity, timestamp, price. "View All" link |
-| `PlatformServiceCards.tsx` | 4 cards (Instagram/YouTube/Twitter/Facebook) with colored icons, order counts, revenue |
-| `KPIMetricsGrid.tsx` | 6 cards in 3x2: Avg Order Value, Profit Margin, Refund Rate, Avg Delivery Time, API Uptime, Support Tickets |
-| `OrderPipelineKanban.tsx` | 4 columns: Pending/Processing/Completed/Failed with colored headers, order cards with service name, user, qty, timestamp |
-| `LiveActivityFeed.tsx` | Auto-updating feed (every 4s), colored type icons, service name, username, amount, relative timestamp, green pulsing LIVE indicator |
-| `TrafficGeographyPanel.tsx` | Device breakdown bar + cards (Desktop/Mobile/Tablet), country list with flag emojis and progress bars |
-| `RevenueExpensesChart.tsx` | Dual bar chart (revenue blue, expenses purple) with rounded tops |
-| `TopProvidersCard.tsx` | Provider list with colored status indicators (Active/Slow/Down), order counts, progress bars |
-| `SystemHealthCard.tsx` | 3 radial gauges (Server Load, API Quota, Balance) + Avg Response Time + Error Rate |
-
-**Layout in Analytics.tsx** (new order):
-
-```text
-Row 1: 4 Stat Cards (existing TopStatCard - add sparkline + glow + count-up)
-Row 2: Order Analytics (3/5) + Recent Orders (2/5)          [NEW]
-Row 3: 4 Platform Service Cards                              [NEW]
-Row 4: KPI Metrics Grid (3x2)                               [NEW]
-Row 5: Order Pipeline Kanban (4 columns)                     [NEW]
-Row 6: Live Activity Feed (3/5) + Traffic & Geography (2/5)  [NEW]
-Row 7: Revenue vs Expenses (1/3) + Top Providers (1/3) + System Health (1/3) [NEW]
---- existing sections below ---
-Row 8: Payment Funnel + Deposit Card (existing)
-Row 9: Retention/Transactions/Customers/Insights (existing)
-Row 10: Order Trends + Revenue charts (existing)
-Row 11: Fast Order + Ads funnels (existing)
-Row 12: Customer Growth (existing)
-```
-
-**Styling**: All new cards use glassmorphic `bg-card/80 backdrop-blur-xl border-border/50` with subtle glow shadows. Theme-aware (works in both light and dark). Staggered `motion.div` entry animations. Hover scale 1.03x. `tabular-nums` for numbers. Uppercase `tracking-wider` labels.
-
-**Data Source**: All new components pull from the same Supabase queries already in `fetchAnalytics` (orders, customers, transactions, analytics_events). No new edge functions needed -- the data is already fetched.
-
-**Skeleton Update**: Update `AnalyticsSkeleton.tsx` to include shimmer placeholders for all new sections so the loading state matches the final layout.
-
-## Files to Modify/Create
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/contexts/AuthContext.tsx` | Add `initializedRef`, skip `setLoading(true)` on TOKEN_REFRESHED; add welcome toast on MFA success |
-| `src/components/auth/TwoFactorChallenge.tsx` | Add inline error message below OTP input |
-| `src/components/analytics/OrderAnalyticsCard.tsx` | New: area chart + donut + filter tabs |
-| `src/components/analytics/RecentOrdersPanel.tsx` | New: live order list |
-| `src/components/analytics/PlatformServiceCards.tsx` | New: 4 platform cards |
-| `src/components/analytics/KPIMetricsGrid.tsx` | New: 6 KPI metric cards |
-| `src/components/analytics/OrderPipelineKanban.tsx` | New: 4-column kanban |
-| `src/components/analytics/LiveActivityFeed.tsx` | New: auto-updating feed |
-| `src/components/analytics/TrafficGeographyPanel.tsx` | New: device + geography |
-| `src/components/analytics/RevenueExpensesChart.tsx` | New: dual bar chart |
-| `src/components/analytics/TopProvidersCard.tsx` | New: provider list |
-| `src/components/analytics/SystemHealthCard.tsx` | New: gauges + stats |
-| `src/components/analytics/AnalyticsSkeleton.tsx` | Update with new section skeletons |
-| `src/components/analytics/index.ts` | Export all new components |
-| `src/pages/panel/Analytics.tsx` | Import and render new sections above existing ones; pass data props |
+| `src/components/sections/HeroSection.tsx` | Replace Link with external `<a>` tag to `https://soc.smmpilot.online`; add green active dots |
+| `src/lib/platform-translations.ts` | Update `home.cta.tools` in all 10 languages to "Boost Social" equivalents |
+| `src/contexts/AuthContext.tsx` | Add `profileRef` for caching; guard against AbortError; prevent duplicate fetches with `isFetchingRef`; skip duplicate INITIAL_SESSION |
+| `src/components/auth/ProtectedRoute.tsx` | Add timeout fallback for stuck `user && !profile` state |
+| `src/components/analytics/OrderPipelineKanban.tsx` | Change to `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` for mobile responsiveness |
+| `src/components/analytics/LiveActivityFeed.tsx` | Filter out cancelled orders from the feed |
+| `src/pages/Auth.tsx` | Improve forgot password error handling; ensure email input accepts all valid emails |
 
