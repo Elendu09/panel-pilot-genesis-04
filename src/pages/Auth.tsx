@@ -169,15 +169,37 @@ const Auth = () => {
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!resetEmail.trim()) {
+      toast({ variant: "destructive", title: "Email Required", description: "Please enter your email address." });
+      return;
+    }
+    // Basic email format check that accepts all TLDs
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail.trim())) {
+      toast({ variant: "destructive", title: "Invalid Email", description: "Please enter a valid email address." });
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
         redirectTo: `${window.location.origin}/auth?type=recovery`
       });
-      if (error) { toast({ variant: "destructive", title: "Reset Failed", description: error.message }); }
-      else { toast({ title: "Reset Email Sent", description: "Check your email for reset instructions." }); setShowForgotPassword(false); setResetEmail(''); }
-    } catch (error: any) { toast({ variant: "destructive", title: "Reset Failed", description: error.message }); }
-    finally { setLoading(false); }
+      if (error) {
+        let desc = error.message;
+        if (error.message?.toLowerCase().includes('rate limit')) {
+          desc = "Too many reset attempts. Please wait a few minutes and try again.";
+        } else if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('no user')) {
+          desc = "If an account exists with this email, you'll receive reset instructions shortly.";
+        }
+        toast({ variant: "destructive", title: "Reset Failed", description: desc });
+      } else {
+        toast({ title: "Reset Email Sent", description: "If an account exists with this email, you'll receive reset instructions shortly." });
+        setShowForgotPassword(false);
+        setResetEmail('');
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Reset Failed", description: "Network error. Please check your connection and try again." });
+    } finally { setLoading(false); }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -336,7 +358,7 @@ const Auth = () => {
                     <Label htmlFor="resetEmail">Email Address</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input id="resetEmail" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Enter your email" className="pl-10 h-11" required data-testid="input-reset-email" />
+                      <Input id="resetEmail" type="text" inputMode="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} placeholder="Enter your email" className="pl-10 h-11" required data-testid="input-reset-email" />
                     </div>
                   </div>
                   <Button type="submit" className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground" disabled={loading} data-testid="button-send-reset">

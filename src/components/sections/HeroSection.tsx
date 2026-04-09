@@ -163,9 +163,15 @@ export const HeroSection = memo(() => {
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
               <Button asChild variant="outline" size="lg" className="text-lg px-8 py-6 border-primary/30 hover:bg-primary/10 rounded-full backdrop-blur-sm">
-                <Link to="/services">
-                  {t('home.cta.tools')}
-                </Link>
+                <a href="https://soc.smmpilot.online" target="_blank" rel="noopener noreferrer">
+                  <span className="flex items-center gap-1.5">
+                    {t('home.cta.tools')}
+                    <span className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" style={{ animationDelay: '0.3s' }} />
+                    </span>
+                  </span>
+                </a>
               </Button>
             </motion.div>
           </motion.div>
