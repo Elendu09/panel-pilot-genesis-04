@@ -1915,7 +1915,7 @@ export const platformTranslations = {
     "home.title.line1": "Lancez votre propre",
     "home.title.line2": "panel smm",
     "home.cta.create": "Créer un panel",
-    "home.cta.tools": "Outils",
+    "home.cta.tools": "Booster Social",
     "home.animated.profit": "pour le profit",
     "home.animated.clients": "pour les clients",
     "home.animated.ease": "facilement",
