@@ -512,7 +512,7 @@ export const platformTranslations = {
     "home.title.line1": "Lanza tu propio",
     "home.title.line2": "panel smm",
     "home.cta.create": "Crear panel",
-    "home.cta.tools": "Herramientas",
+    "home.cta.tools": "Impulsar Social",
     "home.animated.profit": "para ganar",
     "home.animated.clients": "para clientes",
     "home.animated.ease": "con facilidad",
