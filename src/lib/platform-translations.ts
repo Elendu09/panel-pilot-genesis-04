@@ -1639,7 +1639,7 @@ export const platformTranslations = {
     "home.title.line1": "Запустите свою",
     "home.title.line2": "smm панель",
     "home.cta.create": "Создать панель",
-    "home.cta.tools": "Инструменты",
+    "home.cta.tools": "Буст Соцсетей",
     "home.animated.profit": "для прибыли",
     "home.animated.clients": "для клиентов",
     "home.animated.ease": "легко",
