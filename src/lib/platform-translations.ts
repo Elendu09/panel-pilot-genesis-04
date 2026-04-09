@@ -1079,7 +1079,7 @@ export const platformTranslations = {
     "home.title.line1": "أطلق",
     "home.title.line2": "لوحة smm",
     "home.cta.create": "إنشاء لوحة",
-    "home.cta.tools": "أدوات الخدمة",
+    "home.cta.tools": "تعزيز السوشيال",
     "home.animated.profit": "للربح",
     "home.animated.clients": "للعملاء",
     "home.animated.ease": "بسهولة",
