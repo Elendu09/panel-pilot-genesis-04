@@ -28,7 +28,7 @@ export function LiveActivityFeed({ orders }: LiveActivityFeedProps) {
   const [visibleItems, setVisibleItems] = useState<ActivityItem[]>([]);
   const indexRef = useRef(0);
 
-  const allItems: ActivityItem[] = orders.slice(0, 50).map(o => ({
+  const allItems: ActivityItem[] = orders.filter(o => o.status !== 'cancelled').slice(0, 50).map(o => ({
     id: o.id,
     type: (o.status === 'completed' ? 'completed' : o.status === 'processing' || o.status === 'in_progress' ? 'processing' : o.status === 'cancelled' ? 'cancelled' : 'pending') as ActivityItem['type'],
     service: o.service_name || 'Service',

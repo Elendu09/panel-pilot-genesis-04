@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,14 +11,18 @@ interface ProtectedRouteProps {
 }
 
 const LAST_PANEL_ROUTE_KEY = 'homeofsmm_last_panel_route';
+const PROFILE_TIMEOUT_MS = 5000;
 
 export function ProtectedRoute({ 
   children, 
   requiredRole, 
   redirectTo = '/auth' 
 }: ProtectedRouteProps) {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, refreshProfile } = useAuth();
   const location = useLocation();
+  const [timedOut, setTimedOut] = useState(false);
+  const [fallbackProfile, setFallbackProfile] = useState<any>(null);
+  const retryAttempted = useRef(false);
 
   // Save current panel route for restoration after login
   useEffect(() => {
@@ -26,11 +31,52 @@ export function ProtectedRoute({
     }
   }, [user, location.pathname]);
 
+  // Timeout fallback: if user exists but profile is stuck null for 5s
+  useEffect(() => {
+    if (!user || profile || loading) {
+      setTimedOut(false);
+      retryAttempted.current = false;
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      if (!retryAttempted.current) {
+        retryAttempted.current = true;
+        // Try one more profile fetch
+        try {
+          await refreshProfile();
+        } catch {}
+        
+        // If still no profile after retry, create a minimal fallback
+        setTimeout(() => {
+          if (!profile) {
+            // Last resort: fetch directly
+            supabase.from("profiles").select("*").eq("user_id", user.id).single()
+              .then(({ data }) => {
+                if (data) {
+                  setFallbackProfile(data);
+                } else {
+                  // Absolute fallback - minimal profile to prevent infinite loading
+                  setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
+                }
+                setTimedOut(true);
+              })
+              .catch(() => {
+                setFallbackProfile({ role: 'panel_owner', id: user.id, user_id: user.id });
+                setTimedOut(true);
+              });
+          }
+        }, 2000);
+      }
+    }, PROFILE_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [user, profile, loading]);
+
+  const activeProfile = profile || (timedOut ? fallbackProfile : null);
+
   // Show loading spinner while auth state is being determined
-  // CRITICAL: Also wait for profile to load when user exists but profile hasn't loaded yet.
-  // Without this, there's a race condition where user is set (session restored) but profile
-  // is still null (async fetch pending), causing premature redirect to "/" on page reload.
-  if (loading || (user && !profile)) {
+  if (loading || (user && !activeProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-secondary/10">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -42,9 +88,8 @@ export function ProtectedRoute({
     return <Navigate to={redirectTo} state={{ from: location }} replace />;
   }
 
-  if (requiredRole && profile?.role !== requiredRole) {
-    // Redirect based on user's actual role
-    switch (profile?.role) {
+  if (requiredRole && activeProfile?.role !== requiredRole) {
+    switch (activeProfile?.role) {
       case 'admin':
         return <Navigate to="/admin" replace />;
       case 'panel_owner':

@@ -52,7 +52,7 @@ export function OrderPipelineKanban({ orders }: OrderPipelineKanbanProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {groupedOrders.map((col) => (
               <div key={col.key} className={`rounded-xl border border-border/50 border-t-2 ${col.borderColor} bg-muted/20 p-3`}>
                 <div className="flex items-center justify-between mb-3">

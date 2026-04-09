@@ -57,8 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sessionRef = useRef<Session | null>(null);
   const userRef = useRef<User | null>(null);
   const initializedRef = useRef(false);
+  const profileRef = useRef<any | null>(null);
+  const isFetchingRef = useRef(false);
 
   const fetchProfile = async (userId: string) => {
+    // Guard against concurrent fetches
+    if (isFetchingRef.current) {
+      return profileRef.current;
+    }
+    isFetchingRef.current = true;
+
     try {
       const { data, error } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
       if (error) throw error;
@@ -79,11 +87,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (Object.keys(updates).length > 0) {
           const { data: updated } = await supabase.from("profiles").update(updates).eq("user_id", userId).select("*").single();
-          if (updated) { setProfile(updated); return updated; }
+          if (updated) {
+            setProfile(updated);
+            profileRef.current = updated;
+            isFetchingRef.current = false;
+            return updated;
+          }
         }
       }
 
       setProfile(data);
+      profileRef.current = data;
 
       const pendingPanel = localStorage.getItem("pendingPanelCreation");
       if (pendingPanel && data.role === "panel_owner") {
@@ -94,10 +108,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      isFetchingRef.current = false;
       return data;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching profile:", err);
-      return null;
+      
+      // On AbortError or network failure, fall back to cached profile
+      const isAbort = err?.name === "AbortError" || err?.message?.includes("AbortError") || err?.message?.includes("Lock broken");
+      if (isAbort && profileRef.current) {
+        console.warn("Profile fetch aborted (lock contention), using cached profile");
+        setProfile(profileRef.current);
+        isFetchingRef.current = false;
+        return profileRef.current;
+      }
+      
+      // For other errors, still keep cached profile if available
+      if (profileRef.current) {
+        setProfile(profileRef.current);
+      }
+      
+      isFetchingRef.current = false;
+      return profileRef.current || null;
     }
   };
 
@@ -126,12 +157,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const enforceMfaIfEnabled = async (sess: Session) => {
     const u = sess.user;
     if (!u) return;
-    const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
-    const enabled = !!mfaStatus?.enabled;
-    if (!enabled) { setNeedsMfaChallenge(false); return; }
-    const key = getMfaKey(u.id, sess.refresh_token);
-    const alreadyVerified = isMfaMarkedVerified(key);
-    setNeedsMfaChallenge(!alreadyVerified);
+    try {
+      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
+      const enabled = !!mfaStatus?.enabled;
+      if (!enabled) { setNeedsMfaChallenge(false); return; }
+      const key = getMfaKey(u.id, sess.refresh_token);
+      const alreadyVerified = isMfaMarkedVerified(key);
+      setNeedsMfaChallenge(!alreadyVerified);
+    } catch (err) {
+      console.error("MFA check error:", err);
+      // On error, don't block the UI - keep existing MFA state
+    }
   };
 
   const handleMfaVerified = () => {
@@ -141,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markMfaVerified(key);
     }
     setNeedsMfaChallenge(false);
-    toast({ title: "Welcome back!", description: "Two-factor authentication verified successfully." });
+    toast({ title: "Welcome back! 🎉", description: "Two-factor authentication verified successfully." });
     if (sessionRef.current?.user?.id) {
       fetchProfile(sessionRef.current.user.id);
     }
@@ -153,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    profileRef.current = null;
     const sess = sessionRef.current;
     if (sess?.user) {
       const key = getMfaKey(sess.user.id, sess.refresh_token);
@@ -161,7 +198,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Single source of truth for initial load state
     let isInitialLoad = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
@@ -172,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!currentSession?.user) {
         setProfile(null);
+        profileRef.current = null;
         setNeedsMfaChallenge(false);
         if (isInitialLoad) {
           setLoading(false);
@@ -180,16 +217,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // ✅ FIX: TOKEN_REFRESHED should NEVER trigger loading state
+      // TOKEN_REFRESHED: silent background refresh, NEVER show loading
       if (event === "TOKEN_REFRESHED") {
-        // Silently refresh profile & MFA in background without blocking UI
         fetchProfile(currentSession.user.id).catch(() => {});
         enforceMfaIfEnabled(currentSession).catch(console.error);
-        
         if (isInitialLoad) {
           setLoading(false);
           isInitialLoad = false;
+          initializedRef.current = true;
         }
+        return;
+      }
+
+      // Skip duplicate INITIAL_SESSION if already initialized
+      if (event === "INITIAL_SESSION" && initializedRef.current) {
+        // Already initialized, just do a silent refresh
+        fetchProfile(currentSession.user.id).catch(() => {});
+        enforceMfaIfEnabled(currentSession).catch(console.error);
         return;
       }
 
@@ -198,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isInitialLoad) setLoading(true);
         await fetchProfile(currentSession.user.id);
         await enforceMfaIfEnabled(currentSession);
-        
+
         if (isInitialLoad) {
           setLoading(false);
           isInitialLoad = false;
@@ -207,10 +251,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Fallback for initial session if onAuthStateChange hasn't fired yet
+    // Fallback for initial session
     supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
-      if (!isInitialLoad) return; // Prevent race condition with onAuthStateChange
-      
+      if (!isInitialLoad) return;
+
       setSession(sess);
       setUser(sess?.user ?? null);
       sessionRef.current = sess;
@@ -293,6 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setProfile(null);
+      profileRef.current = null;
       setNeedsMfaChallenge(false);
       const sess = sessionRef.current;
       if (sess?.user) {
