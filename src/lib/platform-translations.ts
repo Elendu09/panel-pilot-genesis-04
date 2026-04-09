@@ -2466,7 +2466,7 @@ export const platformTranslations = {
     "home.title.line1": "启动您自己的",
     "home.title.line2": "SMM面板",
     "home.cta.create": "创建面板",
-    "home.cta.tools": "工具",
+    "home.cta.tools": "社交加速",
     "home.animated.profit": "赚取利润",
     "home.animated.clients": "服务客户",
     "home.animated.ease": "轻松完成",
