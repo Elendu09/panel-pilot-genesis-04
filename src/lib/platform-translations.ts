@@ -218,7 +218,7 @@ export const platformTranslations = {
     "home.title.line1": "Launch Your Own",
     "home.title.line2": "SMM Panel",
     "home.cta.create": "Create panel",
-    "home.cta.tools": "Service Tools",
+    "home.cta.tools": "Boost Social",
     "home.animated.profit": "for profit",
     "home.animated.clients": "for clients",
     "home.animated.ease": "with ease",
