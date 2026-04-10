@@ -2713,6 +2713,7 @@ const ServicesManagement = () => {
                               <th className="text-left p-4 hidden md:table-cell">Category</th>
                               <th className="text-left p-4 hidden lg:table-cell">Qty Range</th>
                               <th className="text-left p-4">Price</th>
+                              <th className="text-center p-4 w-12">Stats</th>
                               <th className="text-left p-4">Status</th>
                               <th className="text-left p-4"></th>
                             </tr>
