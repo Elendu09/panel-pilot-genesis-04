@@ -107,6 +107,18 @@ function generateBackupCodes(count = 10): string[] {
   });
 }
 
+function decodeJwtPayload(token: string): { sub?: string; email?: string } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -130,14 +142,24 @@ Deno.serve(async (req) => {
     );
 
     const accessToken = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(accessToken);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const claims = decodeJwtPayload(accessToken);
+    if (!claims?.sub) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { data: authenticatedProfile, error: authenticatedProfileError } = await supabaseUser
+      .from('profiles')
+      .select('id, user_id, email')
+      .eq('user_id', claims.sub)
+      .single();
+
+    if (authenticatedProfileError || !authenticatedProfile) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const user = {
-      id: claimsData.claims.sub as string,
-      email: (claimsData.claims.email as string | undefined) ?? '',
+      id: authenticatedProfile.user_id,
+      email: authenticatedProfile.email ?? claims.email ?? '',
     };
 
     const { action, token, backup_code } = await req.json();
