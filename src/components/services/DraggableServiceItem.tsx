@@ -116,6 +116,8 @@ export const DraggableServiceItem = ({
   isMobile = false,
   showDragHandle = true,
 }: DraggableServiceItemProps) => {
+  const [statsExpanded, setStatsExpanded] = useState(false);
+
   const {
     attributes,
     listeners,
