@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.56.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,17 +129,9 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Use getClaims for faster, more resilient token validation
-    const jwtToken = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(jwtToken);
-    if (claimsError || !claimsData?.claims) {
-      const { data: { user: fallbackUser }, error: fallbackError } = await supabaseUser.auth.getUser();
-      if (fallbackError || !fallbackUser) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-      var user = { id: fallbackUser.id, email: fallbackUser.email };
-    } else {
-      var user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     const { action, token, backup_code } = await req.json();
