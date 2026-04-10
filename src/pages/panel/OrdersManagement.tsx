@@ -919,13 +919,22 @@ const OrdersManagement = () => {
                           const StatusIcon = statusInfo.icon;
                           const isExpanded = expandedOrder === order.id;
 
+                          // Detect platform from service category or name
+                          const category = order.service?.category || '';
+                          const platformIcon = getIconByKey(category);
+                          const PlatformIcon = platformIcon.icon;
+                          const platformName = category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown';
+
                           return (
+                            <React.Fragment key={order.id}>
                             <motion.tr
-                              key={order.id}
                               initial={{ opacity: 0, x: -20 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: index * 0.05 }}
-                              className="border-b border-border/30 hover:bg-accent/30 transition-colors group"
+                              className={cn(
+                                "border-b border-border/30 hover:bg-accent/30 transition-colors group",
+                                isExpanded && "bg-accent/20"
+                              )}
                             >
                               <td className="p-4">
                                 <Checkbox
@@ -1016,6 +1025,86 @@ const OrdersManagement = () => {
                                 </DropdownMenu>
                               </td>
                             </motion.tr>
+
+                            {/* Expanded Row Details */}
+                            {isExpanded && (
+                              <tr className="border-b border-border/30 bg-muted/20">
+                                <td colSpan={10} className="p-0">
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="px-6 py-4"
+                                  >
+                                    {/* Info Grid */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Platform</p>
+                                        <div className="flex items-center gap-2">
+                                          <div className={cn("w-5 h-5 rounded flex items-center justify-center", platformIcon.bgColor)}>
+                                            <PlatformIcon className="text-white" size={12} />
+                                          </div>
+                                          <span className="text-sm font-medium">{platformName}</span>
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Link</p>
+                                        <a 
+                                          href={order.target_url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          className="text-sm text-primary hover:underline truncate block max-w-[180px]"
+                                        >
+                                          {order.target_url.replace(/^https?:\/\//, '').slice(0, 30)}
+                                        </a>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Provider</p>
+                                        <span className="text-sm font-medium">Provider A</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">API Order ID</p>
+                                        <span className="text-sm font-mono">{order.provider_order_id || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Created</p>
+                                        <span className="text-sm">{format(new Date(order.created_at), 'yyyy-MM-dd HH:mm')}</span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Updated</p>
+                                        <span className="text-sm">{format(new Date(order.created_at), 'yyyy-MM-dd HH:mm')}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => viewOrderDetails(order)}>
+                                        <Eye className="w-3 h-3" /> View Details
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                        <RefreshCw className="w-3 h-3" /> Refill
+                                      </Button>
+                                      <Button 
+                                        size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(order.id);
+                                          toast({ title: "Copied", description: "Order ID copied to clipboard" });
+                                        }}
+                                      >
+                                        <Copy className="w-3 h-3" /> Copy ID
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => window.open(order.target_url, '_blank')}>
+                                        <ExternalLink className="w-3 h-3" /> Open Link
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => cancelOrder(order.id)}>
+                                        <XCircle className="w-3 h-3" /> Cancel
+                                      </Button>
+                                    </div>
+                                  </motion.div>
+                                </td>
+                              </tr>
+                            )}
+                            </React.Fragment>
                           );
                         })}
                       </AnimatePresence>
