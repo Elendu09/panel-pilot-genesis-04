@@ -33,7 +33,14 @@ export function TwoFactorSetup({ onStatusChange }: TwoFactorSetupProps) {
           body: { action: 'status' }
         });
         if (cancelled) return;
-        if (!error && data?.enabled) {
+        if (error) {
+          const isUnauthorized = error.message?.includes('401') || error.message?.includes('Unauthorized');
+          if (!isUnauthorized) {
+            console.error('Error checking MFA status:', error);
+          }
+          return;
+        }
+        if (data?.enabled) {
           setMfaEnabled(true);
           setStep('done');
         }

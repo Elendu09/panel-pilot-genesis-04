@@ -158,7 +158,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const u = sess.user;
     if (!u) return;
     try {
-      const { data: mfaStatus } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
+      const { data: mfaStatus, error } = await supabase.functions.invoke("mfa-setup", { body: { action: "status" } });
+      if (error) {
+        const isUnauthorized = error.message?.includes('401') || error.message?.includes('Unauthorized');
+        if (isUnauthorized) {
+          setNeedsMfaChallenge(false);
+          return;
+        }
+        throw error;
+      }
       const enabled = !!mfaStatus?.enabled;
       if (!enabled) { setNeedsMfaChallenge(false); return; }
       const key = getMfaKey(u.id, sess.refresh_token);
@@ -166,7 +174,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setNeedsMfaChallenge(!alreadyVerified);
     } catch (err) {
       console.error("MFA check error:", err);
-      // On error, don't block the UI - keep existing MFA state
+      // On transient errors, don't block the UI
+      setNeedsMfaChallenge(false);
     }
   };
 
