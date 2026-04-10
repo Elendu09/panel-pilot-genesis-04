@@ -246,22 +246,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Handle initial load or explicit sign-in
+      // Handle initial load or explicit sign-in — NEVER await inside callback
       if (isInitialLoad || event === "SIGNED_IN") {
-        if (isInitialLoad) setLoading(true);
-        await fetchProfile(currentSession.user.id);
-        await enforceMfaIfEnabled(currentSession);
+        const wasInitial = isInitialLoad;
+        if (wasInitial) setLoading(true);
 
-        if (isInitialLoad) {
-          setLoading(false);
+        // Fire-and-forget to avoid blocking the auth event loop (prevents tab-return deadlocks)
+        Promise.all([
+          fetchProfile(currentSession.user.id),
+          enforceMfaIfEnabled(currentSession),
+        ])
+          .catch((err) => console.error("Auth init error:", err))
+          .finally(() => {
+            if (wasInitial) {
+              setLoading(false);
+              initializedRef.current = true;
+            }
+          });
+
+        if (wasInitial) {
           isInitialLoad = false;
-          initializedRef.current = true;
         }
       }
     });
 
     // Fallback for initial session
-    supabase.auth.getSession().then(async ({ data: { session: sess } }) => {
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
       if (!isInitialLoad) return;
 
       setSession(sess);
@@ -271,12 +281,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (sess?.user) {
         setLoading(true);
-        await fetchProfile(sess.user.id);
-        await enforceMfaIfEnabled(sess);
+        Promise.all([
+          fetchProfile(sess.user.id),
+          enforceMfaIfEnabled(sess),
+        ])
+          .catch((err) => console.error("Session init error:", err))
+          .finally(() => {
+            setLoading(false);
+            initializedRef.current = true;
+          });
+      } else {
+        setLoading(false);
+        initializedRef.current = true;
       }
-      setLoading(false);
       isInitialLoad = false;
-      initializedRef.current = true;
     });
 
     return () => subscription.unsubscribe();
@@ -292,7 +310,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error) {
-        toast({ variant: "destructive", title: "Sign Up Error", description: error.message });
+        let desc = error.message;
+        if (desc?.toLowerCase().includes("error sending confirmation") || desc?.toLowerCase().includes("email not allowed")) {
+          desc = "We couldn't send a confirmation email to this address. Please try a different email provider (e.g. Gmail, Outlook) or contact support.";
+        }
+        toast({ variant: "destructive", title: "Sign Up Error", description: desc });
       } else {
         toast({ title: "Success", description: "Please check your email to confirm your account." });
       }
