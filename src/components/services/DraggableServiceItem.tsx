@@ -238,6 +238,7 @@ export const DraggableServiceItem = ({
 
   // Desktop View
   return (
+    <>
     <motion.tr
       ref={setNodeRef}
       style={style}
@@ -417,6 +418,52 @@ export const DraggableServiceItem = ({
         </DropdownMenu>
       </td>
     </motion.tr>
+
+    {/* Expanded Stats Panel */}
+    {statsExpanded && (
+      <tr className="border-b border-border/30 bg-muted/20">
+        <td colSpan={8} className="p-0">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-6 py-4"
+          >
+            <div className="grid grid-cols-4 gap-6">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Order Range</p>
+                <p className="text-sm font-medium">{service.minQty.toLocaleString()} — {service.maxQty.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-sm font-semibold text-emerald-500">${(service.orders * service.price / 1000).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Rating</p>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span className="text-sm font-medium">4.8</span>
+                  <span className="text-xs text-muted-foreground">/ 5.0</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">7 Day Trend</p>
+                <div className="flex items-end gap-[2px] h-6">
+                  {[35, 45, 30, 55, 65, 50, 70].map((h, i) => (
+                    <div
+                      key={i}
+                      className="w-3 rounded-t bg-primary/60"
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </td>
+      </tr>
+    )}
+    </>
   );
 };
 
