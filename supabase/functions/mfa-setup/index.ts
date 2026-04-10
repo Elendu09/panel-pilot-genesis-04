@@ -130,10 +130,9 @@ Deno.serve(async (req) => {
     );
 
     // Use getClaims for faster, more resilient token validation
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
+    const jwtToken = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(jwtToken);
     if (claimsError || !claimsData?.claims) {
-      // Fallback to getUser if getClaims fails
       const { data: { user: fallbackUser }, error: fallbackError } = await supabaseUser.auth.getUser();
       if (fallbackError || !fallbackUser) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
