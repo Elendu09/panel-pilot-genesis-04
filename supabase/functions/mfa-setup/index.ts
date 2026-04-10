@@ -129,9 +129,18 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // Use getClaims for faster, more resilient token validation
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      // Fallback to getUser if getClaims fails
+      const { data: { user: fallbackUser }, error: fallbackError } = await supabaseUser.auth.getUser();
+      if (fallbackError || !fallbackUser) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      var user = { id: fallbackUser.id, email: fallbackUser.email };
+    } else {
+      var user = { id: claimsData.claims.sub as string, email: claimsData.claims.email as string };
     }
 
     const { action, token, backup_code } = await req.json();
