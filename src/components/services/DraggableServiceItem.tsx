@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Edit, Trash2, Power, Eye, MoreVertical, Image, Copy, DollarSign, Tag, FileText, Palette, Ban, CheckCircle, ArrowUpDown } from "lucide-react";
+import { GripVertical, Edit, Trash2, Power, Eye, MoreVertical, Image, Copy, DollarSign, Tag, FileText, Palette, Ban, CheckCircle, ArrowUpDown, ChevronRight, ChevronDown, Star, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -332,9 +333,19 @@ export const DraggableServiceItem = ({
         </div>
       </td>
 
-      {/* Orders */}
+      {/* Stats Expander */}
       <td className="py-3 px-2 text-center">
-        <span className="text-sm font-medium">{service.orders.toLocaleString()}</span>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={(e) => {
+            e.stopPropagation();
+            setStatsExpanded(!statsExpanded);
+          }}
+        >
+          {statsExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </Button>
       </td>
 
       {/* Status */}
