@@ -27,7 +27,10 @@ import {
   CheckSquare,
   Square,
   Pause,
-  Play
+  Play,
+  Copy,
+  Link,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,6 +68,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { usePanel } from "@/hooks/usePanel";
 import { usePendingOrders } from "@/hooks/use-pending-orders";
+import { format } from "date-fns";
+import { getIconByKey } from "@/components/icons/SocialIcons";
 
 interface Order {
   id: string;
