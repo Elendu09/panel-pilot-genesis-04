@@ -1,74 +1,65 @@
 
+# Plan: User Analytics Kanban, Sidebar Alignment Fix, Order Management Improvements
 
-# Plan: Auth Tab-Return Fix, Order Expanded UI, Email Sign-Up Fix, Service Stats Expansion, MFA Deploy
+## 1. Add User Analytics Kanban Below Order Analytics
 
-## 1. Auth Tab-Return Fix (Critical)
+**Location**: `src/pages/panel/Analytics.tsx`, insert after Row 2 (line 345) and before Row 3
 
-**Root Cause**: `onAuthStateChange` callback on lines 250-260 of `AuthContext.tsx` uses `await fetchProfile()` and `await enforceMfaIfEnabled()` inside the callback. This blocks the auth event loop, causing deadlocks when Supabase's lock manager fires `TOKEN_REFRESHED` on tab return. The lock times out (5s), steals the lock, and the in-flight fetch gets an `AbortError`, leaving the app stuck.
+**New component**: `src/components/analytics/UserAnalyticsKanban.tsx` -- a kanban-style card similar to `OrderPipelineKanban` but for user/customer metrics:
+- 4 columns: **New Users** (signed up in period), **Active** (placed orders), **Returning** (>1 order), **Inactive** (no orders in 30d)
+- Each column shows count + list of user cards with avatar initial, email, and last activity
+- Data sourced from `rawOrders` buyer data (extract unique buyers, classify by activity)
+- Glass card styling matching existing analytics cards
 
-**Fix in `src/contexts/AuthContext.tsx`**:
-- Remove all `await` calls inside `onAuthStateChange` -- replace with fire-and-forget (`.then()/.catch()`) for both `fetchProfile` and `enforceMfaIfEnabled` on SIGNED_IN and initial load events
-- Keep the `isInitialLoad` / `setLoading` logic but move it inside the `.then()` chain so loading state still resolves properly
-- This follows the Supabase best practice: "Never await operations inside onAuthStateChange callbacks"
+**Also update**: `src/components/analytics/index.ts` to export the new component
 
-**Fix in `src/components/auth/ProtectedRoute.tsx`**:
-- Already has a 5s timeout fallback -- this is fine, just needs the root cause fixed above
+## 2. Fix Sidebar Bottom Section Alignment When Collapsed
 
-## 2. Order Management Expanded Row UI (Image 1)
+**File**: `src/pages/PanelOwnerDashboard.tsx`, lines 390-453
 
-**Current state**: Clicking the chevron `(^)` on an order row sets `expandedOrder` state but renders nothing below the row.
+**Problem**: When sidebar is collapsed (`sidebarOpen = false`), the bottom section (avatar, notification/theme/help/logout buttons) doesn't center-align like the top nav icons do. The top nav uses `NavItem` which has proper `justify-center` when collapsed, but the bottom section's container uses `p-2` without centering.
 
-**Fix in `src/pages/panel/OrdersManagement.tsx`**:
-- After the `</motion.tr>` (line 1013), add a conditional expanded row `{isExpanded && (...)}` that renders a new `<tr>` with a `<td colSpan>` containing:
-  - Top section with grid: PLATFORM (with social icon based on service category), LINK (target_url), PROVIDER (provider name), API ORDER ID (provider_order_id), CREATED (created_at formatted), UPDATED (updated_at formatted)
-  - Bottom action buttons row: "View Details", "Refill", "Copy ID", "Open Link", "Cancel" (red) -- matching the screenshot exactly
-- Style with dark glass background matching the existing UI theme
+**Fix**:
+- Line 390: Add `!sidebarOpen && "items-center"` to the bottom container div
+- Line 412-414 (avatar row): Already has `!sidebarOpen && "justify-center p-2"` -- good
+- Line 429-431 (buttons row): Has `!sidebarOpen && "flex-col"` -- add `items-center` to center the icons
+- Ensure `PanelSwitcher` component aligns centered when collapsed (it receives `collapsed` prop)
 
-## 3. Sign-Up Email Error Fix (Image 2)
+## 3. Improve Order Management Expanded Row & Dropdown Actions
 
-**Issue**: "Error sending confirmation email" when signing up with non-Gmail emails like `@wnbaldwy.com`. This is a Supabase email delivery issue -- Supabase's built-in SMTP may reject or fail to deliver to certain domains.
+**File**: `src/pages/panel/OrdersManagement.tsx`
 
-**Fix in `src/contexts/AuthContext.tsx` (signUp function)**:
-- Improve the error message handling: when Supabase returns "Error sending confirmation email", show a friendlier message suggesting the user try a different email provider or contact support
-- Add a specific catch for this error pattern
+**Improvements to expanded row (lines 1029-1106)**:
+- **View Details**: Already works via `viewOrderDetails(order)`
+- **Open Link**: Add null check -- if `target_url` is empty, disable the button
+- **Refill button**: Currently calls `updateOrderStatus(order.id, 'in_progress')` which is wrong for "Refill". Change to call a proper refill function that re-submits to the provider API
+- **Start Processing + Sync logic**: When an order is cancelled by provider (via sync), "Start Processing" should be disabled or hidden for cancelled orders. Add status-aware button rendering:
+  - If `status === 'cancelled'` or `status === 'completed'`: hide "Start Processing"
+  - If `status === 'pending'`: show "Start Processing"
+  - If `status === 'in_progress'`: show "Pause" instead
+- **Cancel button**: Disable for already cancelled/completed orders
+- **Add "Retry" button**: For cancelled orders, add a "Retry Order" button that re-submits to provider
+- **Add "Add Note" button**: To the expanded row actions
+- **Provider name**: Currently hardcoded "Provider A" (line 1063) -- fetch actual provider name from order's service provider relationship
 
-**Fix in `src/pages/Auth.tsx`**:
-- Add a user-friendly error handler in `handleSignUp` that catches "Error sending confirmation email" and provides actionable guidance
+**Dropdown menu improvements (lines 997-1025 and 830-860)**:
+- Add status-conditional rendering: don't show "Start Processing" for cancelled/completed orders
+- Add "Pause" and "Resume" options contextually based on current status
+- Add "Retry" for cancelled orders
 
-## 4. Service Management: Replace "0" Orders Column with Expandable Stats (Images 3 & 4)
+## 4. Deploy mfa-setup Edge Function
 
-**Current**: Column shows `service.orders` count (often "0") in `DraggableServiceItem.tsx` (line 336-338) and `VirtualizedServiceList.tsx`.
-
-**Fix in `src/components/services/DraggableServiceItem.tsx`**:
-- Replace the "Orders" `<td>` with a `>` chevron button
-- When clicked, expand a stats panel below the service row showing:
-  - Order Range (min_qty — max_qty)
-  - Total Revenue (calculated from orders or stored)
-  - Rating (from service_reviews average)
-  - 7 Day Trend (small sparkline chart)
-- Add state management for `expandedServiceId`
-
-**Fix in `src/components/services/VirtualizedServiceList.tsx`**:
-- Same pattern: replace the "0" column with a chevron expander
-- Note: virtualized lists make inline expansion tricky -- use a variable row height or overlay approach
-
-## 5. Deploy mfa-setup Edge Function
-
-**Current**: The edge function code is already correct (uses JWT decoding + profile verification). It just needs to be redeployed to ensure the latest version is live.
-
-**Action**: Deploy the `mfa-setup` edge function.
+Redeploy the `mfa-setup` edge function with the JWT-based profile validation fix from the previous session.
 
 ---
 
-## Files to Modify
+## Files to Create/Modify
 
 | File | Changes |
 |------|---------|
-| `src/contexts/AuthContext.tsx` | Remove `await` from `onAuthStateChange`; fire-and-forget pattern |
-| `src/pages/panel/OrdersManagement.tsx` | Add expanded row with platform info, links, dates, and action buttons |
-| `src/pages/Auth.tsx` | Better error handling for "Error sending confirmation email" |
-| `src/contexts/AuthContext.tsx` | Friendly error for email sending failures in signUp |
-| `src/components/services/DraggableServiceItem.tsx` | Replace "0" orders column with `>` expandable stats row |
-| `src/components/services/VirtualizedServiceList.tsx` | Same expandable stats pattern |
-| `supabase/functions/mfa-setup/index.ts` | Redeploy (no code changes needed) |
-
+| `src/components/analytics/UserAnalyticsKanban.tsx` | New: Kanban-style user analytics with 4 columns |
+| `src/components/analytics/index.ts` | Export `UserAnalyticsKanban` |
+| `src/pages/panel/Analytics.tsx` | Add `UserAnalyticsKanban` after order analytics row |
+| `src/pages/PanelOwnerDashboard.tsx` | Fix bottom sidebar alignment when collapsed |
+| `src/pages/panel/OrdersManagement.tsx` | Status-aware actions, fix hardcoded provider, improve expanded row buttons |
+| `supabase/functions/mfa-setup/index.ts` | Redeploy |
