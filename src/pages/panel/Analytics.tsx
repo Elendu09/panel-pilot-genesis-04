@@ -24,7 +24,7 @@ import {
   TopStatCard, AnalyticsSkeleton, FastOrderAnalyticsCard, DepositAnalyticsCard, AdsFunnelCard,
   OrderAnalyticsCard, RecentOrdersPanel, PlatformServiceCards, KPIMetricsGrid,
   OrderPipelineKanban, LiveActivityFeed, TrafficGeographyPanel, RevenueExpensesChart,
-  TopProvidersCard, SystemHealthCard,
+  TopProvidersCard, SystemHealthCard, UserAnalyticsKanban,
 } from "@/components/analytics";
 
 const Analytics = () => {
@@ -359,6 +359,9 @@ const Analytics = () => {
 
       {/* Row 5: Order Pipeline Kanban */}
       <OrderPipelineKanban orders={rawOrders.slice(0, 50).map(o => ({ id: o.id, order_number: o.order_number, service_name: o.service_name, status: o.status, quantity: o.quantity, created_at: o.created_at, buyer_id: o.buyer_id }))} />
+
+      {/* Row 5.5: User Analytics Kanban */}
+      <UserAnalyticsKanban orders={rawOrders.map(o => ({ id: o.id, buyer_id: o.buyer_id, status: o.status, created_at: o.created_at, price: o.price || 0, buyer: o.buyer_id ? { email: o.buyer_email || 'Unknown', full_name: o.buyer_name || null } : null }))} />
 
       {/* Row 6: Live Activity Feed (3/5) + Traffic & Geography (2/5) */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
