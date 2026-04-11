@@ -85,6 +85,7 @@ interface Order {
   provider_order_id: string | null;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
   service_name?: string | null;
   drip_feed_runs?: number | null;
   drip_feed_interval?: number | null;
@@ -1125,9 +1126,9 @@ const OrdersManagement = () => {
                                       <Button 
                                         size="sm" variant="outline" className="h-7 text-xs gap-1.5"
                                         onClick={() => {
-                                          setNoteOrderId(order.id);
-                                          setNoteText(order.notes || '');
-                                          setShowNoteDialog(true);
+                                          setSelectedOrder(order);
+                                          setNewOrderNote(order.notes || '');
+                                          setIsDetailsOpen(true);
                                         }}
                                       >
                                         <MessageSquare className="w-3 h-3" /> Add Note
