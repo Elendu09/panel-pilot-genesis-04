@@ -1060,7 +1060,7 @@ const OrdersManagement = () => {
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Provider</p>
-                                        <span className="text-sm font-medium">Provider A</span>
+                                        <span className="text-sm font-medium">{order.provider_order_id ? `ID: ${order.provider_order_id.slice(0, 8)}` : 'Direct'}</span>
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">API Order ID</p>
@@ -1072,7 +1072,7 @@ const OrdersManagement = () => {
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Updated</p>
-                                        <span className="text-sm">{format(new Date(order.created_at), 'yyyy-MM-dd HH:mm')}</span>
+                                        <span className="text-sm">{format(new Date(order.updated_at || order.created_at), 'yyyy-MM-dd HH:mm')}</span>
                                       </div>
                                     </div>
 
@@ -1081,9 +1081,31 @@ const OrdersManagement = () => {
                                       <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => viewOrderDetails(order)}>
                                         <Eye className="w-3 h-3" /> View Details
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
-                                        <RefreshCw className="w-3 h-3" /> Refill
-                                      </Button>
+                                      {order.status === 'pending' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                          <Play className="w-3 h-3" /> Start Processing
+                                        </Button>
+                                      )}
+                                      {order.status === 'in_progress' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => pauseOrder(order.id)}>
+                                          <Pause className="w-3 h-3" /> Pause
+                                        </Button>
+                                      )}
+                                      {order.status === 'paused' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => resumeOrder(order.id)}>
+                                          <Play className="w-3 h-3" /> Resume
+                                        </Button>
+                                      )}
+                                      {(order.status === 'cancelled' || order.status === 'partial') && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10" onClick={() => updateOrderStatus(order.id, 'pending')}>
+                                          <RefreshCw className="w-3 h-3" /> Retry Order
+                                        </Button>
+                                      )}
+                                      {order.status === 'completed' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                          <RefreshCw className="w-3 h-3" /> Refill
+                                        </Button>
+                                      )}
                                       <Button 
                                         size="sm" variant="outline" className="h-7 text-xs gap-1.5"
                                         onClick={() => {
@@ -1093,12 +1115,28 @@ const OrdersManagement = () => {
                                       >
                                         <Copy className="w-3 h-3" /> Copy ID
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => window.open(order.target_url, '_blank')}>
+                                      <Button 
+                                        size="sm" variant="outline" className="h-7 text-xs gap-1.5" 
+                                        disabled={!order.target_url}
+                                        onClick={() => order.target_url && window.open(order.target_url, '_blank')}
+                                      >
                                         <ExternalLink className="w-3 h-3" /> Open Link
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => cancelOrder(order.id)}>
-                                        <XCircle className="w-3 h-3" /> Cancel
+                                      <Button 
+                                        size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+                                        onClick={() => {
+                                          setNoteOrderId(order.id);
+                                          setNoteText(order.notes || '');
+                                          setShowNoteDialog(true);
+                                        }}
+                                      >
+                                        <MessageSquare className="w-3 h-3" /> Add Note
                                       </Button>
+                                      {order.status !== 'cancelled' && order.status !== 'completed' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => cancelOrder(order.id)}>
+                                          <XCircle className="w-3 h-3" /> Cancel
+                                        </Button>
+                                      )}
                                     </div>
                                   </motion.div>
                                 </td>
