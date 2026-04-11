@@ -24,3 +24,4 @@ export { TrafficGeographyPanel } from './TrafficGeographyPanel';
 export { RevenueExpensesChart } from './RevenueExpensesChart';
 export { TopProvidersCard } from './TopProvidersCard';
 export { SystemHealthCard } from './SystemHealthCard';
+export { UserAnalyticsKanban } from './UserAnalyticsKanban';

@@ -85,6 +85,7 @@ interface Order {
   provider_order_id: string | null;
   notes: string | null;
   created_at: string;
+  updated_at?: string;
   service_name?: string | null;
   drip_feed_runs?: number | null;
   drip_feed_interval?: number | null;
@@ -838,12 +839,16 @@ const OrdersManagement = () => {
                                 <Eye className="w-4 h-4 mr-2" /> View Details
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
-                                <Loader2 className="w-4 h-4 mr-2" /> Start Processing
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
-                                <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
-                              </DropdownMenuItem>
+                              {order.status === 'pending' && (
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                  <Loader2 className="w-4 h-4 mr-2" /> Start Processing
+                                </DropdownMenuItem>
+                              )}
+                              {order.status !== 'completed' && order.status !== 'cancelled' && (
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                  <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
+                                </DropdownMenuItem>
+                              )}
                               {order.status === 'in_progress' && (
                                 <DropdownMenuItem onClick={() => pauseOrder(order.id)}>
                                   <Pause className="w-4 h-4 mr-2" /> Pause
@@ -854,10 +859,17 @@ const OrdersManagement = () => {
                                   <Play className="w-4 h-4 mr-2" /> Resume
                                 </DropdownMenuItem>
                               )}
+                              {(order.status === 'cancelled' || order.status === 'partial') && (
+                                <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'pending')}>
+                                  <RefreshCw className="w-4 h-4 mr-2" /> Retry Order
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
-                                <XCircle className="w-4 h-4 mr-2" /> Cancel
-                              </DropdownMenuItem>
+                              {order.status !== 'cancelled' && order.status !== 'completed' && (
+                                <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
+                                  <XCircle className="w-4 h-4 mr-2" /> Cancel
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
                                 <RefreshCw className="w-4 h-4 mr-2" /> Refund
                               </DropdownMenuItem>
@@ -1004,20 +1016,43 @@ const OrdersManagement = () => {
                                     <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
                                       <Eye className="w-4 h-4 mr-2" /> View Details
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => window.open(order.target_url, '_blank')}>
-                                      <ExternalLink className="w-4 h-4 mr-2" /> Open Link
-                                    </DropdownMenuItem>
+                                    {order.target_url && (
+                                      <DropdownMenuItem onClick={() => window.open(order.target_url, '_blank')}>
+                                        <ExternalLink className="w-4 h-4 mr-2" /> Open Link
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
-                                      <Loader2 className="w-4 h-4 mr-2" /> Start Processing
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
-                                      <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
-                                    </DropdownMenuItem>
+                                    {order.status === 'pending' && (
+                                      <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                        <Loader2 className="w-4 h-4 mr-2" /> Start Processing
+                                      </DropdownMenuItem>
+                                    )}
+                                    {order.status === 'in_progress' && (
+                                      <DropdownMenuItem onClick={() => pauseOrder(order.id)}>
+                                        <Pause className="w-4 h-4 mr-2" /> Pause
+                                      </DropdownMenuItem>
+                                    )}
+                                    {order.status === 'paused' && (
+                                      <DropdownMenuItem onClick={() => resumeOrder(order.id)}>
+                                        <Play className="w-4 h-4 mr-2" /> Resume
+                                      </DropdownMenuItem>
+                                    )}
+                                    {(order.status === 'cancelled' || order.status === 'partial') && (
+                                      <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'pending')}>
+                                        <RefreshCw className="w-4 h-4 mr-2" /> Retry Order
+                                      </DropdownMenuItem>
+                                    )}
+                                    {order.status !== 'completed' && order.status !== 'cancelled' && (
+                                      <DropdownMenuItem onClick={() => updateOrderStatus(order.id, 'completed')}>
+                                        <CheckCircle className="w-4 h-4 mr-2" /> Mark Completed
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
-                                      <XCircle className="w-4 h-4 mr-2" /> Cancel Order
-                                    </DropdownMenuItem>
+                                    {order.status !== 'cancelled' && order.status !== 'completed' && (
+                                      <DropdownMenuItem onClick={() => cancelOrder(order.id)} className="text-destructive">
+                                        <XCircle className="w-4 h-4 mr-2" /> Cancel Order
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem onClick={() => openRefundDialog(order)} className="text-destructive">
                                       <RefreshCw className="w-4 h-4 mr-2" /> Process Refund
                                     </DropdownMenuItem>
@@ -1060,7 +1095,7 @@ const OrdersManagement = () => {
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Provider</p>
-                                        <span className="text-sm font-medium">Provider A</span>
+                                        <span className="text-sm font-medium">{order.provider_order_id ? `ID: ${order.provider_order_id.slice(0, 8)}` : 'Direct'}</span>
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">API Order ID</p>
@@ -1072,7 +1107,7 @@ const OrdersManagement = () => {
                                       </div>
                                       <div>
                                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Updated</p>
-                                        <span className="text-sm">{format(new Date(order.created_at), 'yyyy-MM-dd HH:mm')}</span>
+                                        <span className="text-sm">{format(new Date(order.updated_at || order.created_at), 'yyyy-MM-dd HH:mm')}</span>
                                       </div>
                                     </div>
 
@@ -1081,9 +1116,31 @@ const OrdersManagement = () => {
                                       <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => viewOrderDetails(order)}>
                                         <Eye className="w-3 h-3" /> View Details
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
-                                        <RefreshCw className="w-3 h-3" /> Refill
-                                      </Button>
+                                      {order.status === 'pending' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                          <Play className="w-3 h-3" /> Start Processing
+                                        </Button>
+                                      )}
+                                      {order.status === 'in_progress' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => pauseOrder(order.id)}>
+                                          <Pause className="w-3 h-3" /> Pause
+                                        </Button>
+                                      )}
+                                      {order.status === 'paused' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => resumeOrder(order.id)}>
+                                          <Play className="w-3 h-3" /> Resume
+                                        </Button>
+                                      )}
+                                      {(order.status === 'cancelled' || order.status === 'partial') && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-primary border-primary/30 hover:bg-primary/10" onClick={() => updateOrderStatus(order.id, 'pending')}>
+                                          <RefreshCw className="w-3 h-3" /> Retry Order
+                                        </Button>
+                                      )}
+                                      {order.status === 'completed' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => updateOrderStatus(order.id, 'in_progress')}>
+                                          <RefreshCw className="w-3 h-3" /> Refill
+                                        </Button>
+                                      )}
                                       <Button 
                                         size="sm" variant="outline" className="h-7 text-xs gap-1.5"
                                         onClick={() => {
@@ -1093,12 +1150,28 @@ const OrdersManagement = () => {
                                       >
                                         <Copy className="w-3 h-3" /> Copy ID
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => window.open(order.target_url, '_blank')}>
+                                      <Button 
+                                        size="sm" variant="outline" className="h-7 text-xs gap-1.5" 
+                                        disabled={!order.target_url}
+                                        onClick={() => order.target_url && window.open(order.target_url, '_blank')}
+                                      >
                                         <ExternalLink className="w-3 h-3" /> Open Link
                                       </Button>
-                                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => cancelOrder(order.id)}>
-                                        <XCircle className="w-3 h-3" /> Cancel
+                                      <Button 
+                                        size="sm" variant="outline" className="h-7 text-xs gap-1.5"
+                                        onClick={() => {
+                                          setSelectedOrder(order);
+                                          setNewOrderNote(order.notes || '');
+                                          setIsDetailsOpen(true);
+                                        }}
+                                      >
+                                        <MessageSquare className="w-3 h-3" /> Add Note
                                       </Button>
+                                      {order.status !== 'cancelled' && order.status !== 'completed' && (
+                                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => cancelOrder(order.id)}>
+                                          <XCircle className="w-3 h-3" /> Cancel
+                                        </Button>
+                                      )}
                                     </div>
                                   </motion.div>
                                 </td>
