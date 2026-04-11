@@ -428,7 +428,7 @@ const PanelOwnerDashboard = () => {
 
           <div className={cn(
             "flex items-center gap-1",
-            !sidebarOpen && "flex-col"
+            !sidebarOpen && "flex-col items-center"
           )}>
             <NotificationCenter />
             <ThemeToggle />
