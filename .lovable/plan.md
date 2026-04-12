@@ -1,65 +1,67 @@
 
-# Plan: User Analytics Kanban, Sidebar Alignment Fix, Order Management Improvements
 
-## 1. Add User Analytics Kanban Below Order Analytics
+# Plan: Buyer Onboarding Tour Enhancement, Theme Light/Dark Fix, Bulk Selector Mobile Fix
 
-**Location**: `src/pages/panel/Analytics.tsx`, insert after Row 2 (line 345) and before Row 3
+## 1. Enhance Buyer Onboarding Tour with Auto-Start + Bottom Nav Page Highlighting
 
-**New component**: `src/components/analytics/UserAnalyticsKanban.tsx` -- a kanban-style card similar to `OrderPipelineKanban` but for user/customer metrics:
-- 4 columns: **New Users** (signed up in period), **Active** (placed orders), **Returning** (>1 order), **Inactive** (no orders in 30d)
-- Each column shows count + list of user cards with avatar initial, email, and last activity
-- Data sourced from `rawOrders` buyer data (extract unique buyers, classify by activity)
-- Glass card styling matching existing analytics cards
+**Problem**: The tour exists but never auto-starts (auto-start code is commented out). Bottom nav items in buyer dashboard don't get highlighted during tour steps like panel dashboard does.
 
-**Also update**: `src/components/analytics/index.ts` to export the new component
+**Changes in `src/components/buyer/BuyerOnboardingTour.tsx`**:
+- Uncomment auto-start logic (line 138) so first-time buyers see the tour automatically
+- Add a `useEffect` that, on each step with a `selector`, programmatically scrolls/highlights the matching bottom nav item by adding a temporary `data-tour-active` attribute
+- Enhance the welcome step with buyer's name from `useBuyerAuth`
+- Add a profile-specific step (profile page) to make it a "profile tour"
 
-## 2. Fix Sidebar Bottom Section Alignment When Collapsed
+**Changes in `src/pages/buyer/BuyerLayout.tsx`**:
+- Add `data-tour` attributes to each bottom nav `<Link>` matching the tour selectors, so the spotlight correctly highlights them
+- Ensure tour selectors match the actual bottom nav href patterns (currently `[href='/dashboard']` etc. -- verify these match)
 
-**File**: `src/pages/PanelOwnerDashboard.tsx`, lines 390-453
+## 2. Fix Light/Dark Mode Conflict Between ThemeProvider and BuyerThemeContext
 
-**Problem**: When sidebar is collapsed (`sidebarOpen = false`), the bottom section (avatar, notification/theme/help/logout buttons) doesn't center-align like the top nav icons do. The top nav uses `NavItem` which has proper `justify-center` when collapsed, but the bottom section's container uses `p-2` without centering.
+**Problem**: Both `ThemeProvider` (in `use-theme.tsx`) and `BuyerThemeProvider` (in `BuyerThemeContext.tsx`) fight over `document.documentElement` class. When ThemeProvider runs its effect (line 81-98 of use-theme.tsx), it removes and re-adds classes, potentially overriding BuyerThemeProvider's choice. This causes design customization colors (which are scoped via `.dark .buyer-theme-wrapper` and `.light .buyer-theme-wrapper` CSS selectors in `color-utils.ts`) to break.
 
-**Fix**:
-- Line 390: Add `!sidebarOpen && "items-center"` to the bottom container div
-- Line 412-414 (avatar row): Already has `!sidebarOpen && "justify-center p-2"` -- good
-- Line 429-431 (buttons row): Has `!sidebarOpen && "flex-col"` -- add `items-center` to center the icons
-- Ensure `PanelSwitcher` component aligns centered when collapsed (it receives `collapsed` prop)
+**Root cause**: ThemeProvider fetches admin's theme from `profiles` table (line 56-78) and applies it globally. On buyer pages, BuyerThemeProvider sets the theme but ThemeProvider can override it moments later.
 
-## 3. Improve Order Management Expanded Row & Dropdown Actions
+**Fix in `src/hooks/use-theme.tsx`**:
+- Add a check: if the current route is a buyer/tenant page (detect via `buyer-theme-wrapper` class or a context flag), skip applying theme to DOM -- let BuyerThemeProvider handle it
+- Or: scope ThemeProvider's DOM effect to only apply when NOT inside a BuyerThemeProvider
 
-**File**: `src/pages/panel/OrdersManagement.tsx`
+**Fix in `src/contexts/BuyerThemeContext.tsx`**:
+- Dispatch a `buyer-theme-active` event on mount and cleanup on unmount
+- ThemeProvider listens for this and defers DOM manipulation when buyer theme is active
 
-**Improvements to expanded row (lines 1029-1106)**:
-- **View Details**: Already works via `viewOrderDetails(order)`
-- **Open Link**: Add null check -- if `target_url` is empty, disable the button
-- **Refill button**: Currently calls `updateOrderStatus(order.id, 'in_progress')` which is wrong for "Refill". Change to call a proper refill function that re-submits to the provider API
-- **Start Processing + Sync logic**: When an order is cancelled by provider (via sync), "Start Processing" should be disabled or hidden for cancelled orders. Add status-aware button rendering:
-  - If `status === 'cancelled'` or `status === 'completed'`: hide "Start Processing"
-  - If `status === 'pending'`: show "Start Processing"
-  - If `status === 'in_progress'`: show "Pause" instead
-- **Cancel button**: Disable for already cancelled/completed orders
-- **Add "Retry" button**: For cancelled orders, add a "Retry Order" button that re-submits to provider
-- **Add "Add Note" button**: To the expanded row actions
-- **Provider name**: Currently hardcoded "Provider A" (line 1063) -- fetch actual provider name from order's service provider relationship
+**Fix in `src/lib/color-utils.ts`**:
+- Ensure CSS selectors for light mode use `:root.light .buyer-theme-wrapper` specificity to prevent being overridden by the global theme class race
 
-**Dropdown menu improvements (lines 997-1025 and 830-860)**:
-- Add status-conditional rendering: don't show "Start Processing" for cancelled/completed orders
-- Add "Pause" and "Resume" options contextually based on current status
-- Add "Retry" for cancelled orders
+## 3. Fix Bulk Selector UI for Mobile/Tablet in Customer & Order Management
 
-## 4. Deploy mfa-setup Edge Function
+**Problem (Image 1 - Customer Management)**: The `BulkActionToolbar` at `bottom-20` overlaps with bottom nav on mobile. Toolbar buttons are too small and not properly centered.
 
-Redeploy the `mfa-setup` edge function with the JWT-based profile validation fix from the previous session.
+**Problem (Image 2 - Order Management)**: The bulk action bar at `bottom-20` with the select dropdown and "Apply" button is cut off and not properly padded on mobile.
+
+**Fix in `src/components/customers/BulkActionToolbar.tsx`**:
+- Change `bottom-20` to `bottom-24` to clear the bottom nav properly
+- Add `px-4` padding and ensure the toolbar is centered with proper `max-w-[calc(100vw-2rem)]`
+- Increase button sizes on mobile from `h-7 w-7` to `h-9 w-9` for better tap targets
+- Add label text below icons on tablet+ (`sm:` breakpoint)
+
+**Fix in `src/pages/panel/OrdersManagement.tsx`** (lines 670-710):
+- Change `bottom-20` to `bottom-24` on the bulk action bar
+- Improve mobile layout: stack the "X selected" label, select dropdown, and "Apply" button vertically on very small screens
+- Add proper padding `px-4` and ensure the bar doesn't overflow
+- Increase the select and button heights for better mobile tappability
 
 ---
 
-## Files to Create/Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/analytics/UserAnalyticsKanban.tsx` | New: Kanban-style user analytics with 4 columns |
-| `src/components/analytics/index.ts` | Export `UserAnalyticsKanban` |
-| `src/pages/panel/Analytics.tsx` | Add `UserAnalyticsKanban` after order analytics row |
-| `src/pages/PanelOwnerDashboard.tsx` | Fix bottom sidebar alignment when collapsed |
-| `src/pages/panel/OrdersManagement.tsx` | Status-aware actions, fix hardcoded provider, improve expanded row buttons |
-| `supabase/functions/mfa-setup/index.ts` | Redeploy |
+| `src/components/buyer/BuyerOnboardingTour.tsx` | Auto-start for first-time buyers; add profile step; enhance welcome with buyer name |
+| `src/pages/buyer/BuyerLayout.tsx` | Add `data-tour` attributes to bottom nav links for spotlight targeting |
+| `src/hooks/use-theme.tsx` | Add buyer-theme-active guard to prevent overriding buyer theme |
+| `src/contexts/BuyerThemeContext.tsx` | Dispatch buyer-theme-active flag on mount/unmount |
+| `src/lib/color-utils.ts` | Strengthen CSS specificity for light/dark scoping |
+| `src/components/customers/BulkActionToolbar.tsx` | Fix positioning, padding, button sizes for mobile |
+| `src/pages/panel/OrdersManagement.tsx` | Fix bulk action bar mobile positioning and sizing |
+
