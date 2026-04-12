@@ -661,28 +661,35 @@ const OrdersManagement = () => {
         ))}
       </div>
 
-      {/* Bulk Actions Bar - Fixed at bottom on mobile */}
+      {/* Bulk Actions Bar - Fixed above mobile nav/FAB */}
       <AnimatePresence>
         {selectedOrders.size > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg"
+            className="fixed left-4 right-4 bottom-[5.5rem] z-[60] md:left-1/2 md:right-auto md:w-[calc(100vw-3rem)] md:max-w-lg md:-translate-x-1/2 md:bottom-6"
           >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 bg-background/95 backdrop-blur-xl rounded-2xl border border-primary/30 shadow-2xl">
-              <div className="flex items-center justify-between sm:justify-start gap-2">
-                <div className="flex items-center gap-2 shrink-0">
-                  <CheckSquare className="w-4 h-4 text-primary" />
-                  <span className="font-medium text-sm">{selectedOrders.size} selected</span>
+            <div className="w-full rounded-2xl border border-primary/30 bg-background/95 p-3 shadow-2xl backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <CheckSquare className="w-4 h-4 shrink-0 text-primary" />
+                  <span className="truncate text-sm font-medium">{selectedOrders.size} selected</span>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 sm:hidden" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection-mobile">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 sm:hidden"
+                  onClick={() => setSelectedOrders(new Set())}
+                  data-testid="button-clear-selection-mobile"
+                >
                   <XCircle className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:mt-0 sm:flex sm:items-center">
                 <Select value={bulkAction} onValueChange={setBulkAction}>
-                  <SelectTrigger className="flex-1 min-w-0 h-9" data-testid="select-bulk-action">
+                  <SelectTrigger className="h-10 w-full min-w-0" data-testid="select-bulk-action">
                     <SelectValue placeholder="Action..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -694,16 +701,22 @@ const OrdersManagement = () => {
                     <SelectItem value="refund">Process Refund</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button 
-                  onClick={() => setIsBulkActionOpen(true)} 
+                <Button
+                  onClick={() => setIsBulkActionOpen(true)}
                   disabled={!bulkAction}
-                  className="bg-primary shrink-0"
+                  className="h-10 shrink-0 bg-primary px-4"
                   size="sm"
                   data-testid="button-apply-bulk"
                 >
                   Apply
                 </Button>
-                <Button variant="ghost" size="icon" className="hidden sm:flex h-8 w-8 shrink-0" onClick={() => setSelectedOrders(new Set())} data-testid="button-clear-selection">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden h-9 w-9 shrink-0 sm:flex"
+                  onClick={() => setSelectedOrders(new Set())}
+                  data-testid="button-clear-selection"
+                >
                   <XCircle className="w-4 h-4" />
                 </Button>
               </div>
