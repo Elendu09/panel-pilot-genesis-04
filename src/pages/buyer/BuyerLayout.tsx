@@ -367,6 +367,9 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
             // Check active state before any rendering
             const isActiveItem = !item.isMenu && item.href !== '#menu' && isActive(item.href);
             
+            // Determine tour identifier for this nav item
+            const tourId = item.isMenu ? 'mobile-more' : `nav-${item.href.replace('/', '')}`;
+            
             if (item.isMenu) {
               return (
                 <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -546,7 +549,7 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  data-tour="mobile-services"
+                  data-tour="nav-new-order"
                   className="relative -mt-5"
                 >
                   <motion.div 
@@ -573,9 +576,9 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
 
             // Regular nav items with data-tour attributes
             const getTourAttribute = () => {
-              if (item.href === '/dashboard') return 'mobile-home';
-              if (item.href === '/deposit') return 'mobile-deposit';
-              if (item.href === '/support') return 'mobile-support';
+              if (item.href === '/dashboard') return 'nav-dashboard';
+              if (item.href === '/deposit') return 'nav-deposit';
+              if (item.href === '/support') return 'nav-support';
               return undefined;
             };
 

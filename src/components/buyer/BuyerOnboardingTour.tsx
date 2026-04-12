@@ -15,7 +15,8 @@ import {
   Sparkles,
   Hand,
   Check,
-  HeadphonesIcon
+  HeadphonesIcon,
+  User,
 } from "lucide-react";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 
@@ -34,8 +35,8 @@ interface TourStep {
 const buyerTourSteps: TourStep[] = [
   {
     id: "welcome",
-    title: "Welcome to Your Dashboard",
-    description: "Let's quickly explore how to navigate and use the key features!",
+    title: "Welcome! 👋",
+    description: "Let's take a quick tour so you can get started right away!",
     icon: Sparkles,
     target: null,
     position: "center",
@@ -46,7 +47,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Your main hub! View your balance, recent orders, and quick stats at a glance.",
     icon: LayoutDashboard,
     target: "buyer-dashboard",
-    selector: "[href='/dashboard']",
+    selector: "[data-tour='nav-dashboard']",
     position: "top",
     action: "Tap to view your dashboard",
   },
@@ -56,7 +57,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Top up your balance using various payment methods to place orders.",
     icon: Wallet,
     target: "buyer-deposit",
-    selector: "[href='/deposit']",
+    selector: "[data-tour='nav-deposit']",
     position: "top",
     action: "Tap to add funds",
   },
@@ -66,7 +67,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Browse services and place new orders for social media growth!",
     icon: ShoppingCart,
     target: "buyer-new-order",
-    selector: "[href='/new-order']",
+    selector: "[data-tour='nav-new-order']",
     position: "top",
     action: "Tap to create an order",
   },
@@ -76,7 +77,7 @@ const buyerTourSteps: TourStep[] = [
     description: "Need help? Contact our support team for assistance with your orders.",
     icon: HeadphonesIcon,
     target: "buyer-support",
-    selector: "[href='/support']",
+    selector: "[data-tour='nav-support']",
     position: "top",
     action: "Tap for support",
   },
@@ -91,9 +92,18 @@ const buyerTourSteps: TourStep[] = [
     action: "Tap for more options",
   },
   {
+    id: "profile",
+    title: "Your Profile",
+    description: "Manage your account details, security settings, and preferences from your profile.",
+    icon: User,
+    target: null,
+    position: "center",
+    action: "Find it in the More menu",
+  },
+  {
     id: "complete",
-    title: "You're All Set!",
-    description: "Start exploring services and grow your social presence! 🚀",
+    title: "You're All Set! 🚀",
+    description: "Start exploring services and grow your social presence!",
     icon: Sparkles,
     target: null,
     position: "center",
@@ -126,17 +136,18 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
     return () => window.removeEventListener('restartBuyerTour', handleRestartTour);
   }, [isMobile]);
 
-  // Check localStorage for tour completion
+  // Auto-start for first-time users
   useEffect(() => {
     if (!buyer?.id || !isMobile) return;
     
     const tourKey = `buyer_tour_completed_${buyer.id}`;
     const hasCompleted = localStorage.getItem(tourKey);
     
-    // Auto-start for first-time users (optional - uncomment if desired)
-    // if (!hasCompleted) {
-    //   setIsOpen(true);
-    // }
+    if (!hasCompleted) {
+      // Small delay so page renders first
+      const timer = setTimeout(() => setIsOpen(true), 800);
+      return () => clearTimeout(timer);
+    }
   }, [buyer?.id, isMobile]);
 
   const step = buyerTourSteps[currentStep];
@@ -171,6 +182,19 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
     }
   }, [isOpen, currentStep, updateTargetRect]);
 
+  // Highlight active bottom nav item during tour
+  useEffect(() => {
+    if (!isOpen || !step?.selector) return;
+    
+    const el = document.querySelector(step.selector);
+    if (el) {
+      el.setAttribute('data-tour-active', 'true');
+      return () => {
+        el.removeAttribute('data-tour-active');
+      };
+    }
+  }, [isOpen, currentStep, step]);
+
   const handleNext = () => {
     if (currentStep < buyerTourSteps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -199,7 +223,15 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
   };
 
   // Check if this is a centered step
-  const isCenteredStep = step?.id === 'welcome' || step?.id === 'complete';
+  const isCenteredStep = !step?.selector || step?.id === 'welcome' || step?.id === 'complete' || step?.id === 'profile';
+
+  // Personalized welcome title
+  const getStepTitle = () => {
+    if (step?.id === 'welcome' && buyer?.full_name) {
+      return `Welcome, ${buyer.full_name.split(' ')[0]}! 👋`;
+    }
+    return step?.title || '';
+  };
 
   // Positioning for mobile
   const getPositionStyles = useMemo(() => {
@@ -347,7 +379,7 @@ export const BuyerOnboardingTour = ({ onComplete }: BuyerOnboardingTourProps) =>
 
               {/* Content */}
               <div className="text-center space-y-1.5">
-                <h2 className="text-lg font-bold">{step.title}</h2>
+                <h2 className="text-lg font-bold">{getStepTitle()}</h2>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {step.description}
                 </p>

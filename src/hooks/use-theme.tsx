@@ -77,9 +77,14 @@ export function ThemeProvider({
     fetchThemeFromSupabase()
   }, [userId, storageKey])
 
-  // Apply theme to DOM - respect user preference on all pages
+  // Apply theme to DOM - skip when buyer theme is active
   useEffect(() => {
     const root = window.document.documentElement
+
+    // If buyer theme is controlling the DOM, don't override it
+    if (root.hasAttribute('data-buyer-theme')) {
+      return;
+    }
 
     root.style.setProperty("--theme-transition", "background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease")
     root.classList.add("theme-transition")
@@ -128,15 +133,18 @@ export function ThemeProvider({
   }, [storageKey])
 
   const setTheme = useCallback(async (t: Theme) => {
-    // IMMEDIATELY update DOM for instant visual feedback (before state update)
     const root = window.document.documentElement
-    root.classList.remove("light", "dark")
-    
-    if (t === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      root.classList.add(systemTheme)
-    } else {
-      root.classList.add(t)
+
+    // Skip DOM manipulation if buyer theme is active
+    if (!root.hasAttribute('data-buyer-theme')) {
+      root.classList.remove("light", "dark")
+      
+      if (t === "system") {
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+        root.classList.add(systemTheme)
+      } else {
+        root.classList.add(t)
+      }
     }
     
     // Update local state and storage
