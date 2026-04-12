@@ -367,6 +367,9 @@ const BuyerLayoutInner = ({ children }: BuyerLayoutProps) => {
             // Check active state before any rendering
             const isActiveItem = !item.isMenu && item.href !== '#menu' && isActive(item.href);
             
+            // Determine tour identifier for this nav item
+            const tourId = item.isMenu ? 'mobile-more' : `nav-${item.href.replace('/', '')}`;
+            
             if (item.isMenu) {
               return (
                 <Sheet key={item.name} open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
