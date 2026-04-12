@@ -220,8 +220,9 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
     }
     
     /* Dark mode buyer theme (default) */
-    .buyer-theme-wrapper:not(.light),
-    .dark .buyer-theme-wrapper {
+    :root.dark .buyer-theme-wrapper,
+    :root[data-buyer-theme="dark"] .buyer-theme-wrapper,
+    .buyer-theme-wrapper:not(.light) {
       --panel-background: ${background};
       --panel-surface: ${surface};
       --panel-card: ${card};
@@ -273,7 +274,8 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
     }
     
     /* Light mode buyer theme */
-    .light .buyer-theme-wrapper,
+    :root.light .buyer-theme-wrapper,
+    :root[data-buyer-theme="light"] .buyer-theme-wrapper,
     .buyer-theme-wrapper.light {
       --panel-background: ${lightBg};
       --panel-surface: ${lightSurface};
