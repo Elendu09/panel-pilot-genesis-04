@@ -15,11 +15,13 @@ import {
   FlySMMHomepage, 
   SMMStayHomepage, 
   SMMVisitHomepage,
+  KanbanHomepage,
   BuyerThemeTGRef,
   BuyerThemeAliPanel,
   BuyerThemeFlySMM,
   BuyerThemeSMMStay,
   BuyerThemeSMMVisit,
+  BuyerThemeKanban,
 } from '@/components/buyer-themes';
 import { FloatingChatWidget } from '@/components/storefront/FloatingChatWidget';
 import { AnnouncementBar } from '@/components/storefront/AnnouncementBar';
@@ -268,6 +270,10 @@ const Storefront = () => {
         case 'theme_smmvisit':
         case 'smmvisit':
           return { content: <SMMVisitHomepage {...homepageProps} />, wrapper: BuyerThemeSMMVisit };
+        // Kanban theme - productivity-inspired card layout
+        case 'theme_kanban':
+        case 'kanban':
+          return { content: <KanbanHomepage {...homepageProps} />, wrapper: BuyerThemeKanban };
         // ThemeOne is the default for all other cases (default, theme_one, dark_gradient, etc.)
         case 'default':
         case 'theme_one':

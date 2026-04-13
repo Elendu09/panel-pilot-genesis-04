@@ -19,6 +19,7 @@ export const getThemeDefaultAnimationStyle = (themeKey: string): HeroAnimationSt
     'tgref': 'typewriter',
     'alipanel': 'highlight',
     'smmvisit': 'text-reveal',
+    'kanban': 'gradient-wave',
     'default': 'gradient-wave',
     'dark_gradient': 'gradient-wave',
     'theme_one': 'bounce',

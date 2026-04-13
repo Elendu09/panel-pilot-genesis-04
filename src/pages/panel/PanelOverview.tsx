@@ -1031,6 +1031,8 @@ const PanelOverview = () => {
                     theme_tgref: 'TGRef Style',
                     smmvisit: 'SMMVisit Style',
                     theme_smmvisit: 'SMMVisit Style',
+                    kanban: 'Kanban Style',
+                    theme_kanban: 'Kanban Style',
                   };
                   // Check multiple sources in priority order
                   const customBranding = panelData?.custom_branding as any;

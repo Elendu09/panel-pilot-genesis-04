@@ -51,7 +51,7 @@ const PanelOnboarding = () => {
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
 
   // Step 3: Theme & Branding
-  const [selectedTheme, setSelectedTheme] = useState<'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit'>('default');
+  const [selectedTheme, setSelectedTheme] = useState<'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit' | 'kanban'>('default');
   const [brandingMode, setBrandingMode] = useState<'preset' | 'custom'>('preset');
   const [primaryColor, setPrimaryColor] = useState('#3b82f6');
   const [secondaryColor, setSecondaryColor] = useState('#1e40af');
@@ -69,6 +69,7 @@ const PanelOnboarding = () => {
     { key: 'smmstay' as const, name: 'SMMStay', description: 'Neon pink vibrant', primary: '#FF4081', secondary: '#E040FB', preview: 'bg-gradient-to-br from-pink-500 to-fuchsia-500' },
     { key: 'tgref' as const, name: 'TGRef', description: 'Terminal hacker', primary: '#22C55E', secondary: '#16A34A', preview: 'bg-gradient-to-br from-green-500 to-green-600' },
     { key: 'smmvisit' as const, name: 'SMMVisit', description: 'Ocean blue calm', primary: '#0EA5E9', secondary: '#0284C7', preview: 'bg-gradient-to-br from-sky-500 to-sky-600' },
+    { key: 'kanban' as const, name: 'Kanban', description: 'Productivity card layout', primary: '#3B82F6', secondary: '#06B6D4', preview: 'bg-gradient-to-br from-blue-500 to-cyan-500' },
   ];
 
   const steps = [
@@ -268,6 +269,7 @@ const PanelOnboarding = () => {
         'tgref': 'typewriter',
         'alipanel': 'highlight',
         'smmvisit': 'text-reveal',
+        'kanban': 'gradient-wave',
         'default': 'gradient-wave',
       };
 

@@ -9,8 +9,9 @@ import BuyerThemeFlySMM, { flySMMThemeConfig } from './BuyerThemeFlySMM';
 import BuyerThemeSMMStay, { smmStayThemeConfig } from './BuyerThemeSMMStay';
 import BuyerThemeTGRef, { tgRefThemeConfig } from './BuyerThemeTGRef';
 import BuyerThemeSMMVisit, { smmVisitThemeConfig } from './BuyerThemeSMMVisit';
+import BuyerThemeKanban, { kanbanThemeConfig } from './BuyerThemeKanban';
 
-export type BuyerThemeKey = 'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit';
+export type BuyerThemeKey = 'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit' | 'kanban';
 
 // Helper: get theme-specific default animation style
 const getThemeDefaultAnimationStyle = (themeKey: BuyerThemeKey): string => {
@@ -21,6 +22,7 @@ const getThemeDefaultAnimationStyle = (themeKey: BuyerThemeKey): string => {
     smmstay: 'glow-box',
     tgref: 'typewriter',
     smmvisit: 'text-reveal',
+    kanban: 'gradient-wave',
   };
   return map[themeKey] || 'gradient-wave';
 };
@@ -47,6 +49,7 @@ const themeComponents: Record<BuyerThemeKey, React.FC<{ children: ReactNode; cla
   smmstay: BuyerThemeSMMStay,
   tgref: BuyerThemeTGRef,
   smmvisit: BuyerThemeSMMVisit,
+  kanban: BuyerThemeKanban,
 };
 
 // Theme configs map
@@ -57,6 +60,7 @@ const themeConfigs: Record<BuyerThemeKey, typeof defaultThemeConfig> = {
   smmstay: smmStayThemeConfig,
   tgref: tgRefThemeConfig,
   smmvisit: smmVisitThemeConfig,
+  kanban: kanbanThemeConfig,
 };
 
 // All available themes for selection UI
@@ -67,6 +71,7 @@ export const availableThemes = [
   { key: 'smmstay' as const, ...smmStayThemeConfig },
   { key: 'tgref' as const, ...tgRefThemeConfig },
   { key: 'smmvisit' as const, ...smmVisitThemeConfig },
+  { key: 'kanban' as const, ...kanbanThemeConfig },
 ];
 
 interface BuyerThemeWrapperProps {
@@ -148,6 +153,8 @@ export const BuyerThemeWrapper = ({
         'smmstay': 'smmstay',
         'theme_smmvisit': 'smmvisit',
         'smmvisit': 'smmvisit',
+        'theme_kanban': 'kanban',
+        'kanban': 'kanban',
       };
       if (themeMap[branding.selectedTheme]) {
         return themeMap[branding.selectedTheme];

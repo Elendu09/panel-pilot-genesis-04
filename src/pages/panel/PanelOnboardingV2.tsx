@@ -65,7 +65,7 @@ const PanelOnboardingV2 = () => {
   const [customDomain, setCustomDomain] = useState('');
   const [subdomainAvailable, setSubdomainAvailable] = useState<boolean | null>(null);
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
-  const [selectedTheme, setSelectedTheme] = useState<'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit'>('default');
+  const [selectedTheme, setSelectedTheme] = useState<'default' | 'alipanel' | 'flysmm' | 'smmstay' | 'tgref' | 'smmvisit' | 'kanban'>('default');
   const [brandingMode, setBrandingMode] = useState<'preset' | 'custom'>('preset');
   const [primaryColor, setPrimaryColor] = useState('#6366F1');
   const [secondaryColor, setSecondaryColor] = useState('#8B5CF6');
@@ -97,6 +97,7 @@ const PanelOnboardingV2 = () => {
     { key: 'smmstay' as const, name: 'SMMStay', description: 'Dark neon pink', colors: ['#000000', '#FF4081', '#E040FB'] },
     { key: 'tgref' as const, name: 'TGRef', description: 'Terminal hacker green', colors: ['#1A1B26', '#00D4AA', '#0EA5E9'] },
     { key: 'smmvisit' as const, name: 'SMMVisit', description: 'Elegant gold accent', colors: ['#F5F5F5', '#FFD700', '#1A1A1A'] },
+    { key: 'kanban' as const, name: 'Kanban', description: 'Clean card-based layout', colors: ['#0B1120', '#3B82F6', '#06B6D4'] },
   ];
 
   // Fixed 7-step flow (0-6), payment is conditional but index stays fixed

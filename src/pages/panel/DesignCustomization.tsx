@@ -31,11 +31,13 @@ import {
   FlySMMHomepage,
   SMMStayHomepage,
   SMMVisitHomepage,
+  KanbanHomepage,
   BuyerThemeTGRef,
   BuyerThemeAliPanel,
   BuyerThemeFlySMM,
   BuyerThemeSMMStay,
   BuyerThemeSMMVisit,
+  BuyerThemeKanban,
 } from '@/components/buyer-themes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateBuyerThemeCSS } from '@/lib/color-utils';
@@ -798,6 +800,8 @@ const getThemeDefaults = (themeType: string): Partial<typeof defaultCustomizatio
       return { backgroundColor: '#000000', primaryColor: '#FF4081', secondaryColor: '#E040FB', accentColor: '#FF80AB', textColor: '#FFFFFF', mutedColor: '#A1A1AA', surfaceColor: '#0A0A0A', cardColor: '#0A0A0A', borderColor: '#27272A', ...baseColors };
     case 'smmvisit':
       return { backgroundColor: '#F5F5F5', primaryColor: '#FFD700', secondaryColor: '#1A1A1A', accentColor: '#FFC107', textColor: '#1A1A1A', mutedColor: '#6B7280', surfaceColor: '#FFFFFF', cardColor: '#FFFFFF', borderColor: '#E5E7EB', ...baseColors };
+    case 'kanban':
+      return { backgroundColor: '#0B1120', primaryColor: '#3B82F6', secondaryColor: '#06B6D4', accentColor: '#8B5CF6', textColor: '#F1F5F9', mutedColor: '#94A3B8', surfaceColor: '#131C2E', cardColor: '#131C2E', borderColor: '#1E293B', ...baseColors };
     default:
       return { backgroundColor: '#0F172A', primaryColor: '#6366F1', secondaryColor: '#8B5CF6', accentColor: '#EC4899', textColor: '#FFFFFF', mutedColor: '#94A3B8', surfaceColor: '#1E293B', cardColor: '#1E293B', borderColor: '#334155', ...baseColors };
   }
@@ -813,6 +817,7 @@ const storefrontThemes = [
   { id: 'theme_flysmm', name: 'FlySMM Style', description: 'Light friendly with blue accents and illustrations', colors: ['#F8FAFC', '#2196F3', '#00BCD4'], themeType: 'flysmm' },
   { id: 'theme_smmstay', name: 'SMMStay Style', description: 'Dark neon pink with bold uppercase typography', colors: ['#000000', '#FF4081', '#E040FB'], themeType: 'smmstay' },
   { id: 'theme_smmvisit', name: 'SMMVisit Style', description: 'Light gray with yellow/gold accents', colors: ['#F5F5F5', '#FFD700', '#1A1A1A'], themeType: 'smmvisit' },
+  { id: 'theme_kanban', name: 'Kanban Style', description: 'Clean productivity-inspired card-based layout', colors: ['#0B1120', '#3B82F6', '#06B6D4'], themeType: 'kanban' },
 ];
 
 // Live Preview Renderer - renders actual theme based on selectedTheme
@@ -916,6 +921,11 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     case 'smmvisit':
       rendered = <SMMVisitHomepage {...homepageProps} />;
       ThemeWrapper = BuyerThemeSMMVisit;
+      break;
+    case 'theme_kanban':
+    case 'kanban':
+      rendered = <KanbanHomepage {...homepageProps} />;
+      ThemeWrapper = BuyerThemeKanban;
       break;
     // ThemeOne is the default for all other cases
     case 'default':
@@ -1189,7 +1199,8 @@ export default function DesignCustomization() {
       'theme_alipanel', 'alipanel', 
       'theme_flysmm', 'flysmm', 
       'theme_smmstay', 'smmstay', 
-      'theme_smmvisit', 'smmvisit'
+      'theme_smmvisit', 'smmvisit',
+      'theme_kanban', 'kanban'
     ];
     
     setCustomization(prev => {
@@ -1250,6 +1261,8 @@ export default function DesignCustomization() {
         'smmstay': 'smmstay',
         'theme_smmvisit': 'smmvisit',
         'smmvisit': 'smmvisit',
+        'theme_kanban': 'kanban',
+        'kanban': 'kanban',
       };
       const buyerThemeToPersist = themeToBuyerTheme[selectedTheme] || 'default';
 

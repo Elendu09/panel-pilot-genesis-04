@@ -130,6 +130,13 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Tenant 404 Page**: New `TenantNotFound.tsx` component replaces catch-all `<Navigate to="/" />` in TenantRouter; shows branded 404 with panel logo, colors, and back/home navigation
 - **New Components**: `src/components/tenant/TenantNotFound.tsx`, `src/components/tenant/MaintenancePage.tsx`
 
+## Buyer Themes
+
+Seven buyer-facing homepage themes available: `default`, `alipanel`, `flysmm`, `smmstay`, `tgref`, `smmvisit`, `kanban`. Each theme has:
+- Wrapper component (`BuyerTheme*.tsx`) with dark/light mode CSS
+- Homepage component (`*/Homepage.tsx`) with full customization support
+- Integration in: `BuyerThemeWrapper.tsx` (type, components, configs, availableThemes, themeMap), `index.ts` (exports), `DesignCustomization.tsx` (storefrontThemes, LivePreviewRenderer, getThemeDefaults, buyerThemes list, themeToBuyerTheme), `Storefront.tsx` (renderThemeContent switch), `PanelOnboarding.tsx` and `PanelOnboardingV2.tsx` (themePresets, selectedTheme type), `PanelOverview.tsx` (themeLabels), `AnimatedHeroText.tsx` (default animation styles)
+
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding
