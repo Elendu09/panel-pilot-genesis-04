@@ -151,20 +151,11 @@ export const defaultLightColors: ColorPalette = {
   errorColor: '#EF4444',
 };
 
-export interface LightModeColors {
-  backgroundColor?: string;
-  surfaceColor?: string;
-  cardColor?: string;
-  textColor?: string;
-  mutedColor?: string;
-  borderColor?: string;
-}
-
 /**
  * Generate complete CSS variables for buyer theme
  * Supports both light and dark modes with proper scoping
  */
-export function generateBuyerThemeCSS(colors: Partial<ColorPalette>, lightModeOverrides?: LightModeColors): string {
+export function generateBuyerThemeCSS(colors: Partial<ColorPalette>): string {
   const primary = colors.primaryColor || defaultDarkColors.primaryColor;
   const secondary = colors.secondaryColor || defaultDarkColors.secondaryColor;
   const accent = colors.accentColor || defaultDarkColors.accentColor;
@@ -179,12 +170,13 @@ export function generateBuyerThemeCSS(colors: Partial<ColorPalette>, lightModeOv
   const info = colors.infoColor || defaultDarkColors.infoColor;
   const error = colors.errorColor || defaultDarkColors.errorColor;
 
-  const lightBg = lightModeOverrides?.backgroundColor || '#FAFBFC';
-  const lightSurface = lightModeOverrides?.surfaceColor || '#FFFFFF';
-  const lightCard = lightModeOverrides?.cardColor || lightModeOverrides?.surfaceColor || '#FFFFFF';
-  const lightText = lightModeOverrides?.textColor || '#1F2937';
-  const lightMuted = lightModeOverrides?.mutedColor || '#6B7280';
-  const lightBorder = lightModeOverrides?.borderColor || '#E5E7EB';
+  // Light mode equivalents - keep brand colors, adjust UI colors
+  const lightBg = '#FAFBFC';
+  const lightSurface = '#FFFFFF';
+  const lightCard = '#FFFFFF';
+  const lightText = '#1F2937';
+  const lightMuted = '#6B7280';
+  const lightBorder = '#E5E7EB';
 
   return `
     /* Panel brand colors (shared across themes) */

@@ -130,13 +130,6 @@ Admin pages use the `/functions/v1/admin-data` Express endpoint (service role ke
 - **Tenant 404 Page**: New `TenantNotFound.tsx` component replaces catch-all `<Navigate to="/" />` in TenantRouter; shows branded 404 with panel logo, colors, and back/home navigation
 - **New Components**: `src/components/tenant/TenantNotFound.tsx`, `src/components/tenant/MaintenancePage.tsx`
 
-## Theme & Payment Fixes (Task #1)
-
-- **Light Mode Color Fix**: `generateBuyerThemeCSS` now accepts `lightModeOverrides` parameter; `BuyerThemeWrapper` passes panel owner's `lightModeColors` from `custom_branding` so light mode uses owner-customized colors instead of hardcoded defaults
-- **SMMVisit Theme Specificity**: CSS variables in SMMVisit theme now use `!important` to override global `generateBuyerThemeCSS` output; added explicit `--panel-*`, `--background`, `--foreground`, `--card`, `--popover`, `--muted`, `--border`, `--input` CSS variable overrides
-- **Korapay Currency Validation**: Client-side (BuyerDeposit.tsx) blocks unsupported currencies before payment initiation; server-side (process-payment) enforces NGN/GHS/KES restriction and marks transaction failed with descriptive message
-- **Payment Verification Polling**: Polling loop now actively calls `verify-payment` on each pending transaction before refetching the transaction list, enabling automatic balance crediting after gateway redirect
-
 ## Replit-Specific Changes Made
 
 1. **index.html** — Added Replit domains to `isDev` check to prevent visibility hiding

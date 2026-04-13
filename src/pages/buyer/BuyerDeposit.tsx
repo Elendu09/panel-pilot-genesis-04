@@ -315,29 +315,16 @@ const BuyerDeposit = () => {
   }, [buyer?.id, panel?.id]);
 
   const previousTransactionsRef = useRef<Transaction[]>([]);
-  const notifiedTxIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!buyer?.id || !panel?.id) return;
 
-    const pendingTxs = transactions.filter(t => 
+    const hasPending = transactions.some(t => 
       t.status === 'pending' || t.status === 'pending_verification' || t.status === 'processing'
     );
-    const hasPending = pendingTxs.length > 0;
     const interval = hasPending ? 8000 : 30000;
     
     const pollInterval = setInterval(async () => {
-      if (hasPending) {
-        for (const tx of pendingTxs) {
-          try {
-            await supabase.functions.invoke('process-payment', {
-              body: { action: 'verify-payment', transactionId: tx.id }
-            });
-          } catch (e) {
-            // silent — verification is best-effort
-          }
-        }
-      }
       await fetchTransactions();
     }, interval);
 
@@ -354,16 +341,14 @@ const BuyerDeposit = () => {
     for (const tx of transactions) {
       const prevTx = prev.find(p => p.id === tx.id);
       if (prevTx && prevTx.status !== tx.status) {
-        if (tx.status === 'completed' && prevTx.status !== 'completed' && !notifiedTxIds.current.has(tx.id)) {
-          notifiedTxIds.current.add(tx.id);
+        if (tx.status === 'completed' && prevTx.status !== 'completed') {
           refreshBuyer();
           toast({
             title: "Payment Successful!",
             description: `${formatPrice(Number(tx.amount))} has been added to your balance.`
           });
         }
-        if (tx.status === 'failed' && prevTx.status !== 'failed' && !notifiedTxIds.current.has(tx.id)) {
-          notifiedTxIds.current.add(tx.id);
+        if (tx.status === 'failed' && prevTx.status !== 'failed') {
           toast({
             variant: "destructive",
             title: "Payment Failed",
@@ -421,8 +406,7 @@ const BuyerDeposit = () => {
             body: { action: 'verify-payment', transactionId }
           });
           
-          if (verifyResult?.status === 'completed' && !notifiedTxIds.current.has(transactionId)) {
-            notifiedTxIds.current.add(transactionId);
+          if (verifyResult?.status === 'completed') {
             toast({ 
               title: "Payment Successful!", 
               description: `${formatPrice(Number(verifyResult.amount))} has been added to your balance.` 
@@ -430,8 +414,7 @@ const BuyerDeposit = () => {
             refreshBuyer();
             fetchTransactions();
             return;
-          } else if (verifyResult?.status === 'failed' && !notifiedTxIds.current.has(transactionId)) {
-            notifiedTxIds.current.add(transactionId);
+          } else if (verifyResult?.status === 'failed') {
             toast({ 
               variant: "destructive",
               title: "Payment Failed", 
@@ -453,8 +436,7 @@ const BuyerDeposit = () => {
               body: { action: 'verify-payment', transactionId }
             });
             
-            if (verifyRetry?.status === 'completed' && !notifiedTxIds.current.has(transactionId)) {
-              notifiedTxIds.current.add(transactionId);
+            if (verifyRetry?.status === 'completed') {
               toast({ 
                 title: "Payment Successful!", 
                 description: `${formatPrice(Number(verifyRetry.amount))} has been added to your balance.` 
@@ -462,8 +444,7 @@ const BuyerDeposit = () => {
               refreshBuyer();
               fetchTransactions();
               return;
-            } else if (verifyRetry?.status === 'failed' && !notifiedTxIds.current.has(transactionId)) {
-              notifiedTxIds.current.add(transactionId);
+            } else if (verifyRetry?.status === 'failed') {
               toast({ 
                 variant: "destructive",
                 title: "Payment Failed", 
@@ -514,40 +495,19 @@ const BuyerDeposit = () => {
       return;
     }
 
-    const gatewayCurrencyMap: Record<string, string[]> = {
-      korapay: ['NGN', 'GHS', 'KES'],
-      paystack: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'],
-      monnify: ['NGN'],
-      razorpay: ['INR'],
-      paytm: ['INR'],
-      phonepe: ['INR'],
-      upi: ['INR'],
-      mercadopago: ['ARS', 'BRL', 'CLP', 'COP', 'MXN', 'PEN', 'UYU'],
-      pix: ['BRL'],
-      pagseguro: ['BRL'],
-    };
-
-    const supportedCurrencies = gatewayCurrencyMap[methodToUse];
-    if (supportedCurrencies && !supportedCurrencies.includes(currency.toUpperCase())) {
-      const gwName = allPaymentGateways[methodToUse]?.name || methodToUse;
-      toast({
-        variant: "destructive",
-        title: "Currency Not Supported",
-        description: `${gwName} only supports ${supportedCurrencies.join(', ')}. Please switch your currency or choose a different payment method.`
-      });
-      return;
-    }
-
     setProcessing(true);
     setShowManualSelector(false);
 
     try {
       const depositAmount = parseFloat(amount);
+      // Convert to USD for storage if not USD
       const depositAmountUSD = currency === 'USD' ? depositAmount : convertToUSD(depositAmount);
+      // Look in both paymentMethods and allManualMethods
       const selectedPaymentMethod = paymentMethods.find(m => m.id === methodToUse) 
         || allManualMethods.find(m => m.id === methodToUse);
       const methodName = selectedPaymentMethod?.name || methodToUse;
 
+      // Call the payment processing edge function (it creates the transaction server-side)
       const response = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: methodToUse,
