@@ -1,392 +1,462 @@
-import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, 
+  X, 
   Send, 
-  Search, 
-  Clock, 
-  CheckCheck,
-  Loader2,
-  Archive,
-  MoreVertical,
-  Zap,
-  Plus,
-  Settings,
-  Trash2,
-  ArrowLeft,
-  DollarSign,
-  ShoppingCart,
-  CheckCircle,
-  History,
-  Bot
+  Minimize2, 
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
-
-interface ChatSession {
-  id: string;
-  panel_id: string;
-  visitor_id: string;
-  visitor_name: string | null;
-  visitor_email: string | null;
-  status: string;
-  last_message_at: string;
-  created_at: string;
-  unread_count?: number;
-  last_message?: string;
-}
-
-type SenderType = 'visitor' | 'owner' | 'ai';
 
 interface ChatMessage {
   id: string;
-  session_id: string;
-  sender_type: SenderType;
+  sender_type: 'visitor' | 'owner';
   content: string;
-  is_read: boolean;
   created_at: string;
+  session_id?: string;
+  is_read?: boolean;
 }
 
-interface CannedResponse {
-  id: string;
-  title: string;
-  content: string;
-  shortcut: string | null;
-  category: string;
-  usage_count?: number;
+interface LiveChatWidgetProps {
+  panelId: string;
+  visitorName?: string;
+  visitorEmail?: string;
+  panelName?: string;
 }
 
-interface ChatInboxProps {
-  embedded?: boolean;
-}
+// Generate a unique visitor ID
+const getVisitorId = () => {
+  let visitorId = localStorage.getItem('chat_visitor_id');
+  if (!visitorId) {
+    visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    localStorage.setItem('chat_visitor_id', visitorId);
+  }
+  return visitorId;
+};
 
-const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
-  const { profile } = useAuth();
-  const isMobile = useIsMobile();
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [selectedSession, setSelectedSession] = useState<ChatSession | null>(null);
+export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }: LiveChatWidgetProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'active' | 'archived'>('active');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [panelId, setPanelId] = useState<string | null>(null);
-  const [cannedResponses, setCannedResponses] = useState<CannedResponse[]>([]);
-  const [cannedDialogOpen, setCannedDialogOpen] = useState(false);
-  const [editingCanned, setEditingCanned] = useState<CannedResponse | null>(null);
-  const [cannedForm, setCannedForm] = useState({ title: '', content: '', shortcut: '', category: 'general' });
-  const [visitorTyping, setVisitorTyping] = useState(false);
-  const [chatSheetOpen, setChatSheetOpen] = useState(false);
-  
+  const [newMessage, setNewMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [visitorId] = useState(getVisitorId);
+  const [ownerTyping, setOwnerTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const prevSessionsHash = useRef<string>('');
-  const prevMessagesLength = useRef<number>(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Get panel ID
-  useEffect(() => {
-    const fetchPanelId = async () => {
-      if (!profile?.id) return;
-      const { data } = await supabase.from('panels').select('id').eq('owner_id', profile.id).limit(1).maybeSingle();
-      if (data) setPanelId(data.id);
-    };
-    fetchPanelId();
-  }, [profile?.id]);
-
-  // Fetch Canned Responses
+  // Create or get chat session
   useEffect(() => {
     if (!panelId) return;
-    const fetchCanned = async () => {
-      const { data } = await supabase.from('canned_responses').select('*').eq('panel_id', panelId).order('usage_count', { ascending: false });
-      if (data) setCannedResponses(data);
-    };
-    fetchCanned();
-  }, [panelId]);
+    
+    const initChat = async () => {
+      // Check for existing active session
+      const { data: existingSession } = await supabase
+        .from('chat_sessions')
+        .select('id')
+        .eq('panel_id', panelId)
+        .eq('visitor_id', visitorId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-  // Fetch Sessions
-  const fetchSessions = useCallback(async () => {
-    if (!panelId) return;
-    const status = filter === 'active' ? 'active' : 'closed';
-    const { data, error } = await supabase.from('chat_sessions').select('*').eq('panel_id', panelId).eq('status', status).order('last_message_at', { ascending: false });
-    if (error) return;
-
-    const sessionsWithDetails = await Promise.all((data || []).map(async (session) => {
-      const { count } = await supabase.from('chat_messages').select('*', { count: 'exact', head: true }).eq('session_id', session.id).eq('sender_type', 'visitor').eq('is_read', false);
-      const { data: lastMsg } = await supabase.from('chat_messages').select('content').eq('session_id', session.id).order('created_at', { ascending: false }).limit(1).single();
-      return { ...session, unread_count: count || 0, last_message: lastMsg?.content || 'No messages yet' };
-    }));
-
-    const currentHash = JSON.stringify(sessionsWithDetails.map(s => ({ id: s.id, last: s.last_message_at })));
-    if (prevSessionsHash.current !== currentHash) {
-      prevSessionsHash.current = currentHash;
-      setSessions(sessionsWithDetails);
-    }
-  }, [panelId, filter]);
-
-  useEffect(() => {
-    if (!panelId) return;
-    setLoading(true);
-    fetchSessions().finally(() => setLoading(false));
-
-    const channel = supabase.channel('chat-sessions-panel').on('postgres_changes', { event: '*', schema: 'public', table: 'chat_sessions', filter: `panel_id=eq.${panelId}` }, () => fetchSessions()).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [panelId, filter, fetchSessions]);
-
-  // Fetch messages
-  useEffect(() => {
-    if (!selectedSession) return;
-
-    const fetchMessages = async () => {
-      const { data } = await supabase.from('chat_messages').select('*').eq('session_id', selectedSession.id).order('created_at', { ascending: true });
-      if (data) setMessages(data as ChatMessage[]);
-      await supabase.from('chat_messages').update({ is_read: true }).eq('session_id', selectedSession.id).eq('sender_type', 'visitor').eq('is_read', false);
-    };
-
-    fetchMessages();
-
-    const channel = supabase.channel(`chat-messages-panel-${selectedSession.id}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `session_id=eq.${selectedSession.id}` }, (payload) => {
-      const newMsg = payload.new as ChatMessage;
-      setMessages(prev => {
-        if (prev.some(m => m.id === newMsg.id)) return prev;
-        return [...prev, newMsg];
-      });
-      if (newMsg.sender_type === 'visitor') supabase.from('chat_messages').update({ is_read: true }).eq('id', newMsg.id);
-    }).subscribe();
-
-    const typingChannel = supabase.channel(`typing-in-${selectedSession.id}`).on('broadcast', { event: 'typing' }, (payload) => {
-      if (payload.payload.sender_type === 'visitor') {
-        setVisitorTyping(true);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(() => setVisitorTyping(false), 3000);
+      if (existingSession) {
+        setSessionId(existingSession.id);
+        // Load messages
+        const { data: msgs } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('session_id', existingSession.id)
+          .order('created_at', { ascending: true });
+        
+        if (msgs) {
+          setMessages(msgs.map(m => ({
+            ...m,
+            sender_type: m.sender_type as 'visitor' | 'owner'
+          })));
+        }
       }
-    }).subscribe();
+    };
+
+    initChat();
+  }, [panelId, visitorId]);
+
+  // Real-time subscription for new messages
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const channel = supabase
+      .channel(`chat-messages-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `session_id=eq.${sessionId}`
+        },
+        (payload) => {
+          const newMsg = payload.new as ChatMessage;
+          setMessages(prev => {
+            // Avoid duplicates
+            if (prev.some(m => m.id === newMsg.id)) return prev;
+            return [...prev, { ...newMsg, sender_type: newMsg.sender_type as 'visitor' | 'owner' }];
+          });
+          
+          // Count unread if widget is closed or minimized and message is from owner
+          if ((!isOpen || isMinimized) && newMsg.sender_type === 'owner') {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(typingChannel);
     };
-  }, [selectedSession]);
+  }, [sessionId, isOpen, isMinimized]);
 
-  // FIXED AUTO SCROLL: Only scrolls if a NEW message is added. Doesn't scroll when you type.
+  // Typing indicator subscription
   useEffect(() => {
-    if (messages.length > prevMessagesLength.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      prevMessagesLength.current = messages.length;
-    }
+    if (!sessionId) return;
+
+    const channel = supabase
+      .channel(`typing-${sessionId}`)
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (payload.payload.sender_type === 'owner') {
+          setOwnerTyping(true);
+          // Clear typing after 3 seconds
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+          }
+          typingTimeoutRef.current = setTimeout(() => {
+            setOwnerTyping(false);
+          }, 3000);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [sessionId]);
+
+  // Broadcast typing status
+  const broadcastTyping = useCallback(() => {
+    if (!sessionId) return;
+    
+    supabase.channel(`typing-${sessionId}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { sender_type: 'visitor' }
+    });
+  }, [sessionId]);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!selectedSession) return;
-    try {
-      await supabase.from('chat_messages').insert({ session_id: selectedSession.id, sender_type: 'owner', content });
-      await supabase.from('chat_sessions').update({ last_message_at: new Date().toISOString() }).eq('id', selectedSession.id);
-      fetchSessions();
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to send message' });
+  // Clear unread when opening
+  useEffect(() => {
+    if (isOpen && !isMinimized) {
+      setUnreadCount(0);
     }
-  }, [selectedSession, fetchSessions]);
+  }, [isOpen, isMinimized]);
 
-  const archiveSession = async (session: ChatSession) => {
+  const startNewSession = async () => {
     try {
-      await supabase.from('chat_sessions').update({ status: 'closed' }).eq('id', session.id);
-      if (selectedSession?.id === session.id) { setSelectedSession(null); setChatSheetOpen(false); }
-      fetchSessions();
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .insert({
+          panel_id: panelId,
+          visitor_id: visitorId,
+          visitor_name: visitorName || 'Visitor',
+          visitor_email: visitorEmail,
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setSessionId(data.id);
+      return data.id;
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Failed to archive chat' });
+      console.error('Error starting chat session:', error);
+      toast({ variant: 'destructive', title: 'Failed to start chat' });
+      return null;
     }
   };
 
-  const navigate = useNavigate();
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
 
-  const filteredSessions = sessions.filter(s => 
-    (s.visitor_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     s.visitor_email?.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+    setSending(true);
+    try {
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        currentSessionId = await startNewSession();
+        if (!currentSessionId) return;
+      }
 
-  const formatTime = (date: string) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const messageContent = newMessage.trim();
+      setNewMessage('');
+
+      // Optimistic update
+      const optimisticMsg: ChatMessage = {
+        id: `temp-${Date.now()}`,
+        sender_type: 'visitor',
+        content: messageContent,
+        created_at: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+
+      // Save to database
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          session_id: currentSessionId,
+          sender_type: 'visitor',
+          content: messageContent
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Replace optimistic message with real one
+      setMessages(prev => prev.map(m => 
+        m.id === optimisticMsg.id ? { ...data, sender_type: data.sender_type as 'visitor' | 'owner' } : m
+      ));
+
+      // Update session last_message_at
+      await supabase
+        .from('chat_sessions')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', currentSessionId);
+
+      inputRef.current?.focus();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({ variant: 'destructive', title: 'Failed to send message' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    broadcastTyping();
+  };
+
+  const toggleChat = () => {
+    if (isMinimized) {
+      setIsMinimized(false);
+    } else if (!isOpen) {
+      setIsOpen(true);
+    } else {
+      setIsMinimized(true);
+    }
   };
 
   return (
-    <div className={cn("flex gap-4", embedded ? "h-[calc(100vh-200px)]" : "h-[calc(100vh-120px)]")}>
-      {/* Sessions List */}
-      <Card className="w-96 flex flex-col shrink-0">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5" />Live Chat</h2>
-            <Button variant="ghost" size="icon" onClick={() => setCannedDialogOpen(true)}><Settings className="w-4 h-4" /></Button>
-          </div>
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
-          </div>
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as 'active' | 'archived')}>
-            <TabsList className="w-full"><TabsTrigger value="active" className="flex-1">Active</TabsTrigger><TabsTrigger value="archived" className="flex-1">Archived</TabsTrigger></TabsList>
-          </Tabs>
-        </div>
+    <>
+      {/* Chat Button */}
+      <AnimatePresence>
+        {(!isOpen || isMinimized) && (
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            onClick={toggleChat}
+            className={cn(
+              "fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full",
+              "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground",
+              "shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40",
+              "transition-all duration-300 flex items-center justify-center"
+            )}
+          >
+            <MessageCircle className="w-6 h-6" />
+            {unreadCount > 0 && (
+              <Badge 
+                className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center bg-destructive text-destructive-foreground text-xs"
+              >
+                {unreadCount}
+              </Badge>
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-        <ScrollArea className="flex-1">
-          {loading ? <div className="flex justify-center py-8"><Loader2 className="animate-spin" /></div> : filteredSessions.length === 0 ? <div className="text-center py-8 text-muted-foreground">No conversations yet</div> : (
-            filteredSessions.map((session) => (
-              <div key={session.id} onClick={() => { setSelectedSession(session); if (isMobile) setChatSheetOpen(true); }} className={cn("p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors", selectedSession?.id === session.id && "bg-muted")}>
-                <div className="flex items-start gap-3">
-                  <Avatar><AvatarFallback>{session.visitor_name?.[0] || 'V'}</AvatarFallback></Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between mb-1"><span className="font-medium truncate">{session.visitor_name || 'Visitor'}</span><span className="text-xs text-muted-foreground">{formatTime(session.last_message_at)}</span></div>
-                    <p className="text-sm text-muted-foreground truncate">{session.last_message}</p>
+      {/* Chat Window */}
+      <AnimatePresence>
+        {isOpen && !isMinimized && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={cn(
+              "fixed bottom-6 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)]",
+              "bg-card border border-border rounded-2xl shadow-2xl overflow-hidden",
+              "flex flex-col max-h-[500px]"
+            )}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5" />
                   </div>
-                  {(session.unread_count || 0) > 0 && <Badge>{session.unread_count}</Badge>}
-                </div>
-              </div>
-            ))
-          )}
-        </ScrollArea>
-      </Card>
-
-      {/* Chat Area */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        {selectedSession ? (
-          <>
-            <div className="p-4 border-b flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <Avatar><AvatarFallback>{selectedSession.visitor_name?.[0] || 'V'}</AvatarFallback></Avatar>
-                <div>
-                  <h3 className="font-semibold">{selectedSession.visitor_name || 'Visitor'}</h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-3 h-3" />Started {new Date(selectedSession.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button></DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => archiveSession(selectedSession)}>Archive Chat</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {messages.map((msg) => (
-                  <div key={msg.id} className={cn("flex gap-2", msg.sender_type === 'owner' ? "flex-row-reverse" : "")}>
-                    <Avatar className="shrink-0"><AvatarFallback className={cn(msg.sender_type === 'owner' && "bg-primary text-primary-foreground")}>{msg.sender_type === 'owner' ? 'Y' : 'V'}</AvatarFallback></Avatar>
-                    <div className={cn("max-w-[75%] rounded-2xl px-4 py-2", msg.sender_type === 'owner' ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm")}>
-                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <div>
+                    <h3 className="font-semibold">{panelName || 'Support'}</h3>
+                    <div className="flex items-center gap-1.5 text-xs text-white/80">
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                      Online
                     </div>
                   </div>
-                ))}
-                {visitorTyping && <div className="text-xs text-muted-foreground">User is typing...</div>}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10"
+                    onClick={() => setIsMinimized(true)}
+                  >
+                    <Minimize2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/10"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {messages.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">
+                      Start a conversation! We're here to help.
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={cn(
+                        "flex gap-2",
+                        msg.sender_type === 'visitor' ? "flex-row-reverse" : ""
+                      )}
+                    >
+                      <Avatar className="w-8 h-8 shrink-0">
+                        <AvatarFallback className={cn(
+                          msg.sender_type === 'visitor' 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-muted"
+                        )}>
+                          {msg.sender_type === 'visitor' ? (visitorName?.[0] || 'V') : 'S'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className={cn(
+                        "max-w-[75%] rounded-2xl px-4 py-2",
+                        msg.sender_type === 'visitor'
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted rounded-bl-sm"
+                      )}>
+                        <p className="text-sm">{msg.content}</p>
+                        <p className={cn(
+                          "text-[10px] mt-1",
+                          msg.sender_type === 'visitor' ? "text-white/60" : "text-muted-foreground"
+                        )}>
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+                
+                {/* Typing indicator */}
+                {ownerTyping && (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-muted">S</AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-muted-foreground/50 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
-            {/* FIXED UNCONTROLLED KEYBOARD MODULE */}
-            <ZeroLagInput 
-              key={selectedSession.id}
-              sessionId={selectedSession.id} 
-              onSend={handleSendMessage} 
-              cannedResponses={cannedResponses} 
-            />
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a conversation to start messaging.</div>
+            {/* Input */}
+            <div className="p-3 border-t border-border bg-card">
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={inputRef}
+                  value={newMessage}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Type a message..."
+                  className="flex-1 bg-muted/50 border-0"
+                  disabled={sending}
+                />
+                <Button
+                  size="icon"
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || sending}
+                  className="shrink-0"
+                >
+                  {sending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         )}
-      </Card>
-    </div>
+      </AnimatePresence>
+    </>
   );
 };
 
-// ZERO-LAG UNCONTROLLED INPUT (No keystroke freezes)
-interface ZeroLagProps {
-  sessionId: string;
-  onSend: (content: string) => Promise<void>;
-  cannedResponses: CannedResponse[];
-}
-
-const ZeroLagInput = memo(({ sessionId, onSend, cannedResponses }: ZeroLagProps) => {
-  const [sending, setSending] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const lastTypingTimeRef = useRef<number>(0);
-
-  const handleSend = async () => {
-    const text = inputRef.current?.value.trim();
-    if (!text || sending) return;
-    setSending(true);
-    await onSend(text);
-    if (inputRef.current) inputRef.current.value = ''; // Direct reset
-    setSending(false);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  };
-
-  const broadcastTyping = useCallback(() => {
-    const now = Date.now();
-    if (now - lastTypingTimeRef.current > 3000) {
-      lastTypingTimeRef.current = now;
-      supabase.channel(`typing-out-${sessionId}`).send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { sender_type: 'owner' }
-      });
-    }
-  }, [sessionId]);
-
-  return (
-    <div className="p-4 border-t pb-safe bg-card shrink-0">
-      {cannedResponses.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {cannedResponses.slice(0, 5).map((response) => (
-            <Button key={response.id} variant="outline" size="sm" onClick={() => { if (inputRef.current) inputRef.current.value = response.content; }} className="text-xs">
-              <Zap className="w-3 h-3 mr-1" />{response.title}
-            </Button>
-          ))}
-        </div>
-      )}
-      <div className="flex items-end gap-2">
-        <Textarea
-          ref={inputRef}
-          onChange={broadcastTyping}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-          placeholder="Type a reply..."
-          className="flex-1 min-h-[44px] max-h-32 resize-none"
-          rows={1}
-        />
-        <Button onClick={handleSend} disabled={sending}>
-          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </Button>
-      </div>
-    </div>
-  );
-});
-
-export default ChatInbox;
+export default LiveChatWidget;
