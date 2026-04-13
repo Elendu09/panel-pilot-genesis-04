@@ -29,24 +29,22 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const payload: NotificationPayload = await req.json();
-    const { panelId, userId, type, title, message, metadata, sendEmail, emailTo } = payload;
-
-    if (!panelId || !title || !message) {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'panelId, title, and message are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Authorization required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    let resolvedUserId = userId;
-    if (!resolvedUserId) {
-      const { data: panel } = await supabase
-        .from('panels')
-        .select('owner_id')
-        .eq('id', panelId)
-        .maybeSingle();
-      resolvedUserId = panel?.owner_id || undefined;
+    const payload: NotificationPayload = await req.json();
+    const { panelId, userId, type, title, message, metadata, sendEmail, emailTo } = payload;
+
+    if (!panelId || !userId || !title || !message) {
+      return new Response(
+        JSON.stringify({ error: 'panelId, userId, title, and message are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`Creating notification: ${type} - ${title}`);
@@ -55,7 +53,7 @@ serve(async (req) => {
       .from('panel_notifications')
       .insert({
         panel_id: panelId,
-        user_id: resolvedUserId,
+        user_id: userId,
         type: mapNotificationType(type),
         title,
         message,
@@ -71,7 +69,7 @@ serve(async (req) => {
 
     await supabase.from('audit_logs').insert({
       panel_id: panelId,
-      user_id: resolvedUserId,
+      user_id: userId,
       action: 'notification_sent',
       resource_type: 'notification',
       resource_id: notification.id,
@@ -81,7 +79,7 @@ serve(async (req) => {
     let shouldEmail = sendEmail || false;
     let resolvedEmailTo = emailTo;
 
-    if (!shouldEmail && resolvedUserId) {
+    if (!shouldEmail) {
       const { data: panel } = await supabase
         .from('panels')
         .select('settings, subscription_tier')
@@ -99,11 +97,11 @@ serve(async (req) => {
       }
     }
 
-    if (shouldEmail && !resolvedEmailTo && resolvedUserId) {
+    if (shouldEmail && !resolvedEmailTo) {
       const { data: profile } = await supabase
         .from('profiles')
         .select('email')
-        .eq('id', resolvedUserId)
+        .eq('id', userId)
         .maybeSingle();
       resolvedEmailTo = profile?.email || undefined;
     }

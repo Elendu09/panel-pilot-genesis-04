@@ -251,14 +251,23 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         .eq('id', currentSessionId);
 
       const senderName = visitorName || 'Visitor';
-      supabase.functions.invoke('send-notification', {
-        body: {
-          panelId,
-          type: 'chat',
-          title: `New Chat Message from ${senderName}`,
-          message: messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent,
-        },
-      });
+      supabase
+        .from('panels')
+        .select('owner_id')
+        .eq('id', panelId)
+        .maybeSingle()
+        .then(({ data: panel }) => {
+          if (panel?.owner_id) {
+            supabase.from('panel_notifications').insert({
+              user_id: panel.owner_id,
+              panel_id: panelId,
+              type: 'chat',
+              title: `New Chat Message from ${senderName}`,
+              message: messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent,
+              is_read: false,
+            });
+          }
+        });
 
       inputRef.current?.focus();
     } catch (error) {

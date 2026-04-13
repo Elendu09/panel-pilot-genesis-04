@@ -271,11 +271,15 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
                   <Switch checked={emailEnabled} onCheckedChange={handleEmailToggle} />
                 ) : (
                   <div className="flex items-center gap-1.5">
-                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-[10px] h-7 gap-1 px-2"
+                      onClick={() => { navigate('/panel/billing'); setOpen(false); }}
+                    >
                       <Crown className="w-3 h-3 text-amber-500" />
-                      Basic+
-                    </Badge>
-                    <Switch disabled checked={false} />
+                      Upgrade to enable
+                    </Button>
                   </div>
                 )}
               </div>
