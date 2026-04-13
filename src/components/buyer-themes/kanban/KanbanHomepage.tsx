@@ -622,7 +622,7 @@ export const KanbanHomepage = ({
               <div>
                 <h4 className="font-semibold mb-4 text-sm">{t('buyer.footer.support') || 'Support'}</h4>
                 <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
-                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><a href="#faqs" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
                   <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
                   <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
                 </ul>
