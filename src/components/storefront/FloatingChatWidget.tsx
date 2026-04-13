@@ -463,12 +463,13 @@ export const FloatingChatWidget = ({
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', liveChatSessionId);
 
-      if (panelId) {
+      if (panelId && liveChatSessionId) {
         fetch('/api/chat-notification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             panelId,
+            sessionId: liveChatSessionId,
             visitorName: 'Website Visitor',
             messagePreview: messageContent,
           }),

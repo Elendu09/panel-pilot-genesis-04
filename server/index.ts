@@ -1798,14 +1798,56 @@ async function runStartupMigrations() {
   }
 }
 
+const chatNotifRateLimit = new Map<string, number>();
+
 app.post('/api/chat-notification', async (req, res) => {
   try {
-    const { panelId, visitorName, messagePreview } = req.body;
-    if (!panelId) {
-      return res.status(400).json({ error: 'panelId is required' });
+    const { panelId, visitorName, messagePreview, sessionId } = req.body;
+    if (!panelId || !sessionId) {
+      return res.status(400).json({ error: 'panelId and sessionId are required' });
+    }
+
+    const now = Date.now();
+    const rateKey = `${panelId}:${sessionId}`;
+    const lastSent = chatNotifRateLimit.get(rateKey) || 0;
+    if (now - lastSent < 30000) {
+      return res.json({ success: true, throttled: true });
+    }
+    chatNotifRateLimit.set(rateKey, now);
+
+    if (chatNotifRateLimit.size > 10000) {
+      const cutoff = now - 300000;
+      for (const [key, ts] of chatNotifRateLimit) {
+        if (ts < cutoff) chatNotifRateLimit.delete(key);
+      }
     }
 
     const supabase = getSupabaseAdmin();
+
+    const { data: session } = await supabase
+      .from('chat_sessions')
+      .select('id, panel_id, visitor_name')
+      .eq('id', sessionId)
+      .eq('panel_id', panelId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!session) {
+      return res.status(403).json({ error: 'Invalid session' });
+    }
+
+    const { data: recentMsg } = await supabase
+      .from('chat_messages')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('sender_type', 'visitor')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!recentMsg) {
+      return res.status(403).json({ error: 'No recent visitor message found' });
+    }
 
     const { data: panel } = await supabase
       .from('panels')

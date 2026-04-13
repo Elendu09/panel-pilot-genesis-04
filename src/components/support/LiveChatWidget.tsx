@@ -255,6 +255,7 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           panelId,
+          sessionId: currentSessionId,
           visitorName: visitorName || 'Visitor',
           messagePreview: messageContent,
         }),

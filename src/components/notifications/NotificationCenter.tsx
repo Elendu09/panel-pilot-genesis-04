@@ -270,16 +270,20 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
                 {canUseEmail ? (
                   <Switch checked={emailEnabled} onCheckedChange={handleEmailToggle} />
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-[10px] h-7 gap-1 px-2"
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0">
+                        <Crown className="w-3 h-3 text-amber-500" />
+                        Basic+
+                      </Badge>
+                      <Switch disabled checked={false} />
+                    </div>
+                    <button
                       onClick={() => { navigate('/panel/billing'); setOpen(false); }}
+                      className="text-[10px] text-primary hover:underline"
                     >
-                      <Crown className="w-3 h-3 text-amber-500" />
                       Upgrade to enable
-                    </Button>
+                    </button>
                   </div>
                 )}
               </div>
