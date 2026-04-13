@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type NotificationType = "order" | "payment" | "system" | "provider" | "info" | "warning" | "error";
+export type NotificationType = "order" | "payment" | "system" | "provider" | "chat" | "info" | "warning" | "error";
 
 export interface Notification {
   id: string;
@@ -21,6 +21,7 @@ const mapDbTypeToNotificationType = (dbType: string | null, title?: string): Not
     case 'payment': return 'payment';
     case 'system': return 'system';
     case 'provider': return 'provider';
+    case 'chat': return 'chat';
     case 'warning': return 'warning';
     case 'error': return 'error';
   }
@@ -29,6 +30,7 @@ const mapDbTypeToNotificationType = (dbType: string | null, title?: string): Not
     const low = title.toLowerCase();
     if (low.includes('payment') || low.includes('deposit') || low.includes('transfer') || low.includes('transaction') || low.includes('ad purchase')) return 'payment';
     if (low.includes('order')) return 'order';
+    if (low.includes('chat') || low.includes('message')) return 'chat';
     if (low.includes('provider') || low.includes('sync')) return 'provider';
   }
   
@@ -38,6 +40,7 @@ const mapDbTypeToNotificationType = (dbType: string | null, title?: string): Not
 const getActionUrlFromType = (type: string | null, title: string): string | undefined => {
   const lowTitle = title.toLowerCase();
   
+  if (type === 'chat' || lowTitle.includes('chat message') || lowTitle.includes('new chat')) return '/panel/support';
   if (type === 'order' || lowTitle.includes('order')) return '/panel/orders';
   
   if (lowTitle.includes('ad purchase') || lowTitle.includes('promotion') || lowTitle.includes('advertis') || lowTitle.includes('promote') || lowTitle.includes('ad campaign')) {

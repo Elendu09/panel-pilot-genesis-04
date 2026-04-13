@@ -402,9 +402,22 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     };
   }, [selectedSession]);
 
-  // Scroll to bottom
+  const prevMessageCountRef = useRef(0);
+  const isUserTypingRef = useRef(false);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const newCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = newCount;
+
+    if (newCount > prevCount && !isUserTypingRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (newCount > prevCount) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg?.sender_type === 'visitor' || lastMsg?.sender_type === 'ai') {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
   }, [messages]);
 
   // Broadcast typing status
@@ -604,8 +617,10 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value;
+      isUserTypingRef.current = true;
       setNewMessage(value);
       broadcastTyping();
+      setTimeout(() => { isUserTypingRef.current = false; }, 300);
 
       // Check for shortcut trigger
       if (value.startsWith("/")) {
@@ -812,6 +827,8 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
           value={newMessage}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
+          onFocus={() => { isUserTypingRef.current = true; }}
+          onBlur={() => { isUserTypingRef.current = false; }}
           placeholder="Type a reply... (/ for shortcuts)"
           className="flex-1 min-h-[44px] max-h-32 resize-none"
           rows={1}

@@ -1,9 +1,10 @@
-import { useState } from "react";
-import { Bell, Check, CheckCheck, Trash2, ShoppingCart, CreditCard, Settings, Plug, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Bell, Check, CheckCheck, Trash2, ShoppingCart, CreditCard, Settings, Plug, X, MessageCircle, Mail, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet,
   SheetContent,
@@ -30,12 +31,15 @@ import { useNotifications, NotificationType } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const typeIcons: Record<NotificationType, React.ElementType> = {
   order: ShoppingCart,
   payment: CreditCard,
   system: Settings,
   provider: Plug,
+  chat: MessageCircle,
   info: Settings,
   warning: Settings,
   error: Settings,
@@ -46,6 +50,7 @@ const typeColors: Record<NotificationType, string> = {
   payment: "bg-green-500/10 text-green-500",
   system: "bg-orange-500/10 text-orange-500",
   provider: "bg-purple-500/10 text-purple-500",
+  chat: "bg-cyan-500/10 text-cyan-500",
   info: "bg-blue-500/10 text-blue-500",
   warning: "bg-yellow-500/10 text-yellow-500",
   error: "bg-red-500/10 text-red-500",
@@ -128,8 +133,57 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll, getByType } = useNotifications();
+
+  const [panelId, setPanelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const fetchPanelSettings = async () => {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('id, subscription_tier, settings')
+        .eq('owner_id', profile.id)
+        .limit(1)
+        .maybeSingle();
+      if (panel) {
+        setPanelId(panel.id);
+        if (panel.subscription_tier) setSubscriptionTier(panel.subscription_tier);
+        const settings = (panel.settings as Record<string, any>) || {};
+        if (settings.email_notifications === true) setEmailEnabled(true);
+      }
+    };
+    fetchPanelSettings();
+  }, [profile?.id]);
+
+  const handleEmailToggle = useCallback(async (checked: boolean) => {
+    if (!profile?.id || !panelId) return;
+    setEmailEnabled(checked);
+
+    try {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('settings')
+        .eq('id', panelId)
+        .single();
+
+      const currentSettings = (panel?.settings as Record<string, any>) || {};
+      await supabase
+        .from('panels')
+        .update({ settings: { ...currentSettings, email_notifications: checked } })
+        .eq('id', panelId);
+    } catch (err) {
+      console.error('Failed to save email notification preference:', err);
+    }
+  }, [profile?.id, panelId]);
+
+  const canUseEmail = subscriptionTier === 'basic' || subscriptionTier === 'pro' || subscriptionTier === 'enterprise';
 
   const handleNavigate = (url: string) => {
     navigate(url);
@@ -155,16 +209,26 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
             Mark all read
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowClearConfirm(true)}
-          disabled={notifications.length === 0}
-          className="h-8 text-xs text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="w-3.5 h-3.5 mr-1" />
-          Clear
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSettings(!showSettings)}
+            className={cn("h-8 w-8 p-0", showSettings && "bg-accent")}
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowClearConfirm(true)}
+            disabled={notifications.length === 0}
+            className="h-8 text-xs text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1" />
+            Clear
+          </Button>
+        </div>
         <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -186,6 +250,40 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
         </AlertDialog>
       </div>
 
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-b border-border"
+          >
+            <div className="px-4 py-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Email Notifications</p>
+                    <p className="text-[11px] text-muted-foreground">Forward notifications to your email</p>
+                  </div>
+                </div>
+                {canUseEmail ? (
+                  <Switch checked={emailEnabled} onCheckedChange={handleEmailToggle} />
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0">
+                      <Crown className="w-3 h-3 text-amber-500" />
+                      Basic+
+                    </Badge>
+                    <Switch disabled checked={false} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-10 px-2">
           <TabsTrigger value="all" className="text-xs data-[state=active]:shadow-none">
@@ -201,6 +299,9 @@ export const NotificationCenter = ({ variant = "popover" }: NotificationCenterPr
           </TabsTrigger>
           <TabsTrigger value="payment" className="text-xs data-[state=active]:shadow-none">
             Payments
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="text-xs data-[state=active]:shadow-none">
+            Chat
           </TabsTrigger>
           <TabsTrigger value="system" className="text-xs data-[state=active]:shadow-none">
             System
