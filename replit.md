@@ -30,7 +30,7 @@ npm run dev   # Starts both Express server (port 3001) and Vite (port 5000) conc
 
 - `SUPABASE_URL` — Supabase project URL (set)
 - `SUPABASE_ANON_KEY` — Supabase anon/publishable key (set)
-- `SUPABASE_SERVICE_ROLE_KEY` — **Required for server-side admin DB operations** (user must provide)
+- `SUPABASE_SERVICE_ROLE_KEY` — **Required for server-side admin DB operations** (set)
 - `STRIPE_SECRET_KEY` — Optional: for Stripe payment processing
 - `LOVABLE_API_KEY` — Optional: for AI features (Gemini via ai.gateway.lovable.dev)
 
