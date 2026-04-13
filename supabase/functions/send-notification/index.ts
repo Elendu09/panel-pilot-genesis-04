@@ -29,14 +29,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authorization required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const payload: NotificationPayload = await req.json();
     const { panelId, userId, type, title, message, metadata, sendEmail, emailTo } = payload;
 
@@ -45,6 +37,69 @@ serve(async (req) => {
         JSON.stringify({ error: 'panelId, title, and message are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (type === 'chat') {
+      const sessionId = metadata?.sessionId;
+      const messageId = metadata?.messageId;
+      if (!sessionId || !messageId) {
+        return new Response(
+          JSON.stringify({ error: 'Chat notifications require metadata.sessionId and metadata.messageId' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: chatMsg } = await supabase
+        .from('chat_messages')
+        .select('id, session_id, sender_type')
+        .eq('id', messageId)
+        .eq('session_id', sessionId)
+        .eq('sender_type', 'visitor')
+        .maybeSingle();
+
+      if (!chatMsg) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or non-visitor message' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { data: session } = await supabase
+        .from('chat_sessions')
+        .select('id, panel_id')
+        .eq('id', sessionId)
+        .eq('panel_id', panelId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (!session) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid or inactive chat session' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { count: recentCount } = await supabase
+        .from('panel_notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('panel_id', panelId)
+        .eq('type', 'chat')
+        .gte('created_at', new Date(Date.now() - 60000).toISOString());
+
+      if (recentCount && recentCount >= 30) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded for chat notifications' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Authorization required for non-chat notifications' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     let resolvedUserId = userId;
