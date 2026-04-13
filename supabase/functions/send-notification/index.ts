@@ -39,14 +39,23 @@ serve(async (req) => {
       );
     }
 
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('owner_id')
+        .eq('id', panelId)
+        .maybeSingle();
+      resolvedUserId = panel?.owner_id || undefined;
+    }
+
     console.log(`Creating notification: ${type} - ${title}`);
 
-    // Create in-app notification
     const { data: notification, error: notifError } = await supabase
       .from('panel_notifications')
       .insert({
         panel_id: panelId,
-        user_id: userId,
+        user_id: resolvedUserId,
         type: mapNotificationType(type),
         title,
         message,
@@ -60,23 +69,50 @@ serve(async (req) => {
       throw new Error(`Failed to create notification: ${notifError.message}`);
     }
 
-    // Log to audit
     await supabase.from('audit_logs').insert({
       panel_id: panelId,
-      user_id: userId,
+      user_id: resolvedUserId,
       action: 'notification_sent',
       resource_type: 'notification',
       resource_id: notification.id,
       details: { type, title, sendEmail: sendEmail || false },
     });
 
-    // If email is requested, log it (would integrate with email service)
-    if (sendEmail && emailTo) {
-      console.log(`Email notification requested for: ${emailTo}`);
-      
-      // Log email send attempt
+    let shouldEmail = sendEmail || false;
+    let resolvedEmailTo = emailTo;
+
+    if (!shouldEmail && resolvedUserId) {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('settings, subscription_tier')
+        .eq('id', panelId)
+        .maybeSingle();
+
+      if (panel) {
+        const settings = (panel.settings as Record<string, any>) || {};
+        const tier = panel.subscription_tier || 'free';
+        const paidTier = tier === 'basic' || tier === 'pro' || tier === 'enterprise';
+
+        if (paidTier && settings.email_notifications === true) {
+          shouldEmail = true;
+        }
+      }
+    }
+
+    if (shouldEmail && !resolvedEmailTo && resolvedUserId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', resolvedUserId)
+        .maybeSingle();
+      resolvedEmailTo = profile?.email || undefined;
+    }
+
+    if (shouldEmail && resolvedEmailTo) {
+      console.log(`Email notification requested for: ${resolvedEmailTo}`);
+
       await supabase.from('email_send_logs').insert({
-        email: emailTo,
+        email: resolvedEmailTo,
         email_action_type: `notification_${type}`,
         metadata: {
           title,
@@ -98,7 +134,7 @@ serve(async (req) => {
           message,
           createdAt: notification.created_at,
         },
-        emailSent: sendEmail || false,
+        emailSent: shouldEmail && !!resolvedEmailTo,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

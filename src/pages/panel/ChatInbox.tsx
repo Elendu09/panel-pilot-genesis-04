@@ -776,7 +776,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
 
   // Chat Input Component - NOT memoized so it always has fresh state
   const ChatInput = () => (
-    <div className="p-4 border-t pb-safe">
+    <div className="p-4 border-t pb-safe shrink-0">
       {cannedResponses.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {cannedResponses.slice(0, isMobile ? 3 : 5).map((response) => (
@@ -927,7 +927,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
         )}
 
         <Sheet open={chatSheetOpen} onOpenChange={setChatSheetOpen}>
-          <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl p-0 flex flex-col">
+          <SheetContent side="bottom" className="rounded-t-2xl p-0 flex flex-col" style={{ height: '90dvh', maxHeight: '90dvh' }}>
             <SheetHeader className="p-4 border-b shrink-0">
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" onClick={() => setChatSheetOpen(false)} className="shrink-0 -ml-1">

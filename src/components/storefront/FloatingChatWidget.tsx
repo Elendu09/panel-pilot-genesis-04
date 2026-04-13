@@ -464,45 +464,14 @@ export const FloatingChatWidget = ({
         .eq('id', liveChatSessionId);
 
       if (panelId) {
-        const notifTitle = 'New Chat Message from Website Visitor';
-        const notifMessage = messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent;
-        supabase
-          .from('panels')
-          .select('owner_id, settings')
-          .eq('id', panelId)
-          .maybeSingle()
-          .then(async ({ data: panel }) => {
-            if (!panel?.owner_id) return;
-            await supabase.from('panel_notifications').insert({
-              user_id: panel.owner_id,
-              panel_id: panelId,
-              type: 'chat',
-              title: notifTitle,
-              message: notifMessage,
-              is_read: false,
-            });
-            const settings = (panel.settings as Record<string, any>) || {};
-            if (settings.email_notifications) {
-              const { data: ownerProfile } = await supabase
-                .from('profiles')
-                .select('email')
-                .eq('id', panel.owner_id)
-                .maybeSingle();
-              if (ownerProfile?.email) {
-                supabase.functions.invoke('send-notification', {
-                  body: {
-                    panelId,
-                    userId: panel.owner_id,
-                    type: 'chat',
-                    title: notifTitle,
-                    message: notifMessage,
-                    sendEmail: true,
-                    emailTo: ownerProfile.email,
-                  },
-                });
-              }
-            }
-          });
+        supabase.functions.invoke('send-notification', {
+          body: {
+            panelId,
+            type: 'chat',
+            title: 'New Chat Message from Website Visitor',
+            message: messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent,
+          },
+        });
       }
     } catch (error) {
       console.error('Error sending message:', error);
