@@ -11,9 +11,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ThemeCustomization } from '@/types/theme-customization';
 import { 
-  getAnimationVariants, getContainerVariants, getItemVariants,
-  getButtonStyles, getCardStyles, getHoverScale, getLucideIcon,
-  getDefaultStats, getDefaultFeatures, getDefaultTestimonials, getDefaultFAQs,
+  getButtonStyles, getHoverScale, getLucideIcon,
+  getDefaultTestimonials, getDefaultFAQs,
   getSocialLinks, getModeColors, getSocialIconMap
 } from '@/lib/theme-utils';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -41,7 +40,7 @@ export const KanbanHomepage = ({
   logoUrl 
 }: KanbanHomepageProps) => {
   const navigate = useNavigate();
-  const { t, isRTL } = useLanguage();
+  const { t } = useLanguage();
   
   const buyerAuthContext = useContext(BuyerAuthContext);
   const buyer = buyerAuthContext?.buyer || null;
@@ -81,7 +80,6 @@ export const KanbanHomepage = ({
   const heroSubtitle = customization.heroSubtitle || t('buyer.hero.subtitle');
   const heroBadge = customization.heroBadgeText || t('buyer.hero.badge');
   const heroCTA = customization.heroCTAText || t('buyer.hero.cta');
-  const heroSecondaryCTA = customization.heroSecondaryCTAText || t('buyer.hero.ctaSecondary');
   const displayLogo = customization.logoUrl || logoUrl;
   const companyName = customization.companyName || panelName;
 
@@ -102,15 +100,11 @@ export const KanbanHomepage = ({
   const testimonials = customization.testimonials || getDefaultTestimonials();
   const faqs = customization.faqs || getDefaultFAQs();
 
-  const animationVariants = getAnimationVariants(customization);
-  const containerVariants = getContainerVariants(customization);
-  const itemVariants = getItemVariants(customization);
   const hoverScale = getHoverScale(customization);
   const enableAnimations = customization.enableAnimations !== false;
 
   const primaryButtonStyle = getButtonStyles(customization, 'primary');
   const outlineButtonStyle = getButtonStyles(customization, 'outline');
-  const cardStyle = getCardStyles(customization);
 
   const sectionPadding = customization.sectionPaddingY || 80;
   const containerMax = customization.containerMaxWidth || 1280;
@@ -566,6 +560,83 @@ export const KanbanHomepage = ({
           </div>
         </section>
       </article>
+
+      {(customization.enableFooter !== false) && (
+        <footer className="py-12" style={{ 
+          backgroundColor: isLightMode ? '#F1F5F9' : surfaceColor,
+          borderTop: `1px solid ${primary}15` 
+        }}>
+          <div className="mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: containerMax }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+              <div className="col-span-2 md:col-span-1">
+                <div className="flex items-center gap-2 mb-4">
+                  {displayLogo ? (
+                    <img src={displayLogo} alt={companyName} className="w-8 h-8 rounded-lg object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}>
+                      <LayoutDashboard className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <span className="font-bold text-lg">{companyName}</span>
+                </div>
+                <p className="text-sm mb-4" style={{ color: mutedColor }}>
+                  {customization.footerAbout || 'Professional SMM services with instant delivery and 24/7 support.'}
+                </p>
+                {(() => {
+                  const socialLinks = getSocialLinks(customization.socialLinks);
+                  const iconMap = getSocialIconMap();
+                  return socialLinks.length > 0 && (
+                    <div className="flex gap-3">
+                      {socialLinks.map(link => {
+                        const Icon = iconMap[link.id] || LayoutDashboard;
+                        return (
+                          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="opacity-60 hover:opacity-100 transition-opacity">
+                            <Icon className="w-5 h-5" />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4 text-sm">{t('buyer.footer.services') || 'Services'}</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><Link to="/services" className="hover:opacity-80 transition-opacity">{t('buyer.footer.allServices') || 'All Services'}</Link></li>
+                  <li><Link to="/services?platform=instagram" className="hover:opacity-80 transition-opacity">Instagram</Link></li>
+                  <li><Link to="/services?platform=youtube" className="hover:opacity-80 transition-opacity">YouTube</Link></li>
+                  <li><Link to="/services?platform=tiktok" className="hover:opacity-80 transition-opacity">TikTok</Link></li>
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4 text-sm">{t('buyer.footer.company') || 'Company'}</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><Link to="/about" className="hover:opacity-80 transition-opacity">{t('buyer.footer.aboutUs') || 'About Us'}</Link></li>
+                  <li><Link to="/contact" className="hover:opacity-80 transition-opacity">{t('buyer.footer.contact') || 'Contact'}</Link></li>
+                  {showBlogInMenu && <li><Link to="/blog" className="hover:opacity-80 transition-opacity">{t('buyer.footer.blog') || 'Blog'}</Link></li>}
+                </ul>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold mb-4 text-sm">{t('buyer.footer.support') || 'Support'}</h4>
+                <ul className="space-y-2 text-sm" style={{ color: mutedColor }}>
+                  <li><a href="#faq" className="hover:opacity-80 transition-opacity">{t('buyer.footer.faq') || 'FAQ'}</a></li>
+                  <li><Link to="/terms" className="hover:opacity-80 transition-opacity">{t('buyer.footer.terms') || 'Terms'}</Link></li>
+                  <li><Link to="/privacy" className="hover:opacity-80 transition-opacity">{t('buyer.footer.privacy') || 'Privacy'}</Link></li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="pt-6 text-center text-sm" style={{ borderTop: `1px solid ${primary}12`, color: mutedColor }}>
+              {customization.footerText 
+                ? customization.footerText.replace(/\{companyName\}/g, companyName)
+                : `© ${new Date().getFullYear()} ${companyName}. All rights reserved.`}
+            </div>
+          </div>
+        </footer>
+      )}
     </main>
   );
 };
