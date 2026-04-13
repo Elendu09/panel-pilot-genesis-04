@@ -40,9 +40,26 @@ serve(async (req) => {
     const payload: NotificationPayload = await req.json();
     const { panelId, userId, type, title, message, metadata, sendEmail, emailTo } = payload;
 
-    if (!panelId || !userId || !title || !message) {
+    if (!panelId || !title || !message) {
       return new Response(
-        JSON.stringify({ error: 'panelId, userId, title, and message are required' }),
+        JSON.stringify({ error: 'panelId, title, and message are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let resolvedUserId = userId;
+    if (!resolvedUserId) {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('owner_id')
+        .eq('id', panelId)
+        .maybeSingle();
+      resolvedUserId = panel?.owner_id || undefined;
+    }
+
+    if (!resolvedUserId) {
+      return new Response(
+        JSON.stringify({ error: 'Could not determine notification recipient' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -53,7 +70,7 @@ serve(async (req) => {
       .from('panel_notifications')
       .insert({
         panel_id: panelId,
-        user_id: userId,
+        user_id: resolvedUserId,
         type: mapNotificationType(type),
         title,
         message,
@@ -69,7 +86,7 @@ serve(async (req) => {
 
     await supabase.from('audit_logs').insert({
       panel_id: panelId,
-      user_id: userId,
+      user_id: resolvedUserId,
       action: 'notification_sent',
       resource_type: 'notification',
       resource_id: notification.id,
@@ -101,7 +118,7 @@ serve(async (req) => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('email')
-        .eq('id', userId)
+        .eq('id', resolvedUserId)
         .maybeSingle();
       resolvedEmailTo = profile?.email || undefined;
     }

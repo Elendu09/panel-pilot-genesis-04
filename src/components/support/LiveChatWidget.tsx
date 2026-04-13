@@ -250,24 +250,15 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', currentSessionId);
 
-      const senderName = visitorName || 'Visitor';
-      supabase
-        .from('panels')
-        .select('owner_id')
-        .eq('id', panelId)
-        .maybeSingle()
-        .then(({ data: panel }) => {
-          if (panel?.owner_id) {
-            supabase.from('panel_notifications').insert({
-              user_id: panel.owner_id,
-              panel_id: panelId,
-              type: 'chat',
-              title: `New Chat Message from ${senderName}`,
-              message: messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent,
-              is_read: false,
-            });
-          }
-        });
+      fetch('/api/chat-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          panelId,
+          visitorName: visitorName || 'Visitor',
+          messagePreview: messageContent,
+        }),
+      }).catch(() => {});
 
       inputRef.current?.focus();
     } catch (error) {

@@ -1798,6 +1798,82 @@ async function runStartupMigrations() {
   }
 }
 
+app.post('/api/chat-notification', async (req, res) => {
+  try {
+    const { panelId, visitorName, messagePreview } = req.body;
+    if (!panelId) {
+      return res.status(400).json({ error: 'panelId is required' });
+    }
+
+    const supabase = getSupabaseAdmin();
+
+    const { data: panel } = await supabase
+      .from('panels')
+      .select('owner_id, settings, subscription_tier')
+      .eq('id', panelId)
+      .maybeSingle();
+
+    if (!panel?.owner_id) {
+      return res.status(404).json({ error: 'Panel not found' });
+    }
+
+    const senderName = visitorName || 'Website Visitor';
+    const notifTitle = `New Chat Message from ${senderName}`;
+    const notifMessage = messagePreview
+      ? (messagePreview.length > 100 ? messagePreview.slice(0, 100) + '...' : messagePreview)
+      : 'You have a new chat message.';
+
+    const { data: notification, error: notifError } = await supabase
+      .from('panel_notifications')
+      .insert({
+        user_id: panel.owner_id,
+        panel_id: panelId,
+        type: 'chat',
+        title: notifTitle,
+        message: notifMessage,
+        is_read: false,
+      })
+      .select('id')
+      .single();
+
+    if (notifError) {
+      console.error('[server] Chat notification insert error:', notifError);
+      return res.status(500).json({ error: 'Failed to create notification' });
+    }
+
+    const settings = (panel.settings as Record<string, any>) || {};
+    const tier = panel.subscription_tier || 'free';
+    const paidTier = tier === 'basic' || tier === 'pro' || tier === 'enterprise';
+
+    if (paidTier && settings.email_notifications === true) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', panel.owner_id)
+        .maybeSingle();
+
+      if (profile?.email) {
+        await supabase.from('email_send_logs').insert({
+          email: profile.email,
+          email_action_type: 'notification_chat',
+          metadata: {
+            title: notifTitle,
+            message: notifMessage,
+            type: 'chat',
+            panel_id: panelId,
+            sent_at: new Date().toISOString(),
+          },
+        });
+      }
+    }
+
+    return res.json({ success: true, notificationId: notification?.id });
+  } catch (error: any) {
+    console.error('[server] Chat notification error:', error);
+    return res.status(500).json({ error: error.message || 'Internal error' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`[server] Express API running on port ${PORT}`);
   runStartupMigrations();

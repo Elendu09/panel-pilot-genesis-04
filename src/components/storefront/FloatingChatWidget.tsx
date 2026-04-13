@@ -464,23 +464,15 @@ export const FloatingChatWidget = ({
         .eq('id', liveChatSessionId);
 
       if (panelId) {
-        supabase
-          .from('panels')
-          .select('owner_id')
-          .eq('id', panelId)
-          .maybeSingle()
-          .then(({ data: panel }) => {
-            if (panel?.owner_id) {
-              supabase.from('panel_notifications').insert({
-                user_id: panel.owner_id,
-                panel_id: panelId,
-                type: 'chat',
-                title: 'New Chat Message from Website Visitor',
-                message: messageContent.length > 100 ? messageContent.slice(0, 100) + '...' : messageContent,
-                is_read: false,
-              });
-            }
-          });
+        fetch('/api/chat-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            panelId,
+            visitorName: 'Website Visitor',
+            messagePreview: messageContent,
+          }),
+        }).catch(() => {});
       }
     } catch (error) {
       console.error('Error sending message:', error);
