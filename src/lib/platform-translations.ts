@@ -118,7 +118,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Why Choose Us?",
+    "buyer.features.chooseUsHighlight": "Choose Us",
+    "buyer.features.subtitle": "We provide the best social media marketing services at competitive prices.",
     "buyer.features.refillGuarantee": "Refill Guarantee",
+    "buyer.faq.highlight": "Questions",
+    "buyer.howItWorks.highlight": "Works",
+    "buyer.cta.readyToStart": "Ready to Get Started?",
 
     // Misc
     "buyer.trusted": "Trusted by",
@@ -436,7 +441,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "¿Por Qué Elegirnos?",
+    "buyer.features.chooseUsHighlight": "Elegirnos",
+    "buyer.features.subtitle": "Ofrecemos los mejores servicios de marketing en redes sociales a precios competitivos.",
     "buyer.features.refillGuarantee": "Garantía de Relleno",
+    "buyer.faq.highlight": "Preguntas",
+    "buyer.howItWorks.highlight": "Funciona",
+    "buyer.cta.readyToStart": "¿Listo para Comenzar?",
 
     // Misc
     "buyer.trusted": "Confían en nosotros",
@@ -720,7 +730,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Por Que Nos Escolher?",
+    "buyer.features.chooseUsHighlight": "Nos Escolher",
+    "buyer.features.subtitle": "Fornecemos os melhores serviços de marketing em redes sociais a preços competitivos.",
     "buyer.features.refillGuarantee": "Garantia de Reposição",
+    "buyer.faq.highlight": "Perguntas",
+    "buyer.howItWorks.highlight": "Funciona",
+    "buyer.cta.readyToStart": "Pronto para Começar?",
 
     // Misc
     "buyer.trusted": "Confiam em nós",
@@ -1003,7 +1018,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "لماذا تختارنا؟",
+    "buyer.features.chooseUsHighlight": "اختيارنا",
+    "buyer.features.subtitle": "نقدم أفضل خدمات التسويق على وسائل التواصل الاجتماعي بأسعار تنافسية.",
     "buyer.features.refillGuarantee": "ضمان إعادة التعبئة",
+    "buyer.faq.highlight": "الأسئلة",
+    "buyer.howItWorks.highlight": "يعمل",
+    "buyer.cta.readyToStart": "هل أنت مستعد للبدء؟",
 
     // Misc
     "buyer.trusted": "يثقون بنا",
@@ -1287,7 +1307,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Neden Bizi Seçmelisiniz?",
+    "buyer.features.chooseUsHighlight": "Bizi Seçin",
+    "buyer.features.subtitle": "Rekabetçi fiyatlarla en iyi sosyal medya pazarlama hizmetlerini sunuyoruz.",
     "buyer.features.refillGuarantee": "Yenileme Garantisi",
+    "buyer.faq.highlight": "Sorular",
+    "buyer.howItWorks.highlight": "Çalışır",
+    "buyer.cta.readyToStart": "Başlamaya Hazır mısınız?",
 
     // Misc
     "buyer.trusted": "Bize güveniyorlar",
@@ -1563,7 +1588,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Почему Выбирают Нас?",
+    "buyer.features.chooseUsHighlight": "Нас",
+    "buyer.features.subtitle": "Мы предоставляем лучшие услуги SMM по конкурентным ценам.",
     "buyer.features.refillGuarantee": "Гарантия Пополнения",
+    "buyer.faq.highlight": "Вопросы",
+    "buyer.howItWorks.highlight": "Работает",
+    "buyer.cta.readyToStart": "Готовы начать?",
 
     // Misc
     "buyer.trusted": "Нам доверяют",
@@ -1839,7 +1869,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Pourquoi Nous Choisir?",
+    "buyer.features.chooseUsHighlight": "Nous Choisir",
+    "buyer.features.subtitle": "Nous fournissons les meilleurs services de marketing sur les réseaux sociaux à des prix compétitifs.",
     "buyer.features.refillGuarantee": "Garantie de Remplissage",
+    "buyer.faq.highlight": "Questions",
+    "buyer.howItWorks.highlight": "Fonctionne",
+    "buyer.cta.readyToStart": "Prêt à Commencer?",
 
     // Misc
     "buyer.trusted": "Ils nous font confiance",
@@ -2115,7 +2150,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "Warum Uns Wählen?",
+    "buyer.features.chooseUsHighlight": "Uns Wählen",
+    "buyer.features.subtitle": "Wir bieten die besten Social-Media-Marketing-Dienste zu wettbewerbsfähigen Preisen.",
     "buyer.features.refillGuarantee": "Nachfüll-Garantie",
+    "buyer.faq.highlight": "Fragen",
+    "buyer.howItWorks.highlight": "Funktioniert",
+    "buyer.cta.readyToStart": "Bereit anzufangen?",
 
     // Misc
     "buyer.trusted": "Sie vertrauen uns",
@@ -2390,7 +2430,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "为什么选择我们？",
+    "buyer.features.chooseUsHighlight": "选择我们",
+    "buyer.features.subtitle": "我们以具有竞争力的价格提供最好的社交媒体营销服务。",
     "buyer.features.refillGuarantee": "补充保证",
+    "buyer.faq.highlight": "问题",
+    "buyer.howItWorks.highlight": "运作",
+    "buyer.cta.readyToStart": "准备好开始了吗？",
 
     // Misc
     "buyer.trusted": "他们信任我们",
@@ -2665,7 +2710,12 @@ export const platformTranslations = {
 
     // Features extras
     "buyer.features.whyChooseUs": "हमें क्यों चुनें?",
+    "buyer.features.chooseUsHighlight": "हमें चुनें",
+    "buyer.features.subtitle": "हम प्रतिस्पर्धी कीमतों पर सर्वोत्तम सोशल मीडिया मार्केटिंग सेवाएं प्रदान करते हैं।",
     "buyer.features.refillGuarantee": "रिफिल गारंटी",
+    "buyer.faq.highlight": "प्रश्न",
+    "buyer.howItWorks.highlight": "काम करता है",
+    "buyer.cta.readyToStart": "शुरू करने के लिए तैयार हैं?",
 
     // Misc
     "buyer.trusted": "वे हम पर भरोसा करते हैं",

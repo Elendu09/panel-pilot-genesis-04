@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { useTenant } from "@/hooks/useTenant";
 import BuyerLayout from "./BuyerLayout";
 import { Link } from "react-router-dom";
@@ -686,9 +687,15 @@ const BuyerDeposit = () => {
         className="space-y-4 md:space-y-6 max-w-4xl mx-auto"
       >
         {/* Header */}
-        <motion.div variants={itemVariants}>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Add Funds</h1>
-          <p className="text-sm text-muted-foreground">Deposit money to purchase services</p>
+        <motion.div variants={itemVariants} className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Add Funds</h1>
+            <p className="text-sm text-muted-foreground">Deposit money to purchase services</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 pt-1">
+            <span className="text-xs text-muted-foreground hidden sm:block">Currency:</span>
+            <CurrencySelector />
+          </div>
         </motion.div>
 
         {/* Current Balance */}

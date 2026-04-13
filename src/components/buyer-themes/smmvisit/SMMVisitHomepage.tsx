@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { 
   Globe, Zap, Users, Star, ArrowRight, Award, TrendingUp,
   Instagram, Youtube, Twitter, Facebook, User, Lock, Bookmark, 
-  LockKeyhole, ChevronDown, Loader2
+  LockKeyhole, ChevronDown, Loader2, LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,18 +212,14 @@ export const SMMVisitHomepage = ({
         companyName={companyName}
         logoUrl={displayLogo}
         logoIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-10 h-10 rounded-xl object-contain"
-          />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, boxShadow: `0 4px 14px ${primary}40` }}>
+            <LayoutDashboard className="w-5 h-5 text-white" />
+          </div>
         }
         defaultIcon={
-          <img 
-            src="/default-panel-favicon.png" 
-            alt={companyName} 
-            className="w-10 h-10 rounded-xl object-contain"
-          />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})`, boxShadow: `0 4px 14px ${primary}40` }}>
+            <LayoutDashboard className="w-5 h-5 text-white" />
+          </div>
         }
         showBlogInMenu={showBlogInMenu}
         themeMode={themeMode}
@@ -277,12 +273,12 @@ export const SMMVisitHomepage = ({
               <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: mutedColor }}>{heroSubtitle}</p>
               {enableFastOrder ? (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button size="lg" onClick={() => navigate('/fast-order')} className="font-semibold text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}><Zap className="w-5 h-5 mr-2" />{t('buyer.fastOrder.title') || 'Fast Order'}</Button>
+                  <Button size="lg" onClick={() => navigate('/fast-order')} className="font-semibold text-lg px-10 shadow-xl hover:opacity-90" style={primaryButtonStyle}><Zap className="w-5 h-5 mr-2" />{t('buyer.fastOrder.title') || 'Fast Order'}</Button>
                   <Button size="lg" variant="outline" asChild className="font-semibold" style={{ borderColor: primary, color: textCol }}><Link to="/services">{t('buyer.services.viewAll') || 'View Services'}</Link></Button>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button size="lg" onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')} className="font-semibold text-lg px-10 text-white shadow-xl hover:opacity-90" style={primaryButtonStyle}>{buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" /></Button>
+                  <Button size="lg" onClick={() => buyer ? navigate('/dashboard') : navigate('/auth?tab=signup')} className="font-semibold text-lg px-10 shadow-xl hover:opacity-90" style={primaryButtonStyle}>{buyer ? (t('buyer.nav.dashboard') || 'Dashboard') : (heroCTA || 'Get Started')} <ArrowRight className="w-5 h-5 ml-2" /></Button>
                   <Button size="lg" variant="outline" onClick={() => navigate('/fast-order')} className="font-semibold" style={{ borderColor: primary, color: textCol }}><Zap className="w-5 h-5 mr-2" />{t('buyer.fastOrder.title') || 'Fast Order'}</Button>
                 </div>
               )}

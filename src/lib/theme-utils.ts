@@ -115,6 +115,16 @@ export const getItemVariants = (customization: ThemeCustomization) => {
 };
 
 // Generate button styles based on customization
+const getContrastColor = (hex: string): string => {
+  const c = hex.replace('#', '');
+  if (c.length < 6) return '#FFFFFF';
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 0.55 ? '#111111' : '#FFFFFF';
+};
+
 export const getButtonStyles = (customization: ThemeCustomization, variant: 'primary' | 'secondary' | 'outline' = 'primary') => {
   const primary = customization.primaryColor || '#6366F1';
   const secondary = customization.secondaryColor || '#8B5CF6';
@@ -132,11 +142,11 @@ export const getButtonStyles = (customization: ThemeCustomization, variant: 'pri
   if (variant === 'primary') {
     if (style === 'gradient') {
       baseStyles.background = `linear-gradient(to right, ${primary}, ${secondary})`;
-      baseStyles.color = '#FFFFFF';
+      baseStyles.color = getContrastColor(primary);
       baseStyles.border = 'none';
     } else if (style === 'solid') {
       baseStyles.backgroundColor = primary;
-      baseStyles.color = '#FFFFFF';
+      baseStyles.color = getContrastColor(primary);
       baseStyles.border = 'none';
     } else if (style === 'outline') {
       baseStyles.backgroundColor = 'transparent';
