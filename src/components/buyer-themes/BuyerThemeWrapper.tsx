@@ -218,9 +218,10 @@ export const BuyerThemeWrapper = ({
     };
   }, [panelData, themeMode]);
 
-  // Generate CSS variables for theme colors
   const themeCSS = useMemo(() => {
     if (!customization.primaryColor) return '';
+    const branding = panelData?.custom_branding as any || {};
+    const lightModeColors = branding.lightModeColors || undefined;
     return generateBuyerThemeCSS({
       primaryColor: customization.primaryColor,
       secondaryColor: customization.secondaryColor || '#8B5CF6',
@@ -235,8 +236,8 @@ export const BuyerThemeWrapper = ({
       warningColor: customization.warningColor || '#F59E0B',
       infoColor: customization.infoColor || '#3B82F6',
       errorColor: customization.errorColor || '#EF4444',
-    });
-  }, [customization]);
+    }, lightModeColors);
+  }, [customization, panelData?.custom_branding]);
 
   const contextValue = useMemo(() => ({
     themeKey,

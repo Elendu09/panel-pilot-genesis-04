@@ -319,12 +319,24 @@ const BuyerDeposit = () => {
   useEffect(() => {
     if (!buyer?.id || !panel?.id) return;
 
-    const hasPending = transactions.some(t => 
+    const pendingTxs = transactions.filter(t => 
       t.status === 'pending' || t.status === 'pending_verification' || t.status === 'processing'
     );
+    const hasPending = pendingTxs.length > 0;
     const interval = hasPending ? 8000 : 30000;
     
     const pollInterval = setInterval(async () => {
+      if (hasPending) {
+        for (const tx of pendingTxs) {
+          try {
+            await supabase.functions.invoke('process-payment', {
+              body: { action: 'verify-payment', transactionId: tx.id }
+            });
+          } catch (e) {
+            // silent — verification is best-effort
+          }
+        }
+      }
       await fetchTransactions();
     }, interval);
 
@@ -495,19 +507,26 @@ const BuyerDeposit = () => {
       return;
     }
 
+    const korapaySupported = ['NGN', 'GHS', 'KES'];
+    if (methodToUse === 'korapay' && !korapaySupported.includes(currency.toUpperCase())) {
+      toast({
+        variant: "destructive",
+        title: "Currency Not Supported",
+        description: `Kora Pay only supports ${korapaySupported.join(', ')}. Please switch your currency or choose a different payment method.`
+      });
+      return;
+    }
+
     setProcessing(true);
     setShowManualSelector(false);
 
     try {
       const depositAmount = parseFloat(amount);
-      // Convert to USD for storage if not USD
       const depositAmountUSD = currency === 'USD' ? depositAmount : convertToUSD(depositAmount);
-      // Look in both paymentMethods and allManualMethods
       const selectedPaymentMethod = paymentMethods.find(m => m.id === methodToUse) 
         || allManualMethods.find(m => m.id === methodToUse);
       const methodName = selectedPaymentMethod?.name || methodToUse;
 
-      // Call the payment processing edge function (it creates the transaction server-side)
       const response = await supabase.functions.invoke('process-payment', {
         body: {
           gateway: methodToUse,

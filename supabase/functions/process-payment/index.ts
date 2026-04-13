@@ -883,7 +883,15 @@ serve(async (req) => {
       }
 
       case 'korapay': {
-        // Kora Pay integration
+        const koraSupported = ['NGN', 'GHS', 'KES'];
+        if (!koraSupported.includes(currency.toUpperCase())) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Kora Pay only supports ${koraSupported.join('/')} currencies` }).eq('id', transactionIdToUse);
+          return new Response(
+            JSON.stringify({ success: false, error: `Kora Pay only supports ${koraSupported.join(', ')} currencies. Current currency: ${currency.toUpperCase()}` }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
         const koraSecretKey = gatewayConfig.secretKey;
         
         if (!koraSecretKey) {

@@ -29,25 +29,42 @@ const BuyerThemeSMMVisit = ({ children, className }: BuyerThemeSMMVisitProps) =>
           --theme-text: #1A1A1A;
           --theme-muted: #6B7280;
           --theme-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-          background: var(--theme-background);
-          color: var(--theme-text);
+          background: var(--theme-background) !important;
+          color: var(--theme-text) !important;
         }
         
-        /* Override panel variables for this theme */
+        /* Override panel variables — !important ensures theme-specific values
+           win over the global generateBuyerThemeCSS output */
         .buyer-theme-smmvisit {
-          --panel-primary: #FFD700;
-          --panel-secondary: #FFC107;
-          --panel-accent: #1A1A1A;
-          --panel-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-          --panel-gradient-accent: linear-gradient(135deg, #FFD700 0%, #FFB300 100%);
-          --panel-glow: 0 0 20px rgba(255, 215, 0, 0.4);
-          --panel-glow-lg: 0 0 40px rgba(255, 215, 0, 0.3);
-          --panel-nav-active-bg: rgba(255, 215, 0, 0.2);
-          --panel-nav-active-text: #1A1A1A;
-          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%);
-          --step-active: #FFD700;
-          --step-completed: #FFD700;
-          --step-glow: 0 0 16px rgba(255, 215, 0, 0.6);
+          --panel-primary: #FFD700 !important;
+          --panel-secondary: #FFC107 !important;
+          --panel-accent: #1A1A1A !important;
+          --panel-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%) !important;
+          --panel-gradient-accent: linear-gradient(135deg, #FFD700 0%, #FFB300 100%) !important;
+          --panel-glow: 0 0 20px rgba(255, 215, 0, 0.4) !important;
+          --panel-glow-lg: 0 0 40px rgba(255, 215, 0, 0.3) !important;
+          --panel-nav-active-bg: rgba(255, 215, 0, 0.2) !important;
+          --panel-nav-active-text: #1A1A1A !important;
+          --panel-bottom-nav-center-gradient: linear-gradient(135deg, #FFD700 0%, #FFC107 100%) !important;
+          --step-active: #FFD700 !important;
+          --step-completed: #FFD700 !important;
+          --step-glow: 0 0 16px rgba(255, 215, 0, 0.6) !important;
+          --panel-background: #F5F5F5 !important;
+          --panel-surface: #FFFFFF !important;
+          --panel-card: #FFFFFF !important;
+          --panel-text: #1A1A1A !important;
+          --panel-muted: #6B7280 !important;
+          --panel-border: #E5E7EB !important;
+          --background: 0 0% 96% !important;
+          --foreground: 0 0% 10% !important;
+          --card: 0 0% 100% !important;
+          --card-foreground: 0 0% 10% !important;
+          --popover: 0 0% 100% !important;
+          --popover-foreground: 0 0% 10% !important;
+          --muted: 220 14% 96% !important;
+          --muted-foreground: 220 9% 46% !important;
+          --border: 220 13% 91% !important;
+          --input: 220 13% 91% !important;
         }
         
         /* ===== LIGHT MODE STYLES (Only mode for SMMVisit) ===== */
