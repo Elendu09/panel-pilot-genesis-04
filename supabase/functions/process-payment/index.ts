@@ -255,6 +255,53 @@ serve(async (req) => {
               verifiedAmount = (psData.data.amount || 0) / 100;
             }
           }
+        } else if (gw === 'korapay') {
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'korapay')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const koraKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey;
+          if (koraKey) {
+            const koraRes = await fetch(`https://api.korapay.com/merchant/api/v1/charges/${transactionId}`, {
+              headers: { 'Authorization': `Bearer ${koraKey}` },
+            });
+            const koraData = await koraRes.json();
+            console.log('[process-payment] Korapay verify response:', JSON.stringify(koraData));
+            if (koraData.status && koraData.data?.status === 'success') {
+              verified = true;
+              verifiedAmount = koraData.data.amount || tx.amount;
+            }
+          }
+        } else if (gw === 'monnify') {
+          const { data: adminProvider } = await supabase
+            .from('platform_payment_providers')
+            .select('config')
+            .eq('provider_name', 'monnify')
+            .eq('is_enabled', true)
+            .maybeSingle();
+          const monnifyApiKey = (adminProvider?.config as any)?.api_key || (adminProvider?.config as any)?.apiKey;
+          const monnifySecretKey = (adminProvider?.config as any)?.secret_key || (adminProvider?.config as any)?.secretKey;
+          if (monnifyApiKey && monnifySecretKey) {
+            const monnifyAuth = btoa(`${monnifyApiKey}:${monnifySecretKey}`);
+            const tokenRes = await fetch('https://api.monnify.com/api/v1/auth/login', {
+              method: 'POST',
+              headers: { 'Authorization': `Basic ${monnifyAuth}` },
+            });
+            const tokenData = await tokenRes.json();
+            if (tokenData.requestSuccessful && tokenData.responseBody?.accessToken) {
+              const mfRes = await fetch(`https://api.monnify.com/api/v2/transactions/${encodeURIComponent(transactionId)}`, {
+                headers: { 'Authorization': `Bearer ${tokenData.responseBody.accessToken}` },
+              });
+              const mfData = await mfRes.json();
+              console.log('[process-payment] Monnify verify response:', JSON.stringify(mfData));
+              if (mfData.requestSuccessful && mfData.responseBody?.paymentStatus === 'PAID') {
+                verified = true;
+                verifiedAmount = mfData.responseBody.amountPaid || tx.amount;
+              }
+            }
+          }
         }
       } catch (verifyErr) {
         console.error('[process-payment] Gateway verification error:', verifyErr);
@@ -343,6 +390,26 @@ serve(async (req) => {
       console.error('[process-payment] Missing fields:', { gateway, amount, panelId, buyerId });
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const gatewayCurrencyMap: Record<string, string[]> = {
+      korapay: ['NGN', 'GHS', 'KES'],
+      paystack: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'],
+      monnify: ['NGN'],
+      razorpay: ['INR'],
+      paytm: ['INR'],
+      phonepe: ['INR'],
+      upi: ['INR'],
+      mercadopago: ['ARS', 'BRL', 'CLP', 'COP', 'MXN', 'PEN', 'UYU'],
+      pix: ['BRL'],
+      pagseguro: ['BRL'],
+    };
+    const supportedCurrencies = gatewayCurrencyMap[gateway];
+    if (supportedCurrencies && !supportedCurrencies.includes(currency.toUpperCase())) {
+      return new Response(
+        JSON.stringify({ success: false, error: `${gateway} only supports ${supportedCurrencies.join(', ')} currencies. Current currency: ${currency.toUpperCase()}` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -883,15 +950,6 @@ serve(async (req) => {
       }
 
       case 'korapay': {
-        const koraSupported = ['NGN', 'GHS', 'KES'];
-        if (!koraSupported.includes(currency.toUpperCase())) {
-          await supabase.from('transactions').update({ status: 'failed', description: `Kora Pay only supports ${koraSupported.join('/')} currencies` }).eq('id', transactionIdToUse);
-          return new Response(
-            JSON.stringify({ success: false, error: `Kora Pay only supports ${koraSupported.join(', ')} currencies. Current currency: ${currency.toUpperCase()}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
         const koraSecretKey = gatewayConfig.secretKey;
         
         if (!koraSecretKey) {

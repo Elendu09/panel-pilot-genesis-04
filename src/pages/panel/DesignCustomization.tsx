@@ -861,7 +861,7 @@ function LivePreviewRenderer({ customization }: { customization: any }) {
     warningColor: customization.warningColor,
     infoColor: customization.infoColor,
     errorColor: customization.errorColor,
-  });
+  }, customization.lightModeColors || undefined);
 
   // Render appropriate theme based on selectedTheme with proper wrapper
   let rendered: React.ReactNode;

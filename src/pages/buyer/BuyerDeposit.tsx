@@ -507,12 +507,26 @@ const BuyerDeposit = () => {
       return;
     }
 
-    const korapaySupported = ['NGN', 'GHS', 'KES'];
-    if (methodToUse === 'korapay' && !korapaySupported.includes(currency.toUpperCase())) {
+    const gatewayCurrencyMap: Record<string, string[]> = {
+      korapay: ['NGN', 'GHS', 'KES'],
+      paystack: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'],
+      monnify: ['NGN'],
+      razorpay: ['INR'],
+      paytm: ['INR'],
+      phonepe: ['INR'],
+      upi: ['INR'],
+      mercadopago: ['ARS', 'BRL', 'CLP', 'COP', 'MXN', 'PEN', 'UYU'],
+      pix: ['BRL'],
+      pagseguro: ['BRL'],
+    };
+
+    const supportedCurrencies = gatewayCurrencyMap[methodToUse];
+    if (supportedCurrencies && !supportedCurrencies.includes(currency.toUpperCase())) {
+      const gwName = allPaymentGateways[methodToUse]?.name || methodToUse;
       toast({
         variant: "destructive",
         title: "Currency Not Supported",
-        description: `Kora Pay only supports ${korapaySupported.join(', ')}. Please switch your currency or choose a different payment method.`
+        description: `${gwName} only supports ${supportedCurrencies.join(', ')}. Please switch your currency or choose a different payment method.`
       });
       return;
     }
