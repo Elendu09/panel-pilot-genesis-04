@@ -28,13 +28,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -50,7 +48,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { trackAdImpression, trackAdClick } from '@/lib/ad-tracking';
 
 interface ChatSession {
   id: string;
@@ -195,7 +192,7 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
     };
   }, [selectedSession]);
 
-  // Auto scroll only when message count changes
+  // FIXED AUTO SCROLL: Only scrolls if a NEW message is added. Doesn't scroll when you type.
   useEffect(() => {
     if (messages.length > prevMessagesLength.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -314,8 +311,9 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
               </div>
             </ScrollArea>
 
-            {/* SEPARATE ISOLATED COMPONENT TO FIX TYPING FREEZES */}
-            <StableChatInput 
+            {/* FIXED UNCONTROLLED KEYBOARD MODULE */}
+            <ZeroLagInput 
+              key={selectedSession.id}
               sessionId={selectedSession.id} 
               onSend={handleSendMessage} 
               cannedResponses={cannedResponses} 
@@ -329,24 +327,24 @@ const ChatInbox = ({ embedded = false }: ChatInboxProps) => {
   );
 };
 
-// PURE FIXED ISOLATED COMPONENT: 0 KEYBOARD FREEZES
-interface StableInputProps {
+// ZERO-LAG UNCONTROLLED INPUT (No keystroke freezes)
+interface ZeroLagProps {
   sessionId: string;
   onSend: (content: string) => Promise<void>;
   cannedResponses: CannedResponse[];
 }
 
-const StableChatInput = memo(({ sessionId, onSend, cannedResponses }: StableInputProps) => {
-  const [text, setText] = useState('');
+const ZeroLagInput = memo(({ sessionId, onSend, cannedResponses }: ZeroLagProps) => {
   const [sending, setSending] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastTypingTimeRef = useRef<number>(0);
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    const text = inputRef.current?.value.trim();
+    if (!text || sending) return;
     setSending(true);
-    await onSend(text.trim());
-    setText('');
+    await onSend(text);
+    if (inputRef.current) inputRef.current.value = ''; // Direct reset
     setSending(false);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
@@ -368,7 +366,7 @@ const StableChatInput = memo(({ sessionId, onSend, cannedResponses }: StableInpu
       {cannedResponses.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {cannedResponses.slice(0, 5).map((response) => (
-            <Button key={response.id} variant="outline" size="sm" onClick={() => setText(response.content)} className="text-xs">
+            <Button key={response.id} variant="outline" size="sm" onClick={() => { if (inputRef.current) inputRef.current.value = response.content; }} className="text-xs">
               <Zap className="w-3 h-3 mr-1" />{response.title}
             </Button>
           ))}
@@ -377,14 +375,13 @@ const StableChatInput = memo(({ sessionId, onSend, cannedResponses }: StableInpu
       <div className="flex items-end gap-2">
         <Textarea
           ref={inputRef}
-          value={text}
-          onChange={(e) => { setText(e.target.value); broadcastTyping(); }}
+          onChange={broadcastTyping}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           placeholder="Type a reply..."
           className="flex-1 min-h-[44px] max-h-32 resize-none"
           rows={1}
         />
-        <Button onClick={handleSend} disabled={!text.trim() || sending}>
+        <Button onClick={handleSend} disabled={sending}>
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
       </div>
