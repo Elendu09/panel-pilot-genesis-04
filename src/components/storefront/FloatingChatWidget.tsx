@@ -449,13 +449,15 @@ export const FloatingChatWidget = ({
     setInputValue('');
 
     try {
-      await supabase
+      const { data: insertedMsg } = await supabase
         .from('chat_messages')
         .insert({
           session_id: liveChatSessionId,
           sender_type: 'visitor',
           content: messageContent
-        });
+        })
+        .select('id')
+        .single();
 
       // Update session last_message_at
       await supabase
@@ -463,13 +465,14 @@ export const FloatingChatWidget = ({
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', liveChatSessionId);
 
-      if (panelId && liveChatSessionId) {
+      if (panelId && liveChatSessionId && insertedMsg?.id) {
         fetch('/api/chat-notification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             panelId,
             sessionId: liveChatSessionId,
+            messageId: insertedMsg.id,
             visitorName: 'Website Visitor',
             messagePreview: messageContent,
           }),

@@ -250,16 +250,19 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', currentSessionId);
 
-      fetch('/api/chat-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          panelId,
-          sessionId: currentSessionId,
-          visitorName: visitorName || 'Visitor',
-          messagePreview: messageContent,
-        }),
-      }).catch(() => {});
+      if (data?.id) {
+        fetch('/api/chat-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            panelId,
+            sessionId: currentSessionId,
+            messageId: data.id,
+            visitorName: visitorName || 'Visitor',
+            messagePreview: messageContent,
+          }),
+        }).catch(() => {});
+      }
 
       inputRef.current?.focus();
     } catch (error) {
