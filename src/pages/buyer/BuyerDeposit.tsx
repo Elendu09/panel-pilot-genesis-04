@@ -315,6 +315,7 @@ const BuyerDeposit = () => {
   }, [buyer?.id, panel?.id]);
 
   const previousTransactionsRef = useRef<Transaction[]>([]);
+  const notifiedTxIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!buyer?.id || !panel?.id) return;
@@ -353,14 +354,16 @@ const BuyerDeposit = () => {
     for (const tx of transactions) {
       const prevTx = prev.find(p => p.id === tx.id);
       if (prevTx && prevTx.status !== tx.status) {
-        if (tx.status === 'completed' && prevTx.status !== 'completed') {
+        if (tx.status === 'completed' && prevTx.status !== 'completed' && !notifiedTxIds.current.has(tx.id)) {
+          notifiedTxIds.current.add(tx.id);
           refreshBuyer();
           toast({
             title: "Payment Successful!",
             description: `${formatPrice(Number(tx.amount))} has been added to your balance.`
           });
         }
-        if (tx.status === 'failed' && prevTx.status !== 'failed') {
+        if (tx.status === 'failed' && prevTx.status !== 'failed' && !notifiedTxIds.current.has(tx.id)) {
+          notifiedTxIds.current.add(tx.id);
           toast({
             variant: "destructive",
             title: "Payment Failed",
@@ -418,7 +421,8 @@ const BuyerDeposit = () => {
             body: { action: 'verify-payment', transactionId }
           });
           
-          if (verifyResult?.status === 'completed') {
+          if (verifyResult?.status === 'completed' && !notifiedTxIds.current.has(transactionId)) {
+            notifiedTxIds.current.add(transactionId);
             toast({ 
               title: "Payment Successful!", 
               description: `${formatPrice(Number(verifyResult.amount))} has been added to your balance.` 
@@ -426,7 +430,8 @@ const BuyerDeposit = () => {
             refreshBuyer();
             fetchTransactions();
             return;
-          } else if (verifyResult?.status === 'failed') {
+          } else if (verifyResult?.status === 'failed' && !notifiedTxIds.current.has(transactionId)) {
+            notifiedTxIds.current.add(transactionId);
             toast({ 
               variant: "destructive",
               title: "Payment Failed", 
@@ -448,7 +453,8 @@ const BuyerDeposit = () => {
               body: { action: 'verify-payment', transactionId }
             });
             
-            if (verifyRetry?.status === 'completed') {
+            if (verifyRetry?.status === 'completed' && !notifiedTxIds.current.has(transactionId)) {
+              notifiedTxIds.current.add(transactionId);
               toast({ 
                 title: "Payment Successful!", 
                 description: `${formatPrice(Number(verifyRetry.amount))} has been added to your balance.` 
@@ -456,7 +462,8 @@ const BuyerDeposit = () => {
               refreshBuyer();
               fetchTransactions();
               return;
-            } else if (verifyRetry?.status === 'failed') {
+            } else if (verifyRetry?.status === 'failed' && !notifiedTxIds.current.has(transactionId)) {
+              notifiedTxIds.current.add(transactionId);
               toast({ 
                 variant: "destructive",
                 title: "Payment Failed", 
