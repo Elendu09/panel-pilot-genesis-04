@@ -32,6 +32,20 @@ interface ThemeNavigationProps {
   hideThemeToggle?: boolean;
 }
 
+const LogoImage = ({ src, alt, fallback }: { src: string; alt: string; fallback: React.ReactNode }) => {
+  const [error, setError] = useState(false);
+  if (error) return <>{fallback}</>;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl object-contain flex-shrink-0"
+      loading="eager"
+      onError={() => setError(true)}
+    />
+  );
+};
+
 export const ThemeNavigation = ({
   companyName,
   logoUrl,
@@ -117,7 +131,7 @@ export const ThemeNavigation = ({
             {/* Logo */}
             <Link to="/" className="flex items-center gap-1.5 sm:gap-3 min-w-0" aria-label={`${companyName} home`}>
               {logoUrl ? (
-                <img src={logoUrl} alt={companyName} className="w-7 h-7 sm:w-10 sm:h-10 rounded-xl object-contain flex-shrink-0" loading="eager" />
+                <LogoImage src={logoUrl} alt={companyName} fallback={<div className="flex-shrink-0">{defaultIcon || logoIcon}</div>} />
               ) : (
                 <div className="flex-shrink-0">
                   {defaultIcon || logoIcon}

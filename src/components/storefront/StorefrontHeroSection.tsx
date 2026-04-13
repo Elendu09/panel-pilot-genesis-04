@@ -182,7 +182,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       </div>
 
       {/* Left Floating Cards */}
-      {heroShowFloatingCards && (
+      {heroShowFloatingCards && !enableHeroImage && (
         <div className="absolute left-4 lg:left-[5%] top-1/4 space-y-4 hidden lg:block z-20">
           {getLeftCards(t).map((card, index) => (
           <motion.div
@@ -209,7 +209,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       )}
 
       {/* Right Floating Cards */}
-      {heroShowFloatingCards && (
+      {heroShowFloatingCards && !enableHeroImage && (
         <div className="absolute right-4 lg:right-[5%] top-1/4 space-y-4 hidden lg:block z-20">
         {getRightCards(t).map((card, index) => (
           <motion.div
@@ -236,11 +236,11 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
       )}
 
       {/* Main Content */}
-      <div className={`container mx-auto px-4 relative z-10 pt-24 sm:pt-24 lg:pt-32 ${enableHeroImage ? 'flex flex-col lg:flex-row items-center gap-8 lg:gap-12' : 'text-center'}`}>
+      <div className={`container mx-auto px-4 relative z-10 pt-20 sm:pt-24 lg:pt-32 ${enableHeroImage ? 'flex flex-col sm:flex-row items-center gap-6 sm:gap-8 lg:gap-12' : 'text-center'}`}>
         {/* Hero Image - Left position */}
         {enableHeroImage && heroImagePosition === 'left' && (
           <motion.div
-            className="w-full lg:w-2/5 flex-shrink-0 order-first"
+            className="w-full sm:w-2/5 flex-shrink-0 order-first"
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -248,13 +248,13 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             <img 
               src={customization.heroImageUrl} 
               alt="Hero" 
-              className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+              className="w-full max-h-[220px] sm:max-h-[380px] lg:max-h-[500px] object-contain rounded-2xl mx-auto"
             />
           </motion.div>
         )}
         
         <motion.div 
-          className={enableHeroImage ? 'flex-1 text-left' : 'max-w-4xl mx-auto'}
+          className={enableHeroImage ? 'flex-1 text-center sm:text-left' : 'max-w-4xl mx-auto'}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -576,7 +576,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
         {/* Hero Image - Right position */}
         {enableHeroImage && heroImagePosition === 'right' && (
           <motion.div
-            className="w-full lg:w-2/5 flex-shrink-0 order-last"
+            className="w-full sm:w-2/5 flex-shrink-0 order-first sm:order-last"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
@@ -584,7 +584,7 @@ export const StorefrontHeroSection = ({ panel, services = [], customization = {}
             <img 
               src={customization.heroImageUrl} 
               alt="Hero" 
-              className="w-full max-h-[400px] lg:max-h-[500px] object-contain rounded-2xl"
+              className="w-full max-h-[220px] sm:max-h-[380px] lg:max-h-[500px] object-contain rounded-2xl mx-auto"
             />
           </motion.div>
         )}

@@ -133,7 +133,7 @@ const BuyerDeposit = () => {
   const { buyer, refreshBuyer, loading: authLoading, getToken } = useBuyerAuth();
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
-  const { currency, currencyConfig, formatPrice, convertPrice, convertToUSD } = useCurrency();
+  const { currency, currencyConfig, formatPrice, convertPrice, convertToUSD, setCurrency } = useCurrency();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -156,6 +156,28 @@ const BuyerDeposit = () => {
   // Multiple manual methods selector state
   const [showManualSelector, setShowManualSelector] = useState(false);
   const [allManualMethods, setAllManualMethods] = useState<PaymentMethod[]>([]);
+
+  // Gateway-to-required-currency dialog state
+  const [gatewayCurrencyDialog, setGatewayCurrencyDialog] = useState(false);
+  const [pendingGatewayId, setPendingGatewayId] = useState<string | null>(null);
+
+  // Mapping of gateway IDs to their required currency
+  const gatewayCurrencyMap: Record<string, { currency: string; label: string; reason: string }> = {
+    korapay:  { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'KoraPay exclusively processes payments in NGN.' },
+    monnify:  { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Monnify exclusively processes payments in NGN.' },
+    squad:    { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Squad exclusively processes payments in NGN.' },
+    lenco:    { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Lenco exclusively processes payments in NGN.' },
+  };
+
+  const handleSelectPaymentMethod = (methodId: string) => {
+    const required = gatewayCurrencyMap[methodId];
+    if (required && currency !== required.currency) {
+      setPendingGatewayId(methodId);
+      setGatewayCurrencyDialog(true);
+    } else {
+      setSelectedMethod(methodId);
+    }
+  };
   
   // Proof of payment upload state
   const [proofUploading, setProofUploading] = useState(false);
@@ -804,7 +826,7 @@ const BuyerDeposit = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 + index * 0.05 }}
-                  onClick={() => setSelectedMethod(method.id)}
+                  onClick={() => handleSelectPaymentMethod(method.id)}
                   className={cn(
                     "p-3 md:p-4 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group",
                     selectedMethod === method.id
@@ -1196,6 +1218,54 @@ const BuyerDeposit = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowManualSelector(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gateway Currency Switch Dialog */}
+      <Dialog open={gatewayCurrencyDialog} onOpenChange={(open) => { if (!open) { setGatewayCurrencyDialog(false); setPendingGatewayId(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-2xl">🔄</span>
+              Currency Switch Required
+            </DialogTitle>
+            <DialogDescription className="space-y-2 pt-1">
+              {pendingGatewayId && gatewayCurrencyMap[pendingGatewayId] && (
+                <>
+                  <p className="text-sm">
+                    <strong>{allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId}</strong> only supports payments in{' '}
+                    <strong className="text-primary">{gatewayCurrencyMap[pendingGatewayId].label}</strong>.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {gatewayCurrencyMap[pendingGatewayId].reason} To reduce payment errors, your currency will be automatically switched to NGN for this transaction.
+                  </p>
+                  <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <p className="text-sm font-medium text-primary">
+                      Your session currency will be switched from <strong>{currency}</strong> → <strong>NGN</strong>
+                    </p>
+                  </div>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setGatewayCurrencyDialog(false); setPendingGatewayId(null); }}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (pendingGatewayId && gatewayCurrencyMap[pendingGatewayId]) {
+                  setCurrency(gatewayCurrencyMap[pendingGatewayId].currency as any);
+                  setSelectedMethod(pendingGatewayId);
+                }
+                setGatewayCurrencyDialog(false);
+                setPendingGatewayId(null);
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Switch to NGN & Continue
             </Button>
           </DialogFooter>
         </DialogContent>

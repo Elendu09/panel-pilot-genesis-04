@@ -92,6 +92,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Deposit using your preferred method",
     "buyer.howItWorks.step3": "Place Order",
     "buyer.howItWorks.step3Desc": "Select service and start growing",
+    "buyer.howItWorks.step4": "Get Results",
+    "buyer.howItWorks.step4Desc": "Watch your metrics grow instantly",
 
     // Platforms
     "buyer.platforms.title": "Platforms",
@@ -415,6 +417,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Deposita con tu método preferido",
     "buyer.howItWorks.step3": "Haz tu Pedido",
     "buyer.howItWorks.step3Desc": "Selecciona servicio y empieza a crecer",
+    "buyer.howItWorks.step4": "Obtén Resultados",
+    "buyer.howItWorks.step4Desc": "Observa cómo crecen tus métricas al instante",
 
     // Platforms
     "buyer.platforms.title": "Plataformas",
@@ -704,6 +708,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Deposite com seu método preferido",
     "buyer.howItWorks.step3": "Faça seu Pedido",
     "buyer.howItWorks.step3Desc": "Selecione serviço e comece a crescer",
+    "buyer.howItWorks.step4": "Obtenha Resultados",
+    "buyer.howItWorks.step4Desc": "Veja suas métricas crescerem instantaneamente",
 
     // Platforms
     "buyer.platforms.title": "Plataformas",
@@ -992,6 +998,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "أودع بطريقتك المفضلة",
     "buyer.howItWorks.step3": "قدم طلبك",
     "buyer.howItWorks.step3Desc": "اختر الخدمة وابدأ النمو",
+    "buyer.howItWorks.step4": "احصل على النتائج",
+    "buyer.howItWorks.step4Desc": "شاهد مقاييسك تنمو على الفور",
 
     // Platforms
     "buyer.platforms.title": "المنصات",
@@ -1281,6 +1289,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Tercih ettiğiniz yöntemle yatırın",
     "buyer.howItWorks.step3": "Sipariş Verin",
     "buyer.howItWorks.step3Desc": "Hizmet seçin ve büyümeye başlayın",
+    "buyer.howItWorks.step4": "Sonuçları Alın",
+    "buyer.howItWorks.step4Desc": "Metriklerinizin anında büyüdüğünü izleyin",
 
     // Platforms
     "buyer.platforms.title": "Platformlar",
@@ -1562,6 +1572,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Внесите депозит удобным способом",
     "buyer.howItWorks.step3": "Сделайте Заказ",
     "buyer.howItWorks.step3Desc": "Выберите услугу и начните расти",
+    "buyer.howItWorks.step4": "Получите Результаты",
+    "buyer.howItWorks.step4Desc": "Наблюдайте, как мгновенно растут ваши показатели",
 
     // Platforms
     "buyer.platforms.title": "Платформы",
@@ -1843,6 +1855,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Déposez avec votre méthode préférée",
     "buyer.howItWorks.step3": "Passez Commande",
     "buyer.howItWorks.step3Desc": "Sélectionnez le service et commencez à grandir",
+    "buyer.howItWorks.step4": "Obtenez des Résultats",
+    "buyer.howItWorks.step4Desc": "Regardez vos métriques croître instantanément",
 
     // Platforms
     "buyer.platforms.title": "Plateformes",
@@ -2124,6 +2138,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "Mit Ihrer bevorzugten Methode einzahlen",
     "buyer.howItWorks.step3": "Bestellung Aufgeben",
     "buyer.howItWorks.step3Desc": "Service auswählen und wachsen",
+    "buyer.howItWorks.step4": "Ergebnisse Erhalten",
+    "buyer.howItWorks.step4Desc": "Beobachten Sie, wie Ihre Kennzahlen sofort wachsen",
 
     // Platforms
     "buyer.platforms.title": "Plattformen",
@@ -2404,6 +2420,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "使用您喜欢的方式充值",
     "buyer.howItWorks.step3": "下订单",
     "buyer.howItWorks.step3Desc": "选择服务开始成长",
+    "buyer.howItWorks.step4": "获得结果",
+    "buyer.howItWorks.step4Desc": "看看您的指标如何立即增长",
 
     // Platforms
     "buyer.platforms.title": "平台",
@@ -2684,6 +2702,8 @@ export const platformTranslations = {
     "buyer.howItWorks.step2Desc": "अपने पसंदीदा तरीके से जमा करें",
     "buyer.howItWorks.step3": "ऑर्डर दें",
     "buyer.howItWorks.step3Desc": "सेवा चुनें और बढ़ना शुरू करें",
+    "buyer.howItWorks.step4": "परिणाम प्राप्त करें",
+    "buyer.howItWorks.step4Desc": "देखें कैसे आपके मेट्रिक्स तुरंत बढ़ते हैं",
 
     // Platforms
     "buyer.platforms.title": "प्लेटफॉर्म",

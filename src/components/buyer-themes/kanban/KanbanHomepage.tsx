@@ -1,7 +1,7 @@
 import { useCallback, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Zap, Shield, Users, Star, ArrowRight, CheckCircle,
+  Zap, Shield, ShieldCheck, Users, Star, ArrowRight, CheckCircle,
   Instagram, Youtube, Twitter, Music, LayoutDashboard,
   Columns, KanbanSquare, ListChecks, BarChart3, Clock,
   Sparkles, TrendingUp
@@ -304,6 +304,28 @@ export const KanbanHomepage = ({
                     </>
                   )}
                 </div>
+
+                {/* Social Proof Badges */}
+                <motion.div
+                  className="flex flex-wrap items-center justify-center gap-3 mt-8"
+                  {...(enableAnimations ? { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, delay: 0.3 } } : {})}
+                >
+                  {[
+                    { icon: Users, label: '50K+ Active Users', color: primary },
+                    { icon: ShieldCheck, label: '99.9% Uptime', color: secondary },
+                    { icon: Zap, label: 'Instant Delivery', color: accent },
+                  ].map((badge, i) => (
+                    <motion.div
+                      key={i}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                      style={{ ...glassStyle, color: badge.color, borderColor: `${badge.color}25` }}
+                      {...(enableAnimations ? { whileHover: { scale: 1.07, y: -2 } } : {})}
+                    >
+                      <badge.icon className="w-3.5 h-3.5" style={{ color: badge.color }} />
+                      {badge.label}
+                    </motion.div>
+                  ))}
+                </motion.div>
               </motion.div>
             </div>
 
