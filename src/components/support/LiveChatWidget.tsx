@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, 
@@ -32,8 +32,8 @@ interface LiveChatWidgetProps {
   panelName?: string;
 }
 
-// Generate a unique visitor ID
 const getVisitorId = () => {
+  if (typeof window === 'undefined') return '';
   let visitorId = localStorage.getItem('chat_visitor_id');
   if (!visitorId) {
     visitorId = `visitor_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -42,7 +42,7 @@ const getVisitorId = () => {
   return visitorId;
 };
 
-export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }: LiveChatWidgetProps) => {
+export const LiveChatWidget = memo(({ panelId, visitorName, visitorEmail, panelName }: LiveChatWidgetProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -52,16 +52,17 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [visitorId] = useState(getVisitorId);
   const [ownerTyping, setOwnerTyping] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingTimeRef = useRef<number>(0); // Throttle timer
 
   // Create or get chat session
   useEffect(() => {
     if (!panelId) return;
     
     const initChat = async () => {
-      // Check for existing active session
       const { data: existingSession } = await supabase
         .from('chat_sessions')
         .select('id')
@@ -74,7 +75,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
 
       if (existingSession) {
         setSessionId(existingSession.id);
-        // Load messages
         const { data: msgs } = await supabase
           .from('chat_messages')
           .select('*')
@@ -93,7 +93,7 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
     initChat();
   }, [panelId, visitorId]);
 
-  // Real-time subscription for new messages
+  // Real-time message listener
   useEffect(() => {
     if (!sessionId) return;
 
@@ -110,12 +110,10 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         (payload) => {
           const newMsg = payload.new as ChatMessage;
           setMessages(prev => {
-            // Avoid duplicates
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, { ...newMsg, sender_type: newMsg.sender_type as 'visitor' | 'owner' }];
           });
           
-          // Count unread if widget is closed or minimized and message is from owner
           if ((!isOpen || isMinimized) && newMsg.sender_type === 'owner') {
             setUnreadCount(prev => prev + 1);
           }
@@ -128,16 +126,16 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
     };
   }, [sessionId, isOpen, isMinimized]);
 
-  // Typing indicator subscription
+  // Incoming Typing indicator from Panel Owner
   useEffect(() => {
     if (!sessionId) return;
 
+    // Fixed channel name separation so it does not conflict with outgoing
     const channel = supabase
-      .channel(`typing-${sessionId}`)
+      .channel(`typing-in-${sessionId}`)
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.sender_type === 'owner') {
           setOwnerTyping(true);
-          // Clear typing after 3 seconds
           if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
           }
@@ -156,23 +154,27 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
     };
   }, [sessionId]);
 
-  // Broadcast typing status
+  // Throttled Outgoing Typing Broadcast (Locks fixed here)
   const broadcastTyping = useCallback(() => {
     if (!sessionId) return;
-    
-    supabase.channel(`typing-${sessionId}`).send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: { sender_type: 'visitor' }
-    });
+
+    const now = Date.now();
+    // Only send typing events once every 2 seconds to avoid freezing the UI
+    if (now - lastTypingTimeRef.current > 2000) {
+      lastTypingTimeRef.current = now;
+      
+      supabase.channel(`typing-out-${sessionId}`).send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { sender_type: 'visitor' }
+      });
+    }
   }, [sessionId]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Clear unread when opening
   useEffect(() => {
     if (isOpen && !isMinimized) {
       setUnreadCount(0);
@@ -217,7 +219,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
       const messageContent = newMessage.trim();
       setNewMessage('');
 
-      // Optimistic update
       const optimisticMsg: ChatMessage = {
         id: `temp-${Date.now()}`,
         sender_type: 'visitor',
@@ -226,7 +227,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
       };
       setMessages(prev => [...prev, optimisticMsg]);
 
-      // Save to database
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -239,18 +239,16 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
 
       if (error) throw error;
 
-      // Replace optimistic message with real one
       setMessages(prev => prev.map(m => 
         m.id === optimisticMsg.id ? { ...data, sender_type: data.sender_type as 'visitor' | 'owner' } : m
       ));
 
-      // Update session last_message_at
       await supabase
         .from('chat_sessions')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', currentSessionId);
 
-      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.focus(), 50);
     } catch (error) {
       console.error('Error sending message:', error);
       toast({ variant: 'destructive', title: 'Failed to send message' });
@@ -266,10 +264,10 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
     broadcastTyping();
-  };
+  }, [broadcastTyping]);
 
   const toggleChat = () => {
     if (isMinimized) {
@@ -283,7 +281,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
 
   return (
     <>
-      {/* Chat Button */}
       <AnimatePresence>
         {(!isOpen || isMinimized) && (
           <motion.button
@@ -310,7 +307,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
         )}
       </AnimatePresence>
 
-      {/* Chat Window */}
       <AnimatePresence>
         {isOpen && !isMinimized && (
           <motion.div
@@ -323,7 +319,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
               "flex flex-col max-h-[500px]"
             )}
           >
-            {/* Header */}
             <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -359,7 +354,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
               </div>
             </div>
 
-            {/* Messages */}
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
                 {messages.length === 0 ? (
@@ -407,7 +401,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
                   ))
                 )}
                 
-                {/* Typing indicator */}
                 {ownerTyping && (
                   <div className="flex items-center gap-2">
                     <Avatar className="w-8 h-8">
@@ -426,7 +419,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
               </div>
             </ScrollArea>
 
-            {/* Input */}
             <div className="p-3 border-t border-border bg-card">
               <div className="flex items-center gap-2">
                 <Input
@@ -457,6 +449,6 @@ export const LiveChatWidget = ({ panelId, visitorName, visitorEmail, panelName }
       </AnimatePresence>
     </>
   );
-};
+});
 
-export default LiveChatWidget;
+LiveChatWidget.displayName = 'LiveChatWidget';
