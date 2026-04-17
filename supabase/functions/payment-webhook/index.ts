@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-paystack-signature, x-flutterwave-signature, x-squad-signature, x-webhook-signature, x-callback-token, x-signature, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-paystack-signature, x-flutterwave-signature, verif-hash, x-squad-signature, x-webhook-signature, x-callback-token, x-signature, x-request-id, x-korapay-signature, x-razorpay-signature, monnify-signature, x-cc-webhook-signature, x-nowpayments-sig, btcpay-sig, x-square-hmacsha256-signature, binancepay-timestamp, binancepay-nonce, binancepay-signature, paypal-auth-algo, paypal-cert-url, paypal-transmission-id, paypal-transmission-sig, paypal-transmission-time, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // === Signature verification helpers (Web Crypto / Deno) ===
@@ -13,7 +14,14 @@ function bytesToHex(buf: ArrayBuffer): string {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function hmacHex(algorithm: 'SHA-256' | 'SHA-512', secret: string, data: string): Promise<string> {
+function bytesToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+async function hmacHex(algorithm: 'SHA-1' | 'SHA-256' | 'SHA-512', secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw', enc.encode(secret), { name: 'HMAC', hash: algorithm }, false, ['sign']
   );
@@ -21,9 +29,54 @@ async function hmacHex(algorithm: 'SHA-256' | 'SHA-512', secret: string, data: s
   return bytesToHex(sig);
 }
 
+async function hmacBase64(algorithm: 'SHA-256' | 'SHA-512', secret: string, data: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: algorithm }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return bytesToBase64(sig);
+}
+
+async function sha1Hex(data: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-1', enc.encode(data));
+  return bytesToHex(buf);
+}
+
 async function sha512Hex(data: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-512', enc.encode(data));
   return bytesToHex(buf);
+}
+
+async function md5Hex(data: string): Promise<string> {
+  // Web Crypto subtle does not implement MD5; use Deno std crypto which does.
+  const buf = await stdCrypto.subtle.digest('MD5', enc.encode(data));
+  return bytesToHex(buf as ArrayBuffer);
+}
+
+function sortObjectDeep(obj: any): any {
+  if (Array.isArray(obj)) return obj.map(sortObjectDeep);
+  if (obj && typeof obj === 'object') {
+    return Object.keys(obj).sort().reduce((acc: any, k) => {
+      acc[k] = sortObjectDeep(obj[k]);
+      return acc;
+    }, {});
+  }
+  return obj;
+}
+
+function parseKvHeader(h: string): Record<string, string> {
+  return Object.fromEntries(
+    h.split(',').map((p) => p.trim().split('=')).filter((p) => p.length === 2 && p[0])
+  );
+}
+
+// Stripe sends potentially multiple `v1=...` entries in `stripe-signature`
+// during signing-secret rotation. Collect every value for the requested key.
+function parseKvHeaderMulti(h: string, key: string): string[] {
+  return h.split(',')
+    .map((p) => p.trim().split('='))
+    .filter((p) => p.length === 2 && p[0] === key)
+    .map((p) => p[1]);
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -47,12 +100,43 @@ async function loadGatewayConfigForTransaction(
   providerName: string,
 ): Promise<Record<string, any> | null> {
   if (transactionRef) {
-    const { data: tx } = await supabase
+    // Try multiple resolution strategies: internal id, provider-native
+    // external_id, and metadata fields. Webhook payloads commonly carry
+    // the provider's own id (Mollie/MercadoPago/Wise/Braintree) rather
+    // than our internal transaction uuid, so we have to look in several
+    // places to find the owning panel before we can load its secrets.
+    let panelId: string | null = null;
+    // Internal uuid lookup
+    const { data: txById } = await supabase
       .from('transactions')
       .select('panel_id')
       .eq('id', transactionRef)
       .maybeSingle();
-    const panelId = tx?.panel_id;
+    panelId = txById?.panel_id || null;
+    // External provider id lookup
+    if (!panelId) {
+      const { data: txByExternal } = await supabase
+        .from('transactions')
+        .select('panel_id')
+        .eq('external_id', String(transactionRef))
+        .maybeSingle();
+      panelId = txByExternal?.panel_id || null;
+    }
+    // Metadata fallback (recent pending only — bounded scan)
+    if (!panelId) {
+      const { data: candidates } = await supabase
+        .from('transactions')
+        .select('panel_id, metadata, external_id')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      const ref = String(transactionRef);
+      const hit = (candidates || []).find((t: any) => {
+        const m = (t.metadata || {}) as Record<string, any>;
+        return m.transactionId === ref || m.orderId === ref || m.externalId === ref || t.external_id === ref;
+      });
+      panelId = hit?.panel_id || null;
+    }
     if (panelId) {
       const { data: panel } = await supabase
         .from('panels')
@@ -109,10 +193,24 @@ serve(async (req) => {
 
     switch (gateway) {
       case 'stripe': {
-        event = JSON.parse(body);
-        // In production, verify webhook signature with Stripe
-        // const sig = req.headers.get('stripe-signature');
-        
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.object?.metadata?.transactionId;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'stripe');
+        const secret = cfg?.webhookSecret || cfg?.webhook_secret
+          || cfg?.signingSecret || cfg?.signing_secret
+          || Deno.env.get('STRIPE_WEBHOOK_SECRET');
+        if (!secret) return unauthorized('stripe: webhook signing secret not configured');
+        const sigHeader = req.headers.get('stripe-signature') || '';
+        const t = parseKvHeader(sigHeader)['t'];
+        const v1List = parseKvHeaderMulti(sigHeader, 'v1').map((s) => s.toLowerCase());
+        if (!t || v1List.length === 0) return unauthorized('stripe: malformed signature header');
+        const expected = await hmacHex('SHA-256', secret, `${t}.${body}`);
+        if (!v1List.some((v) => timingSafeEqual(v, expected))) return unauthorized('stripe: invalid signature');
+        // Reject signatures older than 5 minutes to prevent replay
+        const tsAge = Math.abs(Date.now() / 1000 - parseInt(t, 10));
+        if (!Number.isFinite(tsAge) || tsAge > 300) return unauthorized('stripe: signature timestamp out of tolerance');
+        event = preEvent;
+
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object;
           transactionId = session.metadata?.transactionId;
@@ -130,7 +228,54 @@ serve(async (req) => {
       }
 
       case 'paypal': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.resource?.purchase_units?.[0]?.custom_id
+          || preEvent.resource?.custom_id
+          || preEvent.resource?.invoice_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'paypal');
+        const webhookId = cfg?.webhookId || cfg?.webhook_id;
+        const clientId = cfg?.apiKey || cfg?.api_key || cfg?.clientId || cfg?.client_id;
+        const clientSecret = cfg?.secretKey || cfg?.secret_key;
+        if (!webhookId || !clientId || !clientSecret) {
+          return unauthorized('paypal: webhookId/clientId/clientSecret not configured');
+        }
+        // Get PayPal access token to verify the webhook signature via PayPal API
+        const sandbox = !!cfg?.sandbox;
+        const apiBase = sandbox ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
+        const tokenResp = await fetch(`${apiBase}/v1/oauth2/token`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials',
+        });
+        const tokenJson = await tokenResp.json().catch(() => null);
+        const accessToken = tokenJson?.access_token;
+        if (!accessToken) return unauthorized('paypal: failed to obtain access token');
+        const verifyBody = {
+          auth_algo: req.headers.get('paypal-auth-algo'),
+          cert_url: req.headers.get('paypal-cert-url'),
+          transmission_id: req.headers.get('paypal-transmission-id'),
+          transmission_sig: req.headers.get('paypal-transmission-sig'),
+          transmission_time: req.headers.get('paypal-transmission-time'),
+          webhook_id: webhookId,
+          webhook_event: preEvent,
+        };
+        if (!verifyBody.auth_algo || !verifyBody.cert_url || !verifyBody.transmission_id
+          || !verifyBody.transmission_sig || !verifyBody.transmission_time) {
+          return unauthorized('paypal: missing webhook signature headers');
+        }
+        const verifyResp = await fetch(`${apiBase}/v1/notifications/verify-webhook-signature`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(verifyBody),
+        });
+        const verifyJson = await verifyResp.json().catch(() => null);
+        if (verifyJson?.verification_status !== 'SUCCESS') {
+          return unauthorized('paypal: signature verification failed');
+        }
+        event = preEvent;
         if (event.event_type === 'CHECKOUT.ORDER.APPROVED' || event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
           const resource = event.resource;
           transactionId = resource.purchase_units?.[0]?.custom_id;
@@ -145,7 +290,16 @@ serve(async (req) => {
       }
 
       case 'coinbase': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.event?.data?.metadata?.transactionId;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'coinbase');
+        const sharedSecret = cfg?.webhookSecret || cfg?.webhook_secret
+          || cfg?.sharedSecret || cfg?.shared_secret;
+        if (!sharedSecret) return unauthorized('coinbase: webhook shared secret not configured');
+        const sigHeader = (req.headers.get('x-cc-webhook-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-256', sharedSecret, body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('coinbase: invalid signature');
+        event = preEvent;
         if (event.event?.type === 'charge:confirmed' || event.event?.type === 'charge:resolved') {
           const charge = event.event.data;
           transactionId = charge.metadata?.transactionId;
@@ -163,10 +317,15 @@ serve(async (req) => {
       }
 
       case 'flutterwave': {
-        event = JSON.parse(body);
-        // Verify webhook signature in production
-        // const signature = req.headers.get('verif-hash');
-        
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.tx_ref;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'flutterwave');
+        const secretHash = cfg?.webhookSecret || cfg?.webhook_secret
+          || cfg?.secretHash || cfg?.secret_hash;
+        if (!secretHash) return unauthorized('flutterwave: secret hash not configured');
+        const provided = req.headers.get('verif-hash') || '';
+        if (!timingSafeEqual(provided, secretHash)) return unauthorized('flutterwave: invalid verif-hash');
+        event = preEvent;
         if (event.event === 'charge.completed' && event.data?.status === 'successful') {
           transactionId = event.data?.tx_ref;
           status = 'completed';
@@ -182,10 +341,15 @@ serve(async (req) => {
       }
 
       case 'paystack': {
-        event = JSON.parse(body);
-        // Verify webhook signature in production
-        // const signature = req.headers.get('x-paystack-signature');
-        
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.reference;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'paystack');
+        const secret = cfg?.secretKey || cfg?.secret_key;
+        if (!secret) return unauthorized('paystack: secret key not configured');
+        const sigHeader = (req.headers.get('x-paystack-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-512', secret, body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('paystack: invalid signature');
+        event = preEvent;
         if (event.event === 'charge.success') {
           transactionId = event.data?.reference;
           status = 'completed';
@@ -201,7 +365,16 @@ serve(async (req) => {
       }
 
       case 'korapay': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.reference;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'korapay');
+        const secret = cfg?.secretKey || cfg?.secret_key;
+        if (!secret) return unauthorized('korapay: secret key not configured');
+        const sigHeader = (req.headers.get('x-korapay-signature') || '').toLowerCase();
+        // Kora Pay signs the JSON-stringified `data` field with the secret key (HMAC-SHA256)
+        const expected = await hmacHex('SHA-256', secret, JSON.stringify(preEvent.data ?? {}));
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('korapay: invalid signature');
+        event = preEvent;
         if (event.event === 'charge.success' || event.data?.status === 'success') {
           transactionId = event.data?.reference;
           status = 'completed';
@@ -217,9 +390,16 @@ serve(async (req) => {
       }
 
       case 'razorpay': {
-        event = JSON.parse(body);
-        // Verify webhook signature in production
-        
+        const preEvent = JSON.parse(body);
+        const prePay = preEvent.payload?.payment?.entity || preEvent.payload?.order?.entity;
+        const preTx = prePay?.notes?.transactionId || prePay?.receipt;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'razorpay');
+        const webhookSecret = cfg?.webhookSecret || cfg?.webhook_secret;
+        if (!webhookSecret) return unauthorized('razorpay: webhook secret not configured');
+        const sigHeader = (req.headers.get('x-razorpay-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-256', webhookSecret, body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('razorpay: invalid signature');
+        event = preEvent;
         if (event.event === 'payment.captured' || event.event === 'order.paid') {
           const payment = event.payload?.payment?.entity || event.payload?.order?.entity;
           transactionId = payment?.receipt || payment?.notes?.transactionId;
@@ -237,7 +417,15 @@ serve(async (req) => {
       }
 
       case 'monnify': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.eventData?.paymentReference;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'monnify');
+        const secret = cfg?.secretKey || cfg?.secret_key;
+        if (!secret) return unauthorized('monnify: secret key not configured');
+        const sigHeader = (req.headers.get('monnify-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-512', secret, body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('monnify: invalid signature');
+        event = preEvent;
         if (event.eventType === 'SUCCESSFUL_TRANSACTION' || event.eventData?.paymentStatus === 'PAID') {
           transactionId = event.eventData?.paymentReference;
           status = 'completed';
@@ -251,7 +439,22 @@ serve(async (req) => {
       }
 
       case 'mercadopago': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.id?.toString();
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'mercadopago');
+        const secret = cfg?.webhookSecret || cfg?.webhook_secret || cfg?.secretKey;
+        if (!secret) return unauthorized('mercadopago: webhook secret not configured');
+        const sigHeader = req.headers.get('x-signature') || '';
+        const parts = parseKvHeader(sigHeader);
+        const ts = parts['ts'];
+        const v1 = (parts['v1'] || '').toLowerCase();
+        const requestId = req.headers.get('x-request-id') || '';
+        const dataId = preEvent.data?.id?.toString() || '';
+        if (!ts || !v1) return unauthorized('mercadopago: malformed signature header');
+        const manifest = `id:${dataId};request-id:${requestId};ts:${ts};`;
+        const expected = await hmacHex('SHA-256', secret, manifest);
+        if (!timingSafeEqual(v1, expected)) return unauthorized('mercadopago: invalid signature');
+        event = preEvent;
         if (event.type === 'payment' && event.action === 'payment.created') {
           // Fetch payment details from Mercado Pago API
           transactionId = event.data?.id?.toString();
@@ -262,34 +465,82 @@ serve(async (req) => {
       }
 
       case 'payu': {
-        event = JSON.parse(body);
-        if (event.status === 'APPROVED' || event.transactionState === 'APPROVED') {
-          transactionId = event.referenceCode || event.reference;
+        // PayU posts as form-urlencoded with `sign` field. Verify with
+        // md5(ApiKey~merchantId~referenceCode~TX_VALUE~currency~transactionState).
+        const params = new URLSearchParams(body);
+        const preTx = params.get('reference_sale') || params.get('referenceCode') || params.get('reference');
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'payu');
+        const apiKey = cfg?.apiKey || cfg?.api_key;
+        const merchantId = cfg?.merchantId || cfg?.merchant_id;
+        if (!apiKey || !merchantId) return unauthorized('payu: api key/merchant id not configured');
+        const provided = String(params.get('sign') || params.get('signature') || '').toLowerCase();
+        const refCode = String(params.get('reference_sale') || params.get('referenceCode') || '');
+        // PayU rounds value to 1 decimal (or whole if integer)
+        const rawValue = parseFloat(String(params.get('value') || params.get('TX_VALUE') || params.get('amount') || '0'));
+        const valueStr = (Math.round(rawValue * 10) / 10).toString();
+        const currency = String(params.get('currency') || '').toUpperCase();
+        const txState = String(params.get('state_pol') || params.get('transactionState') || '');
+        const data = `${apiKey}~${merchantId}~${refCode}~${valueStr}~${currency}~${txState}`;
+        const expected = await md5Hex(data);
+        if (!timingSafeEqual(provided, expected)) return unauthorized('payu: invalid signature');
+        // PayU state_pol: 4 = APPROVED, 6 = DECLINED, 104 = ERROR
+        const approved = txState === '4' || params.get('status') === 'APPROVED' || params.get('transactionState') === 'APPROVED';
+        const declined = txState === '6' || txState === '104' || params.get('status') === 'DECLINED' || params.get('status') === 'ERROR';
+        if (approved) {
+          transactionId = refCode;
           status = 'completed';
-          amount = parseFloat(event.amount || event.value || '0');
+          amount = rawValue;
           console.log(`[payment-webhook] PayU payment completed: ${transactionId}, amount: ${amount}`);
-        } else if (event.status === 'DECLINED' || event.status === 'ERROR') {
-          transactionId = event.referenceCode || event.reference;
+        } else if (declined) {
+          transactionId = refCode;
           status = 'failed';
         }
         break;
       }
 
       case 'mollie': {
-        event = JSON.parse(body);
-        // Mollie sends payment ID, need to fetch status
-        if (event.id) {
-          transactionId = event.metadata?.transactionId || event.id;
-          // Status would need to be fetched from Mollie API
-          // For now, assume it's a success notification
+        // Mollie does not sign callbacks. The body contains only the payment id.
+        // Verify by calling the Mollie API with the panel's API key.
+        const params = new URLSearchParams(body);
+        const paymentId = params.get('id');
+        if (!paymentId) return unauthorized('mollie: missing payment id');
+        const cfg = await loadGatewayConfigForTransaction(supabase, paymentId, 'mollie');
+        const apiKey = cfg?.secretKey || cfg?.secret_key || cfg?.apiKey || cfg?.api_key;
+        if (!apiKey) return unauthorized('mollie: api key not configured');
+        const verifyResp = await fetch(`https://api.mollie.com/v2/payments/${encodeURIComponent(paymentId)}`, {
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+        });
+        if (!verifyResp.ok) return unauthorized('mollie: payment verification failed');
+        const verifyData = await verifyResp.json().catch(() => null);
+        if (!verifyData?.id) return unauthorized('mollie: invalid verification response');
+        event = verifyData;
+        transactionId = verifyData.metadata?.transactionId || paymentId;
+        amount = parseFloat(verifyData.amount?.value || '0');
+        if (verifyData.status === 'paid') {
           status = 'completed';
-          console.log(`[payment-webhook] Mollie payment webhook: ${transactionId}`);
+          console.log(`[payment-webhook] Mollie payment confirmed: ${transactionId}, amount: ${amount}`);
+        } else if (verifyData.status === 'failed' || verifyData.status === 'expired' || verifyData.status === 'canceled') {
+          status = 'failed';
+        } else {
+          // Pending/open/authorized — ignore
+          transactionId = null;
         }
         break;
       }
 
       case 'nowpayments': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.order_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'nowpayments');
+        const ipnSecret = cfg?.ipnSecret || cfg?.ipn_secret
+          || cfg?.webhookSecret || cfg?.webhook_secret;
+        if (!ipnSecret) return unauthorized('nowpayments: ipn secret not configured');
+        const sigHeader = (req.headers.get('x-nowpayments-sig') || '').toLowerCase();
+        // NOWPayments requires HMAC-SHA512 of the JSON body with keys deeply sorted alphabetically
+        const sortedJson = JSON.stringify(sortObjectDeep(preEvent));
+        const expected = await hmacHex('SHA-512', ipnSecret, sortedJson);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('nowpayments: invalid signature');
+        event = preEvent;
         if (event.payment_status === 'finished' || event.payment_status === 'confirmed') {
           transactionId = event.order_id;
           status = 'completed';
@@ -303,7 +554,31 @@ serve(async (req) => {
       }
 
       case 'coingate': {
-        event = JSON.parse(body);
+        // CoinGate callbacks aren't HMAC-signed. Re-verify by fetching the
+        // order from CoinGate's API using the panel-configured API token.
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.order_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'coingate');
+        const apiToken = cfg?.apiToken || cfg?.api_token
+          || cfg?.secretKey || cfg?.secret_key || cfg?.apiKey || cfg?.api_key;
+        if (!apiToken) return unauthorized('coingate: api token not configured');
+        const orderId = preEvent.id;
+        if (!orderId) return unauthorized('coingate: missing order id');
+        const sandbox = !!cfg?.sandbox;
+        const apiBase = sandbox ? 'https://api-sandbox.coingate.com' : 'https://api.coingate.com';
+        const verifyResp = await fetch(`${apiBase}/v2/orders/${encodeURIComponent(orderId)}`, {
+          headers: { 'Authorization': `Token ${apiToken}` },
+        });
+        if (!verifyResp.ok) return unauthorized('coingate: order verification failed');
+        const verifyData = await verifyResp.json().catch(() => null);
+        if (!verifyData?.id) return unauthorized('coingate: invalid verification response');
+        if (String(verifyData.status) !== String(preEvent.status)) {
+          return unauthorized('coingate: callback status mismatch');
+        }
+        if (String(verifyData.order_id || '') !== String(preEvent.order_id || '')) {
+          return unauthorized('coingate: callback order_id mismatch');
+        }
+        event = preEvent;
         if (event.status === 'paid') {
           transactionId = event.order_id;
           status = 'completed';
@@ -317,7 +592,19 @@ serve(async (req) => {
       }
 
       case 'binancepay': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.merchantTradeNo;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'binancepay');
+        const secret = cfg?.secretKey || cfg?.secret_key;
+        if (!secret) return unauthorized('binancepay: secret key not configured');
+        const ts = req.headers.get('binancepay-timestamp') || '';
+        const nonce = req.headers.get('binancepay-nonce') || '';
+        const sigHeader = (req.headers.get('binancepay-signature') || '').toUpperCase();
+        if (!ts || !nonce || !sigHeader) return unauthorized('binancepay: missing signature headers');
+        const payload = `${ts}\n${nonce}\n${body}\n`;
+        const expected = (await hmacHex('SHA-512', secret, payload)).toUpperCase();
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('binancepay: invalid signature');
+        event = preEvent;
         if (event.bizStatus === 'PAY_SUCCESS') {
           transactionId = event.data?.merchantTradeNo;
           status = 'completed';
@@ -331,7 +618,18 @@ serve(async (req) => {
       }
 
       case 'square': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.object?.order_id || preEvent.data?.object?.note;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'square');
+        const sigKey = cfg?.webhookSignatureKey || cfg?.webhook_signature_key
+          || cfg?.signatureKey || cfg?.signature_key;
+        const notificationUrl = cfg?.notificationUrl || cfg?.notification_url
+          || `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=square`;
+        if (!sigKey) return unauthorized('square: webhook signature key not configured');
+        const sigHeader = req.headers.get('x-square-hmacsha256-signature') || '';
+        const expected = await hmacBase64('SHA-256', sigKey, notificationUrl + body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('square: invalid signature');
+        event = preEvent;
         if (event.type === 'payment.completed' || event.data?.object?.status === 'COMPLETED') {
           transactionId = event.data?.object?.order_id || event.data?.object?.note;
           status = 'completed';
@@ -346,14 +644,51 @@ serve(async (req) => {
       }
 
       case 'braintree': {
-        event = JSON.parse(body);
-        if (event.kind === 'transaction_settled' || event.kind === 'disbursement') {
-          transactionId = event.transaction?.id || event.subject?.transactions?.[0]?.id;
+        // Braintree webhooks arrive as form-encoded bt_signature/bt_payload.
+        // bt_signature contains pairs publicKey|sig joined by &; verify by
+        // HMAC-SHA1(payload) with key = sha1(privateKey) for our public key.
+        // The decoded payload itself is XML, so we extract the fields we
+        // need with small regex helpers — no XML library is available in
+        // Deno Edge Functions and we only need a handful of leaf values.
+        const params = new URLSearchParams(body);
+        const btSig = params.get('bt_signature');
+        const btPayload = params.get('bt_payload');
+        if (!btSig || !btPayload) return unauthorized('braintree: missing bt_signature/bt_payload');
+        let xml = '';
+        try {
+          xml = atob(btPayload.replace(/\s+/g, ''));
+        } catch (_e) {
+          return unauthorized('braintree: bt_payload is not valid base64');
+        }
+        const xmlText = (tag: string): string | null => {
+          const m = xml.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'));
+          return m ? m[1].trim() : null;
+        };
+        const preTx = xmlText('id') || xmlText('transaction-id') || xmlText('order-id') || xmlText('custom-field');
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'braintree');
+        const publicKey = cfg?.publicKey || cfg?.public_key;
+        const privateKey = cfg?.secretKey || cfg?.secret_key || cfg?.privateKey || cfg?.private_key;
+        if (!publicKey || !privateKey) return unauthorized('braintree: keys not configured');
+        const pairs = btSig.split('&').map((p) => p.split('|')).filter((p) => p.length === 2);
+        const matched = pairs.find(([k]) => k === publicKey);
+        if (!matched) return unauthorized('braintree: no matching public key in signature');
+        const sigKeyHash = await sha1Hex(privateKey);
+        const expected = await hmacHex('SHA-1', sigKeyHash, btPayload);
+        if (!timingSafeEqual(matched[1].toLowerCase(), expected)) {
+          return unauthorized('braintree: invalid signature');
+        }
+        const kind = xmlText('kind') || '';
+        const txAmount = xmlText('amount');
+        const orderRef = xmlText('order-id') || xmlText('custom-field');
+        const txId = xmlText('id') || xmlText('transaction-id');
+        event = { kind, transaction: { id: txId, amount: txAmount, order_id: orderRef } };
+        if (kind === 'transaction_settled' || kind === 'disbursement') {
+          transactionId = orderRef || txId;
           status = 'completed';
-          amount = parseFloat(event.transaction?.amount || '0');
+          amount = parseFloat(txAmount || '0');
           console.log(`[payment-webhook] Braintree payment settled: ${transactionId}, amount: ${amount}`);
-        } else if (event.kind === 'transaction_settled_failed' || event.kind === 'transaction_settlement_declined') {
-          transactionId = event.transaction?.id;
+        } else if (kind === 'transaction_settled_failed' || kind === 'transaction_settlement_declined') {
+          transactionId = orderRef || txId;
           status = 'failed';
         }
         break;
@@ -361,8 +696,23 @@ serve(async (req) => {
 
       case 'ach':
       case 'sepa': {
-        // ACH/SEPA use Stripe under the hood
-        event = JSON.parse(body);
+        // ACH/SEPA use Stripe under the hood — verify Stripe webhook signature.
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.object?.metadata?.transactionId;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'stripe');
+        const secret = cfg?.webhookSecret || cfg?.webhook_secret
+          || cfg?.signingSecret || cfg?.signing_secret
+          || Deno.env.get('STRIPE_WEBHOOK_SECRET');
+        if (!secret) return unauthorized(`${gateway}: stripe webhook signing secret not configured`);
+        const sigHeader = req.headers.get('stripe-signature') || '';
+        const t = parseKvHeader(sigHeader)['t'];
+        const v1List = parseKvHeaderMulti(sigHeader, 'v1').map((s) => s.toLowerCase());
+        if (!t || v1List.length === 0) return unauthorized(`${gateway}: malformed stripe signature header`);
+        const expected = await hmacHex('SHA-256', secret, `${t}.${body}`);
+        if (!v1List.some((v) => timingSafeEqual(v, expected))) return unauthorized(`${gateway}: invalid stripe signature`);
+        const tsAge = Math.abs(Date.now() / 1000 - parseInt(t, 10));
+        if (!Number.isFinite(tsAge) || tsAge > 300) return unauthorized(`${gateway}: stripe signature timestamp out of tolerance`);
+        event = preEvent;
         if (event.type === 'checkout.session.completed') {
           const session = event.data.object;
           transactionId = session.metadata?.transactionId;
@@ -379,7 +729,15 @@ serve(async (req) => {
       }
 
       case 'btcpay': {
-        event = JSON.parse(body);
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.invoiceId || preEvent.metadata?.orderId;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'btcpay');
+        const secret = cfg?.webhookSecret || cfg?.webhook_secret;
+        if (!secret) return unauthorized('btcpay: webhook secret not configured');
+        const sigHeader = (req.headers.get('btcpay-sig') || '').replace(/^sha256=/i, '').toLowerCase();
+        const expected = await hmacHex('SHA-256', secret, body);
+        if (!timingSafeEqual(sigHeader, expected)) return unauthorized('btcpay: invalid signature');
+        event = preEvent;
         if (event.type === 'InvoiceSettled' || event.type === 'InvoiceProcessing') {
           transactionId = event.invoiceId || event.metadata?.orderId;
           status = 'completed';
@@ -393,7 +751,40 @@ serve(async (req) => {
       }
 
       case 'wise': {
-        event = JSON.parse(body);
+        // Wise signs webhooks with RSA-SHA256 (X-Signature-SHA256) using
+        // Wise's public key. Without a cached/configured public key we
+        // re-verify by fetching the transfer status from Wise's API.
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.resource?.id?.toString();
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'wise');
+        const apiKey = cfg?.secretKey || cfg?.secret_key || cfg?.apiKey || cfg?.api_key;
+        if (!apiKey) return unauthorized('wise: api key not configured');
+        const transferId = preEvent.data?.resource?.id;
+        const profileId = preEvent.data?.resource?.profile_id;
+        if (!transferId) return unauthorized('wise: missing transfer id');
+        const verifyResp = await fetch(
+          `https://api.transferwise.com/v1/profiles/${encodeURIComponent(String(profileId || ''))}/transfers/${encodeURIComponent(String(transferId))}`,
+          { headers: { 'Authorization': `Bearer ${apiKey}` } },
+        );
+        if (!verifyResp.ok) {
+          // Fall back to flat endpoint
+          const altResp = await fetch(`https://api.transferwise.com/v1/transfers/${encodeURIComponent(String(transferId))}`, {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+          });
+          if (!altResp.ok) return unauthorized('wise: transfer verification failed');
+          const altData = await altResp.json().catch(() => null);
+          if (!altData?.id) return unauthorized('wise: invalid verification response');
+          if (preEvent.data?.current_state && altData.status !== preEvent.data.current_state) {
+            return unauthorized('wise: callback state mismatch');
+          }
+        } else {
+          const verifyData = await verifyResp.json().catch(() => null);
+          if (!verifyData?.id) return unauthorized('wise: invalid verification response');
+          if (preEvent.data?.current_state && verifyData.status !== preEvent.data.current_state) {
+            return unauthorized('wise: callback state mismatch');
+          }
+        }
+        event = preEvent;
         if (event.event_type === 'transfers#state-change' && event.data?.current_state === 'outgoing_payment_sent') {
           transactionId = event.data?.resource?.id?.toString();
           status = 'completed';
@@ -407,8 +798,21 @@ serve(async (req) => {
       }
 
       case 'cryptomus': {
-        // Cryptomus crypto payment webhook
-        event = JSON.parse(body);
+        // Cryptomus signs each callback with `sign` = md5(base64(JSON without sign) + apiKey)
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.order_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'cryptomus');
+        const paymentApiKey = cfg?.paymentApiKey || cfg?.payment_api_key
+          || cfg?.apiKey || cfg?.api_key;
+        if (!paymentApiKey) return unauthorized('cryptomus: payment api key not configured');
+        const provided = String(preEvent.sign || '').toLowerCase();
+        if (!provided) return unauthorized('cryptomus: missing sign');
+        const { sign: _omit, ...rest } = preEvent;
+        // Cryptomus uses PHP json_encode with JSON_UNESCAPED_UNICODE — slashes are escaped (\/)
+        const jsonNoSign = JSON.stringify(rest).replace(/\//g, '\\/');
+        const expected = await md5Hex(btoa(jsonNoSign) + paymentApiKey);
+        if (!timingSafeEqual(provided, expected)) return unauthorized('cryptomus: invalid sign');
+        event = preEvent;
         // Cryptomus status: paid, paid_over, wrong_amount, process, confirm_check, wrong_amount_waiting, check, fail, cancel, system_fail, refund_process, refund_fail, refund_paid
         if (event.status === 'paid' || event.status === 'paid_over') {
           transactionId = event.order_id;
