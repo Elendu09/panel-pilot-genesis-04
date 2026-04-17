@@ -33,13 +33,48 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-async function loadGatewayConfig(supabase: any, providerName: string): Promise<Record<string, any>> {
-  const { data } = await supabase
+/**
+ * Load the per-tenant gateway config by following the transaction reference
+ * back to the owning panel's `settings.payments.enabledMethods` entry — the
+ * same source process-payment uses at initiation. This keeps secret-of-record
+ * authority on the panel level so each tenant's webhook is verified with the
+ * exact credentials they configured. Falls back to the platform-level
+ * provider config (rarely populated) only if no panel match is found.
+ */
+async function loadGatewayConfigForTransaction(
+  supabase: any,
+  transactionRef: string | null,
+  providerName: string,
+): Promise<Record<string, any> | null> {
+  if (transactionRef) {
+    const { data: tx } = await supabase
+      .from('transactions')
+      .select('panel_id')
+      .eq('id', transactionRef)
+      .maybeSingle();
+    const panelId = tx?.panel_id;
+    if (panelId) {
+      const { data: panel } = await supabase
+        .from('panels')
+        .select('settings')
+        .eq('id', panelId)
+        .maybeSingle();
+      const settings = (panel?.settings as Record<string, any>) || {};
+      const enabledMethods: any[] = settings?.payments?.enabledMethods || [];
+      const match = enabledMethods.find((m) => {
+        const id = typeof m === 'string' ? m : m?.id;
+        return id === providerName;
+      });
+      if (match && typeof match === 'object') return match as Record<string, any>;
+    }
+  }
+  // Fall back to platform-level provider defaults, if any.
+  const { data: platformRow } = await supabase
     .from('platform_payment_providers')
     .select('config')
     .eq('provider_name', providerName)
     .maybeSingle();
-  return (data?.config as Record<string, any>) || {};
+  return (platformRow?.config as Record<string, any>) || null;
 }
 
 function unauthorized(reason: string): Response {
@@ -396,17 +431,22 @@ serve(async (req) => {
       }
 
       case 'squad': {
-        // Squad signs the raw body with HMAC-SHA512 using the secret key.
-        // Header: x-squad-signature (or squad-signature). Reject if missing/invalid.
-        const cfg = await loadGatewayConfig(supabase, 'squad');
-        const secret = cfg.secretKey || cfg.secret_key || cfg.webhookSecret;
-        if (!secret) return unauthorized('squad: webhook secret not configured');
+        // Pre-parse to extract our internal transaction ref so we can resolve
+        // the panel-scoped gateway config (same secret used at initiation).
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.TransactionRef
+          || preEvent.Body?.transaction_ref
+          || preEvent.Body?.merchant_reference
+          || preEvent.data?.transaction_ref;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'squad');
+        const secret = cfg?.secretKey || cfg?.secret_key || cfg?.webhookSecret;
+        if (!secret) return unauthorized('squad: panel webhook secret not configured');
         const sigHeader = (req.headers.get('x-squad-signature') || req.headers.get('squad-signature') || '').toLowerCase();
         const expected = await hmacHex('SHA-512', secret, body);
         if (!timingSafeEqual(sigHeader, expected)) {
           return unauthorized('squad: invalid signature');
         }
-        event = JSON.parse(body);
+        event = preEvent;
         // Squad: { Event: 'charge_successful', TransactionRef, Body: { transaction_status, ... } }
         const evtType = event.Event || event.event;
         const txData = event.Body || event.data || {};
@@ -425,17 +465,17 @@ serve(async (req) => {
       }
 
       case 'lenco': {
-        // Lenco signs the raw body with HMAC-SHA256 using the webhook secret.
-        // Header: x-webhook-signature.
-        const cfg = await loadGatewayConfig(supabase, 'lenco');
-        const secret = cfg.webhookSecret || cfg.webhook_secret || cfg.secretKey;
-        if (!secret) return unauthorized('lenco: webhook secret not configured');
+        const preEvent = JSON.parse(body);
+        const preTx = preEvent.data?.reference;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'lenco');
+        const secret = cfg?.webhookSecret || cfg?.webhook_secret || cfg?.secretKey;
+        if (!secret) return unauthorized('lenco: panel webhook secret not configured');
         const sigHeader = (req.headers.get('x-webhook-signature') || '').toLowerCase();
         const expected = await hmacHex('SHA-256', secret, body);
         if (!timingSafeEqual(sigHeader, expected)) {
           return unauthorized('lenco: invalid signature');
         }
-        event = JSON.parse(body);
+        event = preEvent;
         // Lenco: { event: 'collection.successful' | 'collection.failed', data: { reference, amount } }
         if (event.event === 'collection.successful' || event.data?.status === 'successful') {
           transactionId = event.data?.reference;
@@ -451,14 +491,15 @@ serve(async (req) => {
 
       case 'toyyibpay': {
         // toyyibPay does not sign callbacks. Verify out-of-band by re-fetching
-        // the bill from toyyibPay's API using the configured secret key.
-        const cfg = await loadGatewayConfig(supabase, 'toyyibpay');
-        const secret = cfg.secretKey || cfg.userSecretKey;
-        if (!secret) return unauthorized('toyyibpay: secret key not configured');
+        // the bill from toyyibPay's API using the panel-configured secret key.
         const params = new URLSearchParams(body);
         const billCode = params.get('billcode') || params.get('billCode');
+        const preTx = params.get('order_id') || params.get('billExternalReferenceNo');
         if (!billCode) return unauthorized('toyyibpay: missing billcode');
-        const baseUrl = cfg.sandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com';
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'toyyibpay');
+        const secret = cfg?.secretKey || cfg?.userSecretKey;
+        if (!secret) return unauthorized('toyyibpay: panel secret key not configured');
+        const baseUrl = cfg?.sandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com';
         const verifyResp = await fetch(`${baseUrl}/index.php/api/getBillTransactions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -488,10 +529,11 @@ serve(async (req) => {
       case 'billplz': {
         // Billplz x_signature: HMAC-SHA256 of `key1value1|key2value2|...` (sorted),
         // excluding `x_signature` itself, using the X-Signature key from Billplz.
-        const cfg = await loadGatewayConfig(supabase, 'billplz');
-        const xSignatureKey = cfg.xSignatureKey || cfg.x_signature_key;
-        if (!xSignatureKey) return unauthorized('billplz: x_signature key not configured');
         const params = new URLSearchParams(body);
+        const preTx = params.get('reference_1') || params.get('id');
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'billplz');
+        const xSignatureKey = cfg?.xSignatureKey || cfg?.x_signature_key;
+        if (!xSignatureKey) return unauthorized('billplz: panel x_signature key not configured');
         const provided = params.get('x_signature') || '';
         const sortedKeys = [...params.keys()].filter((k) => k !== 'x_signature').sort();
         const source = sortedKeys.map((k) => `${k}${params.get(k) ?? ''}`).join('|');
@@ -513,10 +555,11 @@ serve(async (req) => {
 
       case 'midtrans': {
         // Midtrans signature_key = SHA-512(order_id + status_code + gross_amount + server_key)
-        const cfg = await loadGatewayConfig(supabase, 'midtrans');
-        const serverKey = cfg.serverKey || cfg.server_key;
-        if (!serverKey) return unauthorized('midtrans: server key not configured');
         event = JSON.parse(body);
+        const preTx = event.order_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'midtrans');
+        const serverKey = cfg?.serverKey || cfg?.server_key;
+        if (!serverKey) return unauthorized('midtrans: panel server key not configured');
         const provided = (event.signature_key || '').toLowerCase();
         const expected = await sha512Hex(
           `${event.order_id || ''}${event.status_code || ''}${event.gross_amount || ''}${serverKey}`
@@ -542,14 +585,15 @@ serve(async (req) => {
 
       case 'xendit': {
         // Xendit uses a static callback verification token in `x-callback-token`.
-        const cfg = await loadGatewayConfig(supabase, 'xendit');
-        const expectedToken = cfg.callbackToken || cfg.callback_token || cfg.webhookToken;
-        if (!expectedToken) return unauthorized('xendit: callback token not configured');
+        event = JSON.parse(body);
+        const preTx = event.external_id;
+        const cfg = await loadGatewayConfigForTransaction(supabase, preTx, 'xendit');
+        const expectedToken = cfg?.callbackToken || cfg?.callback_token || cfg?.webhookToken;
+        if (!expectedToken) return unauthorized('xendit: panel callback token not configured');
         const provided = req.headers.get('x-callback-token') || '';
         if (!timingSafeEqual(provided, expectedToken)) {
           return unauthorized('xendit: invalid callback token');
         }
-        event = JSON.parse(body);
         // Xendit invoice webhook: { external_id, status: 'PAID' | 'EXPIRED' | 'FAILED', paid_amount }
         transactionId = event.external_id;
         amount = parseFloat(event.paid_amount || event.amount || '0');
