@@ -507,17 +507,48 @@ serve(async (req) => {
         });
         if (!verifyResp.ok) return unauthorized('toyyibpay: callback verification failed');
         const verifyData = await verifyResp.json().catch(() => null);
-        const verified = Array.isArray(verifyData) && verifyData.find(
-          (t: any) => String(t.billpaymentStatus) === String(params.get('status_id'))
+        if (!Array.isArray(verifyData) || verifyData.length === 0) {
+          return unauthorized('toyyibpay: empty verification response');
+        }
+        // Bind verified bill to OUR internal transaction by external reference,
+        // verified payment status, and verified paid amount. This prevents an
+        // attacker from forging a callback that points an unrelated cheap bill
+        // at a different (more valuable) pending transaction.
+        const callbackStatus = String(params.get('status_id'));
+        const callbackRef = params.get('order_id') || params.get('billExternalReferenceNo') || '';
+        const callbackAmountSen = parseFloat(params.get('amount') || '0');
+        const verified = verifyData.find((t: any) =>
+          String(t.billpaymentStatus) === callbackStatus
+          && String(t.billExternalReferenceNo || '') === String(callbackRef)
+          && Math.abs(parseFloat(String(t.billpaymentAmount || '0')) - callbackAmountSen) < 1
         );
-        if (!verified) return unauthorized('toyyibpay: callback does not match billing record');
-        const statusId = params.get('status_id');
-        transactionId = params.get('order_id') || params.get('billExternalReferenceNo');
-        amount = parseFloat(params.get('amount') || '0') / 100;
-        if (statusId === '1') {
+        if (!verified) {
+          return unauthorized(
+            'toyyibpay: callback does not match verified bill (reference/status/amount mismatch)'
+          );
+        }
+        // Now also check our internal transaction matches the verified amount/currency.
+        if (callbackRef) {
+          const { data: internalTx } = await supabase
+            .from('transactions')
+            .select('id, amount, currency, status')
+            .eq('id', callbackRef)
+            .maybeSingle();
+          if (!internalTx) return unauthorized('toyyibpay: unknown internal transaction');
+          const verifiedMyr = callbackAmountSen / 100;
+          if (Math.abs(Number(internalTx.amount) - verifiedMyr) > 0.01) {
+            return unauthorized('toyyibpay: amount mismatch with internal transaction');
+          }
+          if (String(internalTx.currency || '').toUpperCase() !== 'MYR') {
+            return unauthorized('toyyibpay: currency mismatch with internal transaction');
+          }
+        }
+        transactionId = callbackRef;
+        amount = callbackAmountSen / 100;
+        if (callbackStatus === '1') {
           status = 'completed';
           console.log(`[payment-webhook] toyyibPay payment completed: ${transactionId}, amount: ${amount}`);
-        } else if (statusId === '3') {
+        } else if (callbackStatus === '3') {
           status = 'failed';
         } else {
           // status 2 = pending; ignore
@@ -623,16 +654,18 @@ serve(async (req) => {
       );
     }
 
-    // Update transaction status
-    const { data: transaction, error: txError } = await supabase
+    // Update transaction status. Apply an idempotency / state-transition
+    // guard for `completed`: only allow `pending -> completed`. This prevents
+    // a replayed (or otherwise duplicated) webhook from re-completing an
+    // already-finalized transaction and crediting balance twice.
+    let updateQuery = supabase
       .from('transactions')
-      .update({ 
-        status,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', transactionId)
-      .select()
-      .single();
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', transactionId);
+    if (status === 'completed') {
+      updateQuery = updateQuery.eq('status', 'pending');
+    }
+    const { data: transaction, error: txError } = await updateQuery.select().single();
 
     if (txError) {
       console.error('[payment-webhook] Error updating transaction by id:', txError);
