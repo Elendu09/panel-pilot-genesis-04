@@ -334,6 +334,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Switch to {{currency}} & Continue",
       "payment.dialog.continueWith": "Continue with {{currency}}",
       "payment.dialog.selectCurrency": "Select a currency",
+    "payment.dialog.sessionSwitch": "Your session currency will be switched from {{from}} to {{to}}",
     },
   es: {
     // Buyer Theme Homepage Defaults
@@ -633,6 +634,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Cambiar a {{currency}} y continuar",
       "payment.dialog.continueWith": "Continuar con {{currency}}",
       "payment.dialog.selectCurrency": "Selecciona una moneda",
+    "payment.dialog.sessionSwitch": "La moneda de tu sesión cambiará de {{from}} a {{to}}",
     },
   pt: {
     // Buyer Theme Homepage Defaults
@@ -932,6 +934,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Mudar para {{currency}} e continuar",
       "payment.dialog.continueWith": "Continuar com {{currency}}",
       "payment.dialog.selectCurrency": "Selecione uma moeda",
+    "payment.dialog.sessionSwitch": "A moeda da sua sessão mudará de {{from}} para {{to}}",
     },
   ar: {
     // Buyer Theme Homepage Defaults (Arabic)
@@ -1230,6 +1233,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "التحويل إلى {{currency}} والمتابعة",
       "payment.dialog.continueWith": "المتابعة بـ {{currency}}",
       "payment.dialog.selectCurrency": "اختر عملة",
+    "payment.dialog.sessionSwitch": "سيتم تغيير عملة جلستك من {{from}} إلى {{to}}",
     },
   tr: {
     // Buyer Theme Homepage Defaults (Turkish)
@@ -1521,6 +1525,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "{{currency}} olarak değiştir ve devam et",
       "payment.dialog.continueWith": "{{currency}} ile devam et",
       "payment.dialog.selectCurrency": "Bir para birimi seç",
+    "payment.dialog.sessionSwitch": "Oturum para biriminiz {{from}} biriminden {{to}} birimine değiştirilecek",
     },
   ru: {
     // Buyer Theme Homepage Defaults (Russian)
@@ -1812,6 +1817,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Сменить на {{currency}} и продолжить",
       "payment.dialog.continueWith": "Продолжить с {{currency}}",
       "payment.dialog.selectCurrency": "Выберите валюту",
+    "payment.dialog.sessionSwitch": "Валюта сессии будет изменена с {{from}} на {{to}}",
     },
   fr: {
     // Buyer Theme Homepage Defaults (French)
@@ -2103,6 +2109,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Passer à {{currency}} et continuer",
       "payment.dialog.continueWith": "Continuer avec {{currency}}",
       "payment.dialog.selectCurrency": "Sélectionnez une devise",
+    "payment.dialog.sessionSwitch": "La devise de votre session passera de {{from}} à {{to}}",
     },
   de: {
     // Buyer Theme Homepage Defaults (German)
@@ -2394,6 +2401,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "Zu {{currency}} wechseln und fortfahren",
       "payment.dialog.continueWith": "Mit {{currency}} fortfahren",
       "payment.dialog.selectCurrency": "Währung auswählen",
+    "payment.dialog.sessionSwitch": "Die Währung deiner Sitzung wird von {{from}} auf {{to}} geändert",
     },
   zh: {
     // Buyer Theme Homepage Defaults (Chinese)
@@ -2684,6 +2692,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "切换到 {{currency}} 并继续",
       "payment.dialog.continueWith": "使用 {{currency}} 继续",
       "payment.dialog.selectCurrency": "选择货币",
+    "payment.dialog.sessionSwitch": "您的会话货币将从 {{from}} 切换到 {{to}}",
     },
   hi: {
     // Buyer Theme Homepage Defaults (Hindi)
@@ -2974,6 +2983,7 @@ export const platformTranslations = {
       "payment.dialog.switchAndContinue": "{{currency}} पर बदलें और जारी रखें",
       "payment.dialog.continueWith": "{{currency}} के साथ जारी रखें",
       "payment.dialog.selectCurrency": "एक मुद्रा चुनें",
+    "payment.dialog.sessionSwitch": "आपकी सत्र मुद्रा {{from}} से {{to}} में बदल जाएगी",
     },
 };
 

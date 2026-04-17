@@ -1297,7 +1297,7 @@ const BuyerDeposit = () => {
                   {pendingDialogMode === 'must-switch' && pendingTargetCurrency && (
                     <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
                       <p className="text-sm font-medium text-primary">
-                        Your session currency will be switched from <strong>{currency}</strong> → <strong>{pendingTargetCurrency}</strong>
+                        {t('payment.dialog.sessionSwitch', { from: currency, to: pendingTargetCurrency })}
                       </p>
                     </div>
                   )}
