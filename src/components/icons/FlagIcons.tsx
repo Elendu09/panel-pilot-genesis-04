@@ -285,6 +285,275 @@ export const FlagAE: React.FC<FlagProps> = ({ className }) => (
   </svg>
 );
 
+// New Zealand
+export const FlagNZ: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#00247D" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" width="14" height="8"/>
+    <rect fill="#CF101A" x="5" width="4" height="8"/>
+    <rect fill="#CF101A" y="3" width="14" height="2"/>
+    <g fill="#CC0001"><circle cx="24" cy="8" r="2"/><circle cx="30" cy="14" r="2"/><circle cx="28" cy="22" r="2"/><circle cx="22" cy="18" r="2"/></g>
+  </svg>
+);
+
+// Switzerland
+export const FlagCH: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FF0000" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" x="14" y="7" width="8" height="22"/>
+    <rect fill="#FFFFFF" x="7" y="14" width="22" height="8"/>
+  </svg>
+);
+
+// Egypt
+export const FlagEG: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#CE1126" width="36" height="12" rx="4"/>
+    <rect fill="#FFFFFF" y="12" width="36" height="12"/>
+    <rect fill="#000000" y="24" width="36" height="12" rx="4"/>
+    <circle fill="#C09300" cx="18" cy="18" r="4" opacity="0.8"/>
+  </svg>
+);
+
+// Morocco
+export const FlagMA: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#C1272D" width="36" height="36" rx="4"/>
+    <polygon fill="none" stroke="#006233" strokeWidth="1.5" points="18,8 20,14 26,14 21,18 23,24 18,20 13,24 15,18 10,14 16,14"/>
+  </svg>
+);
+
+// West/Central Africa generic (used for XOF/XAF)
+export const FlagXF: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#009A44" width="12" height="36" rx="4"/>
+    <rect fill="#FEDD00" x="12" width="12" height="36"/>
+    <rect fill="#CE1126" x="24" width="12" height="36" rx="4"/>
+  </svg>
+);
+
+// Sri Lanka
+export const FlagLK: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#8D153A" width="36" height="36" rx="4"/>
+    <rect fill="#FF7300" x="2" width="6" height="36"/>
+    <rect fill="#009E49" x="8" width="6" height="36"/>
+    <rect fill="#FBBF24" x="16" width="16" height="32" y="2" rx="2"/>
+  </svg>
+);
+
+// Nepal
+export const FlagNP: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="36" rx="4"/>
+    <polygon fill="#003893" points="4,4 4,28 24,28"/>
+    <polygon fill="#CE1126" points="6,6 6,25 21,25"/>
+    <circle fill="#FFFFFF" cx="12" cy="14" r="2"/>
+    <polygon fill="#FFFFFF" points="12,20 14,24 10,24"/>
+  </svg>
+);
+
+// Thailand
+export const FlagTH: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#A51931" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" y="6" width="36" height="24"/>
+    <rect fill="#2D2A4A" y="12" width="36" height="12"/>
+  </svg>
+);
+
+// Malaysia
+export const FlagMY: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#CC0001" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" y="4" width="36" height="4"/>
+    <rect fill="#FFFFFF" y="12" width="36" height="4"/>
+    <rect fill="#FFFFFF" y="20" width="36" height="4"/>
+    <rect fill="#FFFFFF" y="28" width="36" height="4"/>
+    <rect fill="#010066" width="18" height="20"/>
+    <circle fill="#FC0" cx="10" cy="10" r="4"/>
+    <circle fill="#010066" cx="12" cy="10" r="3"/>
+    <polygon fill="#FC0" points="16,6 16.8,8.5 19.5,8.5 17.3,10 18.2,12.5 16,11 13.8,12.5 14.7,10 12.5,8.5 15.2,8.5"/>
+  </svg>
+);
+
+// Singapore
+export const FlagSG: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#EF3340" width="36" height="18" rx="4"/>
+    <rect fill="#FFFFFF" y="18" width="36" height="18" rx="4"/>
+    <circle fill="#FFFFFF" cx="10" cy="12" r="5"/>
+    <circle fill="#EF3340" cx="12" cy="12" r="4"/>
+    <g fill="#FFFFFF" transform="translate(16,8)"><circle cx="0" cy="0" r="1"/><circle cx="2" cy="3" r="1"/><circle cx="-2" cy="3" r="1"/><circle cx="1.5" cy="-1" r="1"/><circle cx="-1.5" cy="-1" r="1"/></g>
+  </svg>
+);
+
+// Hong Kong
+export const FlagHK: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#DE2910" width="36" height="36" rx="4"/>
+    <g fill="#FFFFFF" opacity="0.9">
+      <path d="M18,6 Q22,12 18,18 Q14,12 18,6Z" transform="rotate(0,18,18)"/>
+      <path d="M18,6 Q22,12 18,18 Q14,12 18,6Z" transform="rotate(72,18,18)"/>
+      <path d="M18,6 Q22,12 18,18 Q14,12 18,6Z" transform="rotate(144,18,18)"/>
+      <path d="M18,6 Q22,12 18,18 Q14,12 18,6Z" transform="rotate(216,18,18)"/>
+      <path d="M18,6 Q22,12 18,18 Q14,12 18,6Z" transform="rotate(288,18,18)"/>
+    </g>
+  </svg>
+);
+
+// Japan
+export const FlagJP: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="36" rx="4"/>
+    <circle fill="#BC002D" cx="18" cy="18" r="9"/>
+  </svg>
+);
+
+// South Korea
+export const FlagKR: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="36" rx="4"/>
+    <circle fill="#CD2E3A" cx="18" cy="18" r="7"/>
+    <path fill="#003478" d="M18,11 Q25,11 25,18 Q25,14 18,14Z"/>
+    <path fill="#CD2E3A" d="M11,18 Q11,25 18,25 Q14,25 14,18Z"/>
+    <g stroke="#000" strokeWidth="1.5" opacity="0.7">
+      <line x1="6" y1="8" x2="11" y2="13"/><line x1="8" y1="6" x2="13" y2="11"/><line x1="4" y1="10" x2="9" y2="15"/>
+      <line x1="25" y1="23" x2="30" y2="28"/><line x1="23" y1="25" x2="28" y2="30"/><line x1="27" y1="21" x2="32" y2="26"/>
+    </g>
+  </svg>
+);
+
+// Taiwan
+export const FlagTW: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FE0000" width="36" height="36" rx="4"/>
+    <rect fill="#000095" width="18" height="18"/>
+    <circle fill="#FFFFFF" cx="9" cy="9" r="5"/>
+    <circle fill="#000095" cx="9" cy="9" r="3"/>
+    <circle fill="#FFFFFF" cx="9" cy="9" r="1.5"/>
+  </svg>
+);
+
+// Colombia
+export const FlagCO: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FCD116" width="36" height="18" rx="4"/>
+    <rect fill="#003087" y="18" width="36" height="9"/>
+    <rect fill="#CE1126" y="27" width="36" height="9" rx="4"/>
+  </svg>
+);
+
+// Argentina
+export const FlagAR: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#74ACDF" width="36" height="12" rx="4"/>
+    <rect fill="#FFFFFF" y="12" width="36" height="12"/>
+    <rect fill="#74ACDF" y="24" width="36" height="12" rx="4"/>
+    <circle fill="#F6B40E" cx="18" cy="18" r="4"/>
+  </svg>
+);
+
+// Chile
+export const FlagCL: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="18" rx="4"/>
+    <rect fill="#D52B1E" y="18" width="36" height="18" rx="4"/>
+    <rect fill="#0039A6" width="14" height="18"/>
+    <polygon fill="#FFFFFF" points="7,5 8.2,9 12,9 9,11 10.2,15 7,13 3.8,15 5,11 2,9 5.8,9"/>
+  </svg>
+);
+
+// Peru
+export const FlagPE: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#D91023" width="12" height="36" rx="4"/>
+    <rect fill="#FFFFFF" x="12" width="12" height="36"/>
+    <rect fill="#D91023" x="24" width="12" height="36" rx="4"/>
+  </svg>
+);
+
+// Ukraine
+export const FlagUA: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#005BBB" width="36" height="18" rx="4"/>
+    <rect fill="#FFD500" y="18" width="36" height="18" rx="4"/>
+  </svg>
+);
+
+// Poland
+export const FlagPL: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="18" rx="4"/>
+    <rect fill="#DC143C" y="18" width="36" height="18" rx="4"/>
+  </svg>
+);
+
+// Czech Republic
+export const FlagCZ: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="18" rx="4"/>
+    <rect fill="#D7141A" y="18" width="36" height="18" rx="4"/>
+    <polygon fill="#11457E" points="0,0 18,18 0,36"/>
+  </svg>
+);
+
+// Hungary
+export const FlagHU: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#CE2939" width="36" height="12" rx="4"/>
+    <rect fill="#FFFFFF" y="12" width="36" height="12"/>
+    <rect fill="#477050" y="24" width="36" height="12" rx="4"/>
+  </svg>
+);
+
+// Romania
+export const FlagRO: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#002B7F" width="12" height="36" rx="4"/>
+    <rect fill="#FCD116" x="12" width="12" height="36"/>
+    <rect fill="#CE1126" x="24" width="12" height="36" rx="4"/>
+  </svg>
+);
+
+// Bulgaria
+export const FlagBG: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#FFFFFF" width="36" height="12" rx="4"/>
+    <rect fill="#00966E" y="12" width="36" height="12"/>
+    <rect fill="#D62612" y="24" width="36" height="12" rx="4"/>
+  </svg>
+);
+
+// Sweden
+export const FlagSE: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#006AA7" width="36" height="36" rx="4"/>
+    <rect fill="#FECC02" x="12" width="6" height="36"/>
+    <rect fill="#FECC02" y="15" width="36" height="6"/>
+  </svg>
+);
+
+// Norway
+export const FlagNO: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#EF2B2D" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" x="10" width="6" height="36"/>
+    <rect fill="#FFFFFF" y="15" width="36" height="6"/>
+    <rect fill="#002868" x="12" width="2" height="36"/>
+    <rect fill="#002868" y="17" width="36" height="2"/>
+  </svg>
+);
+
+// Denmark
+export const FlagDK: React.FC<FlagProps> = ({ className }) => (
+  <svg className={className} viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+    <rect fill="#C60C30" width="36" height="36" rx="4"/>
+    <rect fill="#FFFFFF" x="12" width="5" height="36"/>
+    <rect fill="#FFFFFF" y="15" width="36" height="5"/>
+  </svg>
+);
+
 export const flagComponents: Record<string, React.FC<FlagProps>> = {
   en: FlagUS,
   es: FlagES,
