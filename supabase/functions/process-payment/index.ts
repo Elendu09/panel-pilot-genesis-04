@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isCurrencyAllowedForGateway, GATEWAY_CURRENCY_SUPPORT } from "../_shared/payment-gateway-currencies.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -333,6 +334,20 @@ serve(async (req) => {
 
     // === STANDARD PAYMENT FLOW ===
     const { gateway, amount, amountUsd, panelId, buyerId, transactionId, returnUrl, currency = 'usd', orderId, isOwnerDeposit, metadata } = body as PaymentRequest;
+
+    // === GUARD: reject mismatched currency for restricted gateways ===
+    if (gateway && !isCurrencyAllowedForGateway(gateway, currency)) {
+      const allowed = GATEWAY_CURRENCY_SUPPORT[gateway]?.currencies || [];
+      console.error(`[process-payment] Currency ${currency} not supported by ${gateway}. Allowed: ${allowed.join(', ')}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `${gateway} does not support ${(currency || '').toUpperCase()}. Supported currencies: ${allowed.join(', ')}.`,
+          allowedCurrencies: allowed,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`[process-payment] Processing ${gateway} payment: $${amount} for panel ${panelId}${orderId ? `, order: ${orderId}` : ''}`);
 
@@ -1598,6 +1613,219 @@ serve(async (req) => {
         );
       }
 
+      case 'squad': {
+        // Squad by GTBank — Nigerian payment gateway, NGN only
+        const squadSecretKey = gatewayConfig.secretKey;
+        if (!squadSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Squad not configured' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'Squad not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const squadResp = await fetch('https://api-d.squadco.com/transaction/initiate', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${squadSecretKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: Math.round(amount * 100), // kobo
+            email: buyerEmail,
+            currency: 'NGN',
+            initiate_type: 'inline',
+            transaction_ref: transactionIdToUse,
+            callback_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            metadata: { panelId, buyerId, transactionId: transactionIdToUse },
+          }),
+        });
+        const squadData = await squadResp.json();
+        if (!squadData.status || squadData.status >= 400 || !squadData.data?.checkout_url) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Squad error: ${squadData.message || 'unknown'}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: squadData.message || 'Squad payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = squadData.data.checkout_url;
+        paymentId = squadData.data.transaction_ref;
+        break;
+      }
+
+      case 'lenco': {
+        // Lenco — Nigerian payment gateway, NGN only
+        const lencoSecretKey = gatewayConfig.secretKey;
+        if (!lencoSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Lenco not configured' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'Lenco not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const lencoResp = await fetch('https://api.lenco.co/access/v2/collections/checkout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${lencoSecretKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amount,
+            currency: 'NGN',
+            reference: transactionIdToUse,
+            customer: { email: buyerEmail },
+            callbackUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            description: `Deposit for panel ${panelId}`,
+          }),
+        });
+        const lencoData = await lencoResp.json();
+        if (!lencoData?.data?.checkoutUrl) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Lenco error: ${lencoData.message || 'unknown'}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: lencoData.message || 'Lenco payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = lencoData.data.checkoutUrl;
+        paymentId = lencoData.data.reference || transactionIdToUse;
+        break;
+      }
+
+      case 'toyyibpay': {
+        // toyyibPay — Malaysian gateway, MYR only
+        const toyyibSecretKey = gatewayConfig.secretKey;
+        const toyyibCategoryCode = gatewayConfig.categoryCode || gatewayConfig.merchantId;
+        if (!toyyibSecretKey || !toyyibCategoryCode) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'toyyibPay not configured (need secretKey + categoryCode)' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'toyyibPay not configured (need secretKey + categoryCode)' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const toyyibForm = new URLSearchParams({
+          userSecretKey: toyyibSecretKey,
+          categoryCode: toyyibCategoryCode,
+          billName: `Deposit-${transactionIdToUse.slice(0, 12)}`,
+          billDescription: `Deposit ${amount} MYR`,
+          billPriceSetting: '1',
+          billPayorInfo: '1',
+          billAmount: String(Math.round(amount * 100)), // sen
+          billReturnUrl: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          billCallbackUrl: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=toyyibpay`,
+          billExternalReferenceNo: transactionIdToUse,
+          billTo: buyerEmail || 'Customer',
+          billEmail: buyerEmail || 'noreply@example.com',
+          billPhone: '0000000000',
+          billPaymentChannel: '0',
+          billContentEmail: 'Thank you for your payment',
+          billChargeToCustomer: '1',
+        });
+        const toyyibResp = await fetch('https://toyyibpay.com/index.php/api/createBill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: toyyibForm.toString(),
+        });
+        const toyyibData = await toyyibResp.json();
+        const billCode = Array.isArray(toyyibData) ? toyyibData[0]?.BillCode : toyyibData?.BillCode;
+        if (!billCode) {
+          await supabase.from('transactions').update({ status: 'failed', description: `toyyibPay error: ${JSON.stringify(toyyibData)}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'toyyibPay payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = `https://toyyibpay.com/${billCode}`;
+        paymentId = billCode;
+        break;
+      }
+
+      case 'billplz': {
+        // Billplz — Malaysian gateway, MYR only
+        const billplzApiKey = gatewayConfig.apiKey || gatewayConfig.secretKey;
+        const billplzCollectionId = gatewayConfig.collectionId || gatewayConfig.merchantId;
+        if (!billplzApiKey || !billplzCollectionId) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Billplz not configured (need apiKey + collectionId)' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'Billplz not configured (need apiKey + collectionId)' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const billplzAuth = btoa(`${billplzApiKey}:`);
+        const billplzForm = new URLSearchParams({
+          collection_id: billplzCollectionId,
+          email: buyerEmail || 'noreply@example.com',
+          name: buyerEmail?.split('@')[0] || 'Customer',
+          amount: String(Math.round(amount * 100)),
+          description: `Deposit ${transactionIdToUse.slice(0, 12)}`,
+          callback_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/payment-webhook?gateway=billplz`,
+          redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+          reference_1_label: 'transaction_id',
+          reference_1: transactionIdToUse,
+        });
+        const billplzResp = await fetch('https://www.billplz.com/api/v3/bills', {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${billplzAuth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: billplzForm.toString(),
+        });
+        const billplzData = await billplzResp.json();
+        if (!billplzData?.url || !billplzData?.id) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Billplz error: ${billplzData?.error?.message || 'unknown'}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: billplzData?.error?.message || 'Billplz payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = billplzData.url;
+        paymentId = billplzData.id;
+        break;
+      }
+
+      case 'midtrans': {
+        // Midtrans — Indonesian gateway, IDR only
+        const midtransServerKey = gatewayConfig.secretKey || gatewayConfig.serverKey;
+        const midtransIsProd = gatewayConfig.production === true || gatewayConfig.production === 'true';
+        if (!midtransServerKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Midtrans not configured' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'Midtrans not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const midtransAuth = btoa(`${midtransServerKey}:`);
+        const midtransUrl = midtransIsProd
+          ? 'https://app.midtrans.com/snap/v1/transactions'
+          : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
+        const midtransResp = await fetch(midtransUrl, {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${midtransAuth}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            transaction_details: {
+              order_id: transactionIdToUse,
+              gross_amount: Math.round(amount), // IDR has no decimals
+            },
+            customer_details: { email: buyerEmail },
+            callbacks: { finish: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}` },
+          }),
+        });
+        const midtransData = await midtransResp.json();
+        if (!midtransData?.redirect_url) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Midtrans error: ${midtransData?.error_messages?.join(', ') || 'unknown'}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: midtransData?.error_messages?.join(', ') || 'Midtrans payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = midtransData.redirect_url;
+        paymentId = midtransData.token || transactionIdToUse;
+        break;
+      }
+
+      case 'xendit': {
+        // Xendit — multi-currency SE Asia gateway (IDR/PHP/MYR/THB/VND)
+        const xenditSecretKey = gatewayConfig.secretKey || gatewayConfig.apiKey;
+        if (!xenditSecretKey) {
+          await supabase.from('transactions').update({ status: 'failed', description: 'Xendit not configured' }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: 'Xendit not configured' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const xenditAuth = btoa(`${xenditSecretKey}:`);
+        const xenditResp = await fetch('https://api.xendit.co/v2/invoices', {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${xenditAuth}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            external_id: transactionIdToUse,
+            amount: amount,
+            currency: currency.toUpperCase(),
+            payer_email: buyerEmail,
+            description: `Deposit for panel ${panelId}`,
+            success_redirect_url: `${returnUrl}?success=true&transaction_id=${transactionIdToUse}`,
+            failure_redirect_url: `${returnUrl}?cancelled=true&transaction_id=${transactionIdToUse}`,
+          }),
+        });
+        const xenditData = await xenditResp.json();
+        if (!xenditData?.invoice_url) {
+          await supabase.from('transactions').update({ status: 'failed', description: `Xendit error: ${xenditData?.message || 'unknown'}` }).eq('id', transactionIdToUse);
+          return new Response(JSON.stringify({ success: false, error: xenditData?.message || 'Xendit payment failed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        redirectUrl = xenditData.invoice_url;
+        paymentId = xenditData.id;
+        break;
+      }
+
       case 'manual_transfer':
       default: {
         // Manual transfer or unsupported gateway - return the transaction ID for manual handling
@@ -1680,7 +1908,7 @@ serve(async (req) => {
           );
         }
         
-        const supportedList = 'Stripe, PayPal, Flutterwave, Paystack, Korapay, Razorpay, Coinbase, Cryptomus, Heleket, Monnify, NOWPayments, CoinGate, Binance Pay, Skrill, Perfect Money, Square, Braintree, BTCPay';
+        const supportedList = 'Stripe, PayPal, Flutterwave, Paystack, Korapay, Razorpay, Coinbase, Cryptomus, Heleket, Monnify, NOWPayments, CoinGate, Binance Pay, Skrill, Perfect Money, Square, Braintree, BTCPay, Squad, Lenco, toyyibPay, Billplz, Midtrans, Xendit';
         console.error(`[process-payment] Unsupported gateway: ${gateway}. Supported: ${supportedList}`);
         return new Response(
           JSON.stringify({ 

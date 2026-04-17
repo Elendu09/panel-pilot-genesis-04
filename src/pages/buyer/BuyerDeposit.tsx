@@ -38,6 +38,7 @@ import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { useTenant } from "@/hooks/useTenant";
+import { checkGatewayCurrency } from "@/lib/payment-gateway-currencies";
 import BuyerLayout from "./BuyerLayout";
 import { Link } from "react-router-dom";
 import { BuyerInvoiceHistory } from "@/components/billing/BuyerInvoiceHistory";
@@ -106,6 +107,22 @@ const allPaymentGateways: Record<string, { name: string; icon: any; color: strin
   
   // Manual Transfer
   manual_transfer: { name: "Bank Transfer", icon: Banknote, color: "from-emerald-500 to-teal-600", badge: "12-24h" },
+
+  // === SE Asia ===
+  toyyibpay:  { name: "toyyibPay", icon: Globe, color: "from-blue-500 to-cyan-500", badge: "Instant" },
+  billplz:    { name: "Billplz", icon: Banknote, color: "from-orange-500 to-red-500", badge: "Instant" },
+  senangpay:  { name: "senangPay", icon: CreditCard, color: "from-pink-500 to-rose-500", badge: "Instant" },
+  ipay88:     { name: "iPay88", icon: CreditCard, color: "from-indigo-500 to-blue-600", badge: "Instant" },
+  xendit:     { name: "Xendit", icon: Globe, color: "from-blue-600 to-blue-800", badge: "Instant" },
+  midtrans:   { name: "Midtrans", icon: CreditCard, color: "from-cyan-500 to-blue-500", badge: "Instant" },
+  omise:      { name: "Omise", icon: CreditCard, color: "from-purple-500 to-purple-700", badge: "Instant" },
+  dragonpay:  { name: "DragonPay", icon: Banknote, color: "from-red-500 to-orange-500", badge: "Instant" },
+  vnpay:      { name: "VNPay", icon: Smartphone, color: "from-blue-500 to-indigo-500", badge: "Instant" },
+  momo:       { name: "MoMo", icon: Smartphone, color: "from-pink-500 to-rose-500", badge: "Instant" },
+  gcash:      { name: "GCash", icon: Smartphone, color: "from-blue-400 to-blue-600", badge: "Instant" },
+  '2c2p':     { name: "2C2P", icon: CreditCard, color: "from-blue-700 to-indigo-700", badge: "Instant" },
+  squad:      { name: "Squad", icon: Globe, color: "from-purple-600 to-indigo-600", badge: "Instant" },
+  lenco:      { name: "Lenco", icon: Banknote, color: "from-emerald-500 to-green-600", badge: "Instant" },
 };
 
 interface PaymentMethod {
@@ -157,26 +174,48 @@ const BuyerDeposit = () => {
   const [showManualSelector, setShowManualSelector] = useState(false);
   const [allManualMethods, setAllManualMethods] = useState<PaymentMethod[]>([]);
 
-  // Gateway-to-required-currency dialog state
+  // Gateway-currency dialog state — handles both must-switch and pick-one cases
   const [gatewayCurrencyDialog, setGatewayCurrencyDialog] = useState(false);
   const [pendingGatewayId, setPendingGatewayId] = useState<string | null>(null);
-
-  // Mapping of gateway IDs to their required currency
-  const gatewayCurrencyMap: Record<string, { currency: string; label: string; reason: string }> = {
-    korapay:  { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'KoraPay exclusively processes payments in NGN.' },
-    monnify:  { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Monnify exclusively processes payments in NGN.' },
-    squad:    { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Squad exclusively processes payments in NGN.' },
-    lenco:    { currency: 'NGN', label: 'Nigerian Naira (NGN)', reason: 'Lenco exclusively processes payments in NGN.' },
-  };
+  const [pendingDialogMode, setPendingDialogMode] = useState<'must-switch' | 'pick-one'>('must-switch');
+  const [pendingTargetCurrency, setPendingTargetCurrency] = useState<string | null>(null);
+  const [pendingCurrencyOptions, setPendingCurrencyOptions] = useState<string[]>([]);
+  const [pendingDialogReason, setPendingDialogReason] = useState<string>('');
 
   const handleSelectPaymentMethod = (methodId: string) => {
-    const required = gatewayCurrencyMap[methodId];
-    if (required && currency !== required.currency) {
-      setPendingGatewayId(methodId);
-      setGatewayCurrencyDialog(true);
-    } else {
+    const result = checkGatewayCurrency(methodId, currency);
+    if (result.kind === 'ok') {
       setSelectedMethod(methodId);
+      return;
     }
+    setPendingGatewayId(methodId);
+    setPendingDialogReason(result.reason);
+    if (result.kind === 'must-switch') {
+      setPendingDialogMode('must-switch');
+      setPendingTargetCurrency(result.currency);
+      setPendingCurrencyOptions([]);
+    } else {
+      setPendingDialogMode('pick-one');
+      setPendingTargetCurrency(null);
+      setPendingCurrencyOptions(result.currencies);
+    }
+    setGatewayCurrencyDialog(true);
+  };
+
+  const closeGatewayCurrencyDialog = () => {
+    setGatewayCurrencyDialog(false);
+    setPendingGatewayId(null);
+    setPendingTargetCurrency(null);
+    setPendingCurrencyOptions([]);
+    setPendingDialogReason('');
+  };
+
+  const confirmCurrencySwitch = (target: string) => {
+    if (pendingGatewayId) {
+      setCurrency(target as any);
+      setSelectedMethod(pendingGatewayId);
+    }
+    closeGatewayCurrencyDialog();
   };
   
   // Proof of payment upload state
@@ -1224,49 +1263,62 @@ const BuyerDeposit = () => {
       </Dialog>
 
       {/* Gateway Currency Switch Dialog */}
-      <Dialog open={gatewayCurrencyDialog} onOpenChange={(open) => { if (!open) { setGatewayCurrencyDialog(false); setPendingGatewayId(null); } }}>
+      <Dialog open={gatewayCurrencyDialog} onOpenChange={(open) => { if (!open) closeGatewayCurrencyDialog(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="text-2xl">🔄</span>
-              Currency Switch Required
+              {pendingDialogMode === 'pick-one' ? 'Choose a Supported Currency' : 'Currency Switch Required'}
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-1">
-              {pendingGatewayId && gatewayCurrencyMap[pendingGatewayId] && (
+              {pendingGatewayId && (
                 <>
                   <p className="text-sm">
-                    <strong>{allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId}</strong> only supports payments in{' '}
-                    <strong className="text-primary">{gatewayCurrencyMap[pendingGatewayId].label}</strong>.
+                    <strong>{allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId}</strong>{' '}
+                    {pendingDialogMode === 'must-switch'
+                      ? <>only supports <strong className="text-primary">{pendingTargetCurrency}</strong>.</>
+                      : <>does not support <strong>{currency}</strong>. Pick one of the supported currencies below to continue.</>}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {gatewayCurrencyMap[pendingGatewayId].reason} To reduce payment errors, your currency will be automatically switched to NGN for this transaction.
-                  </p>
-                  <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                    <p className="text-sm font-medium text-primary">
-                      Your session currency will be switched from <strong>{currency}</strong> → <strong>NGN</strong>
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">{pendingDialogReason}</p>
+                  {pendingDialogMode === 'must-switch' && pendingTargetCurrency && (
+                    <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <p className="text-sm font-medium text-primary">
+                        Your session currency will be switched from <strong>{currency}</strong> → <strong>{pendingTargetCurrency}</strong>
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
+
+          {pendingDialogMode === 'pick-one' && (
+            <div className="grid grid-cols-3 gap-2 py-2">
+              {pendingCurrencyOptions.map((c) => (
+                <Button
+                  key={c}
+                  variant="outline"
+                  onClick={() => confirmCurrencySwitch(c)}
+                  className="h-12 font-semibold"
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
+          )}
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => { setGatewayCurrencyDialog(false); setPendingGatewayId(null); }}>
+            <Button variant="outline" onClick={closeGatewayCurrencyDialog}>
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                if (pendingGatewayId && gatewayCurrencyMap[pendingGatewayId]) {
-                  setCurrency(gatewayCurrencyMap[pendingGatewayId].currency as any);
-                  setSelectedMethod(pendingGatewayId);
-                }
-                setGatewayCurrencyDialog(false);
-                setPendingGatewayId(null);
-              }}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Switch to NGN & Continue
-            </Button>
+            {pendingDialogMode === 'must-switch' && pendingTargetCurrency && (
+              <Button
+                onClick={() => confirmCurrencySwitch(pendingTargetCurrency)}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Switch to {pendingTargetCurrency} & Continue
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

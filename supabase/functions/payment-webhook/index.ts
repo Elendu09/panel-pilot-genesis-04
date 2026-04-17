@@ -353,6 +353,105 @@ serve(async (req) => {
         break;
       }
 
+      case 'squad': {
+        event = JSON.parse(body);
+        // Squad: { Event: 'charge_successful', TransactionRef, Body: { transaction_status, ... } }
+        const evtType = event.Event || event.event;
+        const txData = event.Body || event.data || {};
+        if (evtType === 'charge_successful' || txData.transaction_status === 'success') {
+          transactionId = event.TransactionRef || txData.transaction_ref || txData.merchant_reference;
+          status = 'completed';
+          amount = parseFloat(txData.transaction_amount || txData.amount || '0') / 100;
+          panelId = txData.metadata?.panelId;
+          buyerId = txData.metadata?.buyerId;
+          console.log(`[payment-webhook] Squad payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (evtType === 'charge_failed') {
+          transactionId = event.TransactionRef || txData.transaction_ref;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'lenco': {
+        event = JSON.parse(body);
+        // Lenco: { event: 'collection.successful' | 'collection.failed', data: { reference, amount } }
+        if (event.event === 'collection.successful' || event.data?.status === 'successful') {
+          transactionId = event.data?.reference;
+          status = 'completed';
+          amount = parseFloat(event.data?.amount || '0');
+          console.log(`[payment-webhook] Lenco payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.event === 'collection.failed' || event.data?.status === 'failed') {
+          transactionId = event.data?.reference;
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'toyyibpay': {
+        // toyyibPay sends form-encoded callback. status_id: 1 = success, 2 = pending, 3 = failed
+        const params = new URLSearchParams(body);
+        const statusId = params.get('status_id');
+        transactionId = params.get('order_id') || params.get('billExternalReferenceNo');
+        amount = parseFloat(params.get('amount') || '0') / 100;
+        if (statusId === '1') {
+          status = 'completed';
+          console.log(`[payment-webhook] toyyibPay payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (statusId === '3') {
+          status = 'failed';
+        } else {
+          // status 2 = pending; ignore
+          transactionId = null;
+        }
+        break;
+      }
+
+      case 'billplz': {
+        // Billplz sends form-encoded callback (x-www-form-urlencoded)
+        const params = new URLSearchParams(body);
+        transactionId = params.get('reference_1') || params.get('id');
+        amount = parseFloat(params.get('amount') || '0') / 100;
+        const paid = params.get('paid');
+        if (paid === 'true') {
+          status = 'completed';
+          console.log(`[payment-webhook] Billplz payment completed: ${transactionId}, amount: ${amount}`);
+        } else {
+          status = 'failed';
+        }
+        break;
+      }
+
+      case 'midtrans': {
+        event = JSON.parse(body);
+        // Midtrans: transaction_status = capture, settlement, pending, deny, cancel, expire, failure
+        transactionId = event.order_id;
+        amount = parseFloat(event.gross_amount || '0');
+        const ts = event.transaction_status;
+        if (ts === 'capture' || ts === 'settlement') {
+          status = 'completed';
+          console.log(`[payment-webhook] Midtrans payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (ts === 'deny' || ts === 'cancel' || ts === 'expire' || ts === 'failure') {
+          status = 'failed';
+        } else {
+          // pending; ignore
+          transactionId = null;
+        }
+        break;
+      }
+
+      case 'xendit': {
+        event = JSON.parse(body);
+        // Xendit invoice webhook: { external_id, status: 'PAID' | 'EXPIRED' | 'FAILED', paid_amount }
+        transactionId = event.external_id;
+        amount = parseFloat(event.paid_amount || event.amount || '0');
+        if (event.status === 'PAID' || event.status === 'SETTLED') {
+          status = 'completed';
+          console.log(`[payment-webhook] Xendit payment completed: ${transactionId}, amount: ${amount}`);
+        } else if (event.status === 'EXPIRED' || event.status === 'FAILED') {
+          status = 'failed';
+        }
+        break;
+      }
+
       default: {
         console.log(`[payment-webhook] Unknown gateway: ${gateway}`);
         return new Response(
