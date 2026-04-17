@@ -1680,6 +1680,7 @@ serve(async (req) => {
         // toyyibPay — Malaysian gateway, MYR only
         const toyyibSecretKey = gatewayConfig.secretKey;
         const toyyibCategoryCode = gatewayConfig.categoryCode || gatewayConfig.merchantId;
+        const toyyibBaseUrl = gatewayConfig.sandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com';
         if (!toyyibSecretKey || !toyyibCategoryCode) {
           await supabase.from('transactions').update({ status: 'failed', description: 'toyyibPay not configured (need secretKey + categoryCode)' }).eq('id', transactionIdToUse);
           return new Response(JSON.stringify({ success: false, error: 'toyyibPay not configured (need secretKey + categoryCode)' }),
@@ -1703,7 +1704,7 @@ serve(async (req) => {
           billContentEmail: 'Thank you for your payment',
           billChargeToCustomer: '1',
         });
-        const toyyibResp = await fetch('https://toyyibpay.com/index.php/api/createBill', {
+        const toyyibResp = await fetch(`${toyyibBaseUrl}/index.php/api/createBill`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: toyyibForm.toString(),
@@ -1715,7 +1716,7 @@ serve(async (req) => {
           return new Response(JSON.stringify({ success: false, error: 'toyyibPay payment failed' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
-        redirectUrl = `https://toyyibpay.com/${billCode}`;
+        redirectUrl = `${toyyibBaseUrl}/${billCode}`;
         paymentId = billCode;
         break;
       }

@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useBuyerAuth } from "@/contexts/BuyerAuthContext";
 import { useCurrency, currencies as ALL_CURRENCIES, type Currency } from "@/contexts/CurrencyContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { CurrencySelector } from "@/components/buyer/CurrencySelector";
 import { useTenant } from "@/hooks/useTenant";
 import { checkGatewayCurrency } from "@/lib/payment-gateway-currencies";
@@ -111,16 +112,8 @@ const allPaymentGateways: Record<string, { name: string; icon: any; color: strin
   // === SE Asia ===
   toyyibpay:  { name: "toyyibPay", icon: Globe, color: "from-blue-500 to-cyan-500", badge: "Instant" },
   billplz:    { name: "Billplz", icon: Banknote, color: "from-orange-500 to-red-500", badge: "Instant" },
-  senangpay:  { name: "senangPay", icon: CreditCard, color: "from-pink-500 to-rose-500", badge: "Instant" },
-  ipay88:     { name: "iPay88", icon: CreditCard, color: "from-indigo-500 to-blue-600", badge: "Instant" },
   xendit:     { name: "Xendit", icon: Globe, color: "from-blue-600 to-blue-800", badge: "Instant" },
   midtrans:   { name: "Midtrans", icon: CreditCard, color: "from-cyan-500 to-blue-500", badge: "Instant" },
-  omise:      { name: "Omise", icon: CreditCard, color: "from-purple-500 to-purple-700", badge: "Instant" },
-  dragonpay:  { name: "DragonPay", icon: Banknote, color: "from-red-500 to-orange-500", badge: "Instant" },
-  vnpay:      { name: "VNPay", icon: Smartphone, color: "from-blue-500 to-indigo-500", badge: "Instant" },
-  momo:       { name: "MoMo", icon: Smartphone, color: "from-pink-500 to-rose-500", badge: "Instant" },
-  gcash:      { name: "GCash", icon: Smartphone, color: "from-blue-400 to-blue-600", badge: "Instant" },
-  '2c2p':     { name: "2C2P", icon: CreditCard, color: "from-blue-700 to-indigo-700", badge: "Instant" },
   squad:      { name: "Squad", icon: Globe, color: "from-purple-600 to-indigo-600", badge: "Instant" },
   lenco:      { name: "Lenco", icon: Banknote, color: "from-emerald-500 to-green-600", badge: "Instant" },
 };
@@ -151,6 +144,7 @@ const BuyerDeposit = () => {
   const { panel, loading: panelLoading } = useTenant();
   const { generateInvoice } = useInvoiceGeneration();
   const { currency, currencyConfig, formatPrice, convertPrice, convertToUSD, setCurrency } = useCurrency();
+  const { t } = useLanguage();
   const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -1278,18 +1272,28 @@ const BuyerDeposit = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className="text-2xl">🔄</span>
-              {pendingDialogMode === 'pick-one' ? 'Choose a Supported Currency' : 'Currency Switch Required'}
+              {pendingDialogMode === 'pick-one'
+                ? t('payment.dialog.pickTitle')
+                : t('payment.dialog.switchTitle')}
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-1">
               {pendingGatewayId && (
                 <>
                   <p className="text-sm">
-                    <strong>{allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId}</strong>{' '}
                     {pendingDialogMode === 'must-switch'
-                      ? <>only supports <strong className="text-primary">{pendingTargetCurrency}</strong>.</>
-                      : <>does not support <strong>{currency}</strong>. Pick one of the supported currencies below to continue.</>}
+                      ? t('payment.dialog.switchDescription', {
+                          gateway: allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId,
+                          currency: pendingTargetCurrency || '',
+                          reason: '',
+                        })
+                      : t('payment.dialog.pickDescription', {
+                          gateway: allPaymentGateways[pendingGatewayId]?.name || pendingGatewayId,
+                          reason: '',
+                        })}
                   </p>
-                  <p className="text-sm text-muted-foreground">{pendingDialogReason}</p>
+                  {pendingDialogReason && (
+                    <p className="text-sm text-muted-foreground">{pendingDialogReason}</p>
+                  )}
                   {pendingDialogMode === 'must-switch' && pendingTargetCurrency && (
                     <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
                       <p className="text-sm font-medium text-primary">
@@ -1332,14 +1336,14 @@ const BuyerDeposit = () => {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={closeGatewayCurrencyDialog}>
-              Cancel
+              {t('payment.dialog.cancel')}
             </Button>
             {pendingDialogMode === 'must-switch' && pendingTargetCurrency && (
               <Button
                 onClick={() => confirmCurrencySwitch(pendingTargetCurrency)}
                 className="bg-primary hover:bg-primary/90"
               >
-                Switch to {pendingTargetCurrency} & Continue
+                {t('payment.dialog.switchAndContinue', { currency: pendingTargetCurrency })}
               </Button>
             )}
             {pendingDialogMode === 'pick-one' && (
@@ -1348,7 +1352,9 @@ const BuyerDeposit = () => {
                 disabled={!pickerSelection}
                 className="bg-primary hover:bg-primary/90"
               >
-                {pickerSelection ? `Continue with ${pickerSelection}` : 'Select a currency'}
+                {pickerSelection
+                  ? t('payment.dialog.continueWith', { currency: pickerSelection })
+                  : t('payment.dialog.selectCurrency')}
               </Button>
             )}
           </DialogFooter>
