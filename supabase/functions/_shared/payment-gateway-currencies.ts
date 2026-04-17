@@ -1,52 +1,17 @@
-// Server-side mirror of src/lib/payment-gateway-currencies.ts
-// Keep in sync with the frontend file — this is the single source of truth for
-// the process-payment edge function's currency validation.
+// Server-side wrapper for the canonical gateway-currency registry.
+// The data lives in shared/payment-gateway-currencies.json at the repo root
+// and is consumed by BOTH the client (src/lib/payment-gateway-currencies.ts)
+// and this Deno edge-function helper. There is exactly one source of truth.
+
+import gatewayCurrencyData from '../../../shared/payment-gateway-currencies.json' with { type: 'json' };
 
 export interface GatewayCurrencySupport {
   currencies: string[];
   reason: string;
 }
 
-export const GATEWAY_CURRENCY_SUPPORT: Record<string, GatewayCurrencySupport> = {
-  korapay:  { currencies: ['NGN'], reason: 'KoraPay exclusively processes payments in Nigerian Naira.' },
-  monnify:  { currencies: ['NGN'], reason: 'Monnify exclusively processes payments in Nigerian Naira.' },
-  squad:    { currencies: ['NGN'], reason: 'Squad exclusively processes payments in Nigerian Naira.' },
-  lenco:    { currencies: ['NGN'], reason: 'Lenco exclusively processes payments in Nigerian Naira.' },
-
-  paystack:    { currencies: ['NGN', 'GHS', 'ZAR', 'KES', 'USD'], reason: 'Paystack supports payments in select African currencies and USD.' },
-  flutterwave: { currencies: ['NGN', 'KES', 'GHS', 'UGX', 'TZS', 'ZMW', 'USD', 'EUR', 'GBP'], reason: 'Flutterwave supports payments in select African currencies and major foreign currencies.' },
-
-  toyyibpay:  { currencies: ['MYR'], reason: 'toyyibPay only processes payments in Malaysian Ringgit.' },
-  billplz:    { currencies: ['MYR'], reason: 'Billplz only processes payments in Malaysian Ringgit.' },
-  senangpay:  { currencies: ['MYR'], reason: 'senangPay only processes payments in Malaysian Ringgit.' },
-  midtrans:   { currencies: ['IDR'], reason: 'Midtrans only processes payments in Indonesian Rupiah.' },
-  vnpay:      { currencies: ['VND'], reason: 'VNPay only processes payments in Vietnamese Dong.' },
-  momo:       { currencies: ['VND'], reason: 'MoMo only processes payments in Vietnamese Dong.' },
-  dragonpay:  { currencies: ['PHP'], reason: 'DragonPay only processes payments in Philippine Peso.' },
-  gcash:      { currencies: ['PHP'], reason: 'GCash only processes payments in Philippine Peso.' },
-
-  xendit:  { currencies: ['IDR', 'PHP', 'MYR', 'THB', 'VND'], reason: 'Xendit supports several Southeast Asian currencies.' },
-  ipay88:  { currencies: ['MYR', 'SGD', 'IDR', 'PHP', 'THB'], reason: 'iPay88 supports several Southeast Asian currencies.' },
-  omise:   { currencies: ['THB', 'JPY', 'SGD', 'MYR', 'USD'], reason: 'Omise supports Thai Baht and several APAC currencies.' },
-  '2c2p':  { currencies: ['THB', 'SGD', 'MYR', 'PHP', 'IDR', 'VND', 'HKD', 'USD', 'AUD', 'JPY'], reason: '2C2P supports many Asia-Pacific currencies.' },
-
-  pagseguro:   { currencies: ['BRL'], reason: 'PagSeguro only processes payments in Brazilian Real.' },
-  pix:         { currencies: ['BRL'], reason: 'PIX is a Brazilian instant-payment system; only BRL is supported.' },
-  mercadopago: { currencies: ['BRL', 'ARS', 'CLP', 'COP', 'MXN', 'PEN'], reason: 'Mercado Pago supports several LATAM currencies.' },
-  payu:        { currencies: ['INR', 'COP', 'MXN', 'BRL', 'ARS', 'PEN'], reason: 'PayU supports Indian Rupee and several LATAM currencies.' },
-
-  razorpay: { currencies: ['INR'], reason: 'Razorpay only processes payments in Indian Rupee.' },
-  paytm:    { currencies: ['INR'], reason: 'Paytm only processes payments in Indian Rupee.' },
-  phonepe:  { currencies: ['INR'], reason: 'PhonePe only processes payments in Indian Rupee.' },
-  upi:      { currencies: ['INR'], reason: 'UPI is an Indian payment rail; only INR is supported.' },
-
-  ideal:      { currencies: ['EUR'], reason: 'iDEAL is a Dutch bank-transfer system; only EUR is supported.' },
-  sofort:     { currencies: ['EUR'], reason: 'Sofort only processes payments in Euro.' },
-  giropay:    { currencies: ['EUR'], reason: 'Giropay only processes payments in Euro.' },
-  bancontact: { currencies: ['EUR'], reason: 'Bancontact only processes payments in Euro.' },
-  mollie:     { currencies: ['EUR'], reason: 'Mollie processes payments in Euro by default.' },
-  klarna:     { currencies: ['EUR', 'SEK', 'NOK', 'DKK', 'USD', 'GBP'], reason: 'Klarna supports several European currencies plus USD/GBP.' },
-};
+export const GATEWAY_CURRENCY_SUPPORT: Record<string, GatewayCurrencySupport> =
+  gatewayCurrencyData as Record<string, GatewayCurrencySupport>;
 
 export function isCurrencyAllowedForGateway(gatewayId: string, currency: string): boolean {
   const support = GATEWAY_CURRENCY_SUPPORT[gatewayId];
