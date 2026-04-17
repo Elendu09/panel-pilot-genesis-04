@@ -1,64 +1,97 @@
+import { useState, useRef, useEffect } from "react";
 import { useCurrency, currencies, Currency } from "@/contexts/CurrencyContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
-import { 
-  FlagUS, FlagEU, FlagGB, FlagNG, FlagIN, FlagBR, FlagTR, FlagRU, FlagAE, FlagCA 
-} from "@/components/icons/FlagIcons";
+import { Input } from "@/components/ui/input";
+import { Check, Search } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface CurrencyItem {
+const allCurrencyList = (Object.values(currencies) as {
   code: Currency;
   name: string;
   symbol: string;
-  FlagIcon: React.FC<{ className?: string }>;
-}
-
-const currencyList: CurrencyItem[] = [
-  { code: 'USD', name: 'US Dollar', symbol: '$', FlagIcon: FlagUS },
-  { code: 'EUR', name: 'Euro', symbol: '€', FlagIcon: FlagEU },
-  { code: 'GBP', name: 'British Pound', symbol: '£', FlagIcon: FlagGB },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦', FlagIcon: FlagNG },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹', FlagIcon: FlagIN },
-  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$', FlagIcon: FlagBR },
-  { code: 'TRY', name: 'Turkish Lira', symbol: '₺', FlagIcon: FlagTR },
-  { code: 'RUB', name: 'Russian Ruble', symbol: '₽', FlagIcon: FlagRU },
-  { code: 'AED', name: 'UAE Dirham', symbol: 'د.إ', FlagIcon: FlagAE },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', FlagIcon: FlagCA },
-];
+  flag: string;
+}[]).sort((a, b) => a.code.localeCompare(b.code));
 
 export const CurrencySelector = () => {
-  const { currency, setCurrency, currencyConfig } = useCurrency();
+  const { currency, setCurrency } = useCurrency();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setSearch("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  const filtered = allCurrencyList.filter(
+    (c) =>
+      search.trim() === "" ||
+      c.code.toLowerCase().includes(search.toLowerCase()) ||
+      c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-9 px-2.5 gap-1 font-medium" title="Change currency">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 px-2.5 gap-1 font-medium"
+          title="Change currency"
+        >
+          <span className="text-base leading-none">{currencies[currency]?.flag ?? ""}</span>
           <span className="text-xs font-semibold">{currency}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        {currencyList.map((curr) => {
-          const FlagComponent = curr.FlagIcon;
-          return (
-            <DropdownMenuItem
-              key={curr.code}
-              onClick={() => setCurrency(curr.code)}
-              className="flex items-center justify-between cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <FlagComponent className="w-5 h-4 rounded-sm" />
-                <span>{curr.code}</span>
-                <span className="text-muted-foreground text-xs">({curr.symbol})</span>
-              </div>
-              {currency === curr.code && <Check className="w-4 h-4 text-primary" />}
-            </DropdownMenuItem>
-          );
-        })}
+      <DropdownMenuContent align="end" className="w-56 p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <div className="p-2 border-b">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              ref={inputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search currency…"
+              className="h-8 pl-7 text-sm"
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+        <ScrollArea className="h-64">
+          <div className="p-1">
+            {filtered.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">No match</p>
+            ) : (
+              filtered.map((curr) => (
+                <button
+                  key={curr.code}
+                  onClick={() => {
+                    setCurrency(curr.code);
+                    setOpen(false);
+                  }}
+                  className="flex w-full items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base leading-none shrink-0">{curr.flag}</span>
+                    <span className="font-medium shrink-0">{curr.code}</span>
+                    <span className="text-muted-foreground text-xs truncate">{curr.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-muted-foreground text-xs">{curr.symbol}</span>
+                    {currency === curr.code && <Check className="w-3.5 h-3.5 text-primary" />}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );
