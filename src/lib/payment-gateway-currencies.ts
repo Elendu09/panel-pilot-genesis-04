@@ -90,3 +90,16 @@ export function isCurrencyAllowedForGateway(gatewayId: string, currency: string)
   if (!support) return true;
   return support.currencies.includes((currency || '').toUpperCase());
 }
+
+/**
+ * Returns the union of every currency code referenced by any registered gateway.
+ * Used as a runtime guard so callers can narrow `string` to a known currency
+ * without `as any` casts.
+ */
+const ALL_REGISTERED_CURRENCIES: ReadonlySet<string> = new Set(
+  Object.values(GATEWAY_CURRENCY_SUPPORT).flatMap((g) => g.currencies)
+);
+
+export function isKnownGatewayCurrency(code: string): boolean {
+  return ALL_REGISTERED_CURRENCIES.has((code || '').toUpperCase());
+}

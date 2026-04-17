@@ -3,8 +3,50 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-paystack-signature, x-flutterwave-signature, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature, x-paystack-signature, x-flutterwave-signature, x-squad-signature, x-webhook-signature, x-callback-token, x-signature, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// === Signature verification helpers (Web Crypto / Deno) ===
+const enc = new TextEncoder();
+
+function bytesToHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hmacHex(algorithm: 'SHA-256' | 'SHA-512', secret: string, data: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw', enc.encode(secret), { name: 'HMAC', hash: algorithm }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return bytesToHex(sig);
+}
+
+async function sha512Hex(data: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-512', enc.encode(data));
+  return bytesToHex(buf);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function loadGatewayConfig(supabase: any, providerName: string): Promise<Record<string, any>> {
+  const { data } = await supabase
+    .from('platform_payment_providers')
+    .select('config')
+    .eq('provider_name', providerName)
+    .maybeSingle();
+  return (data?.config as Record<string, any>) || {};
+}
+
+function unauthorized(reason: string): Response {
+  console.warn(`[payment-webhook] Rejecting webhook: ${reason}`);
+  return new Response(JSON.stringify({ received: false, error: reason }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -354,6 +396,16 @@ serve(async (req) => {
       }
 
       case 'squad': {
+        // Squad signs the raw body with HMAC-SHA512 using the secret key.
+        // Header: x-squad-signature (or squad-signature). Reject if missing/invalid.
+        const cfg = await loadGatewayConfig(supabase, 'squad');
+        const secret = cfg.secretKey || cfg.secret_key || cfg.webhookSecret;
+        if (!secret) return unauthorized('squad: webhook secret not configured');
+        const sigHeader = (req.headers.get('x-squad-signature') || req.headers.get('squad-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-512', secret, body);
+        if (!timingSafeEqual(sigHeader, expected)) {
+          return unauthorized('squad: invalid signature');
+        }
         event = JSON.parse(body);
         // Squad: { Event: 'charge_successful', TransactionRef, Body: { transaction_status, ... } }
         const evtType = event.Event || event.event;
@@ -373,6 +425,16 @@ serve(async (req) => {
       }
 
       case 'lenco': {
+        // Lenco signs the raw body with HMAC-SHA256 using the webhook secret.
+        // Header: x-webhook-signature.
+        const cfg = await loadGatewayConfig(supabase, 'lenco');
+        const secret = cfg.webhookSecret || cfg.webhook_secret || cfg.secretKey;
+        if (!secret) return unauthorized('lenco: webhook secret not configured');
+        const sigHeader = (req.headers.get('x-webhook-signature') || '').toLowerCase();
+        const expected = await hmacHex('SHA-256', secret, body);
+        if (!timingSafeEqual(sigHeader, expected)) {
+          return unauthorized('lenco: invalid signature');
+        }
         event = JSON.parse(body);
         // Lenco: { event: 'collection.successful' | 'collection.failed', data: { reference, amount } }
         if (event.event === 'collection.successful' || event.data?.status === 'successful') {
@@ -388,8 +450,26 @@ serve(async (req) => {
       }
 
       case 'toyyibpay': {
-        // toyyibPay sends form-encoded callback. status_id: 1 = success, 2 = pending, 3 = failed
+        // toyyibPay does not sign callbacks. Verify out-of-band by re-fetching
+        // the bill from toyyibPay's API using the configured secret key.
+        const cfg = await loadGatewayConfig(supabase, 'toyyibpay');
+        const secret = cfg.secretKey || cfg.userSecretKey;
+        if (!secret) return unauthorized('toyyibpay: secret key not configured');
         const params = new URLSearchParams(body);
+        const billCode = params.get('billcode') || params.get('billCode');
+        if (!billCode) return unauthorized('toyyibpay: missing billcode');
+        const baseUrl = cfg.sandbox ? 'https://dev.toyyibpay.com' : 'https://toyyibpay.com';
+        const verifyResp = await fetch(`${baseUrl}/index.php/api/getBillTransactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ userSecretKey: secret, billCode }).toString(),
+        });
+        if (!verifyResp.ok) return unauthorized('toyyibpay: callback verification failed');
+        const verifyData = await verifyResp.json().catch(() => null);
+        const verified = Array.isArray(verifyData) && verifyData.find(
+          (t: any) => String(t.billpaymentStatus) === String(params.get('status_id'))
+        );
+        if (!verified) return unauthorized('toyyibpay: callback does not match billing record');
         const statusId = params.get('status_id');
         transactionId = params.get('order_id') || params.get('billExternalReferenceNo');
         amount = parseFloat(params.get('amount') || '0') / 100;
@@ -406,8 +486,19 @@ serve(async (req) => {
       }
 
       case 'billplz': {
-        // Billplz sends form-encoded callback (x-www-form-urlencoded)
+        // Billplz x_signature: HMAC-SHA256 of `key1value1|key2value2|...` (sorted),
+        // excluding `x_signature` itself, using the X-Signature key from Billplz.
+        const cfg = await loadGatewayConfig(supabase, 'billplz');
+        const xSignatureKey = cfg.xSignatureKey || cfg.x_signature_key;
+        if (!xSignatureKey) return unauthorized('billplz: x_signature key not configured');
         const params = new URLSearchParams(body);
+        const provided = params.get('x_signature') || '';
+        const sortedKeys = [...params.keys()].filter((k) => k !== 'x_signature').sort();
+        const source = sortedKeys.map((k) => `${k}${params.get(k) ?? ''}`).join('|');
+        const expected = await hmacHex('SHA-256', xSignatureKey, source);
+        if (!timingSafeEqual(provided.toLowerCase(), expected)) {
+          return unauthorized('billplz: invalid x_signature');
+        }
         transactionId = params.get('reference_1') || params.get('id');
         amount = parseFloat(params.get('amount') || '0') / 100;
         const paid = params.get('paid');
@@ -421,7 +512,18 @@ serve(async (req) => {
       }
 
       case 'midtrans': {
+        // Midtrans signature_key = SHA-512(order_id + status_code + gross_amount + server_key)
+        const cfg = await loadGatewayConfig(supabase, 'midtrans');
+        const serverKey = cfg.serverKey || cfg.server_key;
+        if (!serverKey) return unauthorized('midtrans: server key not configured');
         event = JSON.parse(body);
+        const provided = (event.signature_key || '').toLowerCase();
+        const expected = await sha512Hex(
+          `${event.order_id || ''}${event.status_code || ''}${event.gross_amount || ''}${serverKey}`
+        );
+        if (!timingSafeEqual(provided, expected)) {
+          return unauthorized('midtrans: invalid signature_key');
+        }
         // Midtrans: transaction_status = capture, settlement, pending, deny, cancel, expire, failure
         transactionId = event.order_id;
         amount = parseFloat(event.gross_amount || '0');
@@ -439,6 +541,14 @@ serve(async (req) => {
       }
 
       case 'xendit': {
+        // Xendit uses a static callback verification token in `x-callback-token`.
+        const cfg = await loadGatewayConfig(supabase, 'xendit');
+        const expectedToken = cfg.callbackToken || cfg.callback_token || cfg.webhookToken;
+        if (!expectedToken) return unauthorized('xendit: callback token not configured');
+        const provided = req.headers.get('x-callback-token') || '';
+        if (!timingSafeEqual(provided, expectedToken)) {
+          return unauthorized('xendit: invalid callback token');
+        }
         event = JSON.parse(body);
         // Xendit invoice webhook: { external_id, status: 'PAID' | 'EXPIRED' | 'FAILED', paid_amount }
         transactionId = event.external_id;

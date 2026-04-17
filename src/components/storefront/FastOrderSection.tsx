@@ -43,7 +43,7 @@ import { SpeedGauge } from '@/components/buyer/SpeedGauge';
 import { detectServiceType } from '@/lib/service-icon-detection';
 import { useAvailablePaymentGateways, AvailableGateway } from '@/hooks/useAvailablePaymentGateways';
 import { useAnalyticsTracking } from '@/hooks/use-analytics-tracking';
-import { useCurrency } from '@/contexts/CurrencyContext';
+import { useCurrency, currencies as ALL_CURRENCIES, type Currency } from '@/contexts/CurrencyContext';
 import { checkGatewayCurrency } from '@/lib/payment-gateway-currencies';
 
 interface Service {
@@ -264,17 +264,25 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
     setGatewayCurrencyDialog(true);
   };
 
+  const [pickerSelection, setPickerSelection] = useState<string | null>(null);
+
   const closeGatewayCurrencyDialog = () => {
     setGatewayCurrencyDialog(false);
     setPendingGatewayId(null);
     setPendingTargetCurrency(null);
     setPendingCurrencyOptions([]);
     setPendingDialogReason('');
+    setPickerSelection(null);
   };
 
   const confirmCurrencySwitch = (target: string) => {
+    const upper = (target || '').toUpperCase();
+    if (!(upper in ALL_CURRENCIES)) {
+      console.error(`[FastOrderSection] Refusing to switch to unknown currency: ${target}`);
+      return;
+    }
     if (pendingGatewayId) {
-      setCurrency(target as any);
+      setCurrency(upper as Currency);
       setSelectedPaymentMethod(pendingGatewayId);
     }
     closeGatewayCurrencyDialog();
@@ -2138,17 +2146,30 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
           </DialogHeader>
 
           {pendingDialogMode === 'pick-one' && (
-            <div className="grid grid-cols-3 gap-2 py-2">
-              {pendingCurrencyOptions.map((c) => (
-                <Button
-                  key={c}
-                  variant="outline"
-                  onClick={() => confirmCurrencySwitch(c)}
-                  className="h-12 font-semibold"
-                >
-                  {c}
-                </Button>
-              ))}
+            <div className="grid grid-cols-2 gap-2 py-2 max-h-[260px] overflow-y-auto">
+              {pendingCurrencyOptions.map((c) => {
+                const cfg = ALL_CURRENCIES[c as Currency];
+                const isSelected = pickerSelection === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setPickerSelection(c)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-all",
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <span className="text-2xl">{cfg?.flag || '🌐'}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm">{c}</p>
+                      <p className="text-xs text-muted-foreground truncate">{cfg?.name || c}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -2160,6 +2181,15 @@ export const FastOrderSection = ({ services, panelId, panelName, customization, 
                 className="bg-primary hover:bg-primary/90"
               >
                 Switch to {pendingTargetCurrency} & Continue
+              </Button>
+            )}
+            {pendingDialogMode === 'pick-one' && (
+              <Button
+                onClick={() => pickerSelection && confirmCurrencySwitch(pickerSelection)}
+                disabled={!pickerSelection}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {pickerSelection ? `Continue with ${pickerSelection}` : 'Select a currency'}
               </Button>
             )}
           </DialogFooter>
