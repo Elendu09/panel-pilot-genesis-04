@@ -70,7 +70,8 @@ const ShoppingCart = ({
     return SOCIAL_ICONS_MAP[categoryId] || SOCIAL_ICONS_MAP.other;
   };
 
-  const hasEnoughBalance = buyerBalance >= cartTotal;
+  const liveCartTotal = cart.reduce((sum, item) => sum + (getEffectivePrice(item.service) * item.quantity) / 1000, 0);
+  const hasEnoughBalance = buyerBalance >= liveCartTotal;
 
   const validateCart = () => {
     const errors: string[] = [];
@@ -109,49 +110,46 @@ const ShoppingCart = ({
     setCheckoutProgress(0);
     setCompletedOrders([]);
 
-    try {
-      const orderPromises = cart.map(async (item, index) => {
-        const orderNumber = `ORD${Date.now()}${index}`;
-        const price = (item.effectivePrice * item.quantity) / 1000;
+    const failed: string[] = [];
 
-        const { error } = await supabase
-          .from('orders')
-          .insert({
-            order_number: orderNumber,
-            panel_id: panelId,
-            buyer_id: buyerId,
-            service_id: item.service.id,
-            target_url: item.targetUrl,
-            quantity: item.quantity,
-            price,
-            status: 'pending',
-            progress: 0,
+    try {
+      for (let index = 0; index < cart.length; index++) {
+        const item = cart[index];
+        try {
+          const { data, error } = await supabase.functions.invoke('buyer-api', {
+            body: {
+              key: '__buyer_id_auth__',
+              action: 'add',
+              buyerId,
+              panelId,
+              service: item.service.id,
+              link: item.targetUrl,
+              quantity: item.quantity,
+            },
           });
 
-        if (error) throw error;
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
 
-        setCheckoutProgress(prev => prev + (100 / cart.length));
-        setCompletedOrders(prev => [...prev, item.service.id]);
+          setCheckoutProgress(((index + 1) / cart.length) * 100);
+          setCompletedOrders(prev => [...prev, item.service.id]);
+        } catch (itemErr: any) {
+          console.error(`Order failed for ${item.service.name}:`, itemErr);
+          failed.push(item.service.name);
+        }
+      }
 
-        return { orderNumber, price };
-      });
+      if (failed.length === cart.length) {
+        throw new Error(failed[0] || 'All orders failed');
+      }
 
-      const results = await Promise.all(orderPromises);
-      const totalPrice = results.reduce((sum, r) => sum + r.price, 0);
-
-      // Deduct balance
-      const newBalance = buyerBalance - totalPrice;
-      await supabase
-        .from('client_users')
-        .update({ 
-          balance: newBalance,
-          total_spent: supabase.rpc ? totalPrice : totalPrice,
-        })
-        .eq('id', buyerId);
-
+      const successCount = cart.length - failed.length;
       toast({
         title: t('cart.order_placed'),
-        description: `${cart.length} ${t('cart.items')}. ${t('common.total')}: ${formatPrice(totalPrice)}`,
+        description: failed.length > 0
+          ? `${successCount} order(s) placed. ${failed.length} failed: ${failed.join(', ')}`
+          : `${successCount} ${t('cart.items')} ordered successfully.`,
+        variant: failed.length > 0 ? 'destructive' : 'default',
       });
 
       setTimeout(async () => {
@@ -160,12 +158,12 @@ const ShoppingCart = ({
         onCheckoutComplete();
       }, 1500);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
       toast({ 
         variant: "destructive", 
         title: "Checkout Failed", 
-        description: "Some orders failed. Please try again." 
+        description: error.message || "Some orders failed. Please try again." 
       });
     } finally {
       setCheckoutLoading(false);
@@ -181,15 +179,18 @@ const ShoppingCart = ({
 
     try {
       for (const item of items) {
-        await supabase
-          .from('buyer_cart')
-          .insert({
-            buyer_id: buyerId,
-            panel_id: panelId,
-            service_id: item.service.id,
+        const { data: addData, error: addError } = await supabase.functions.invoke('buyer-api', {
+          body: {
+            action: 'cart-add',
+            buyerId,
+            panelId,
+            serviceId: item.service.id,
             quantity: item.quantity,
-            target_url: item.targetUrl,
-          });
+            targetUrl: item.targetUrl,
+          },
+        });
+        if (addError) throw addError;
+        if (addData?.error) throw new Error(addData.error);
       }
 
       toast({ 
@@ -276,7 +277,8 @@ const ShoppingCart = ({
                       {cart.map((item) => {
                         const categoryData = getCategoryData(item.service.category);
                         const CategoryIcon = categoryData.icon;
-                        const lineTotal = (item.effectivePrice * item.quantity) / 1000;
+                        const livePrice = getEffectivePrice(item.service);
+                        const lineTotal = (livePrice * item.quantity) / 1000;
                         const isCompleted = completedOrders.includes(item.service.id);
 
                         return (
@@ -300,7 +302,7 @@ const ShoppingCart = ({
                                   <div>
                                     <p className="font-medium text-sm truncate">{item.service.name}</p>
                                     <p className="text-xs text-muted-foreground">
-                                      {formatPrice(item.effectivePrice)}/1K
+                                      {formatPrice(getEffectivePrice(item.service))}/1K
                                     </p>
                                   </div>
                                   {isCompleted ? (
@@ -386,7 +388,7 @@ const ShoppingCart = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium">{t('common.total')} ({cart.length} {t('cart.items')})</span>
-                      <span className="text-xl font-bold">{formatPrice(cartTotal)}</span>
+                      <span className="text-xl font-bold">{formatPrice(liveCartTotal)}</span>
                     </div>
                   </div>
 

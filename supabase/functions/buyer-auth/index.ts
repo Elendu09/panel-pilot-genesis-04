@@ -682,6 +682,15 @@ async function handleLogin(supabaseAdmin: any, body: any, req: Request) {
 
   // Check if user is suspended (inactive)
   if (!user.is_active) {
+    // Distinguish between email-not-verified and admin-suspended
+    if (user.verification_token) {
+      console.log('User email not verified:', user.id);
+      return jsonResponse({
+        error: 'Please verify your email before logging in. Check your inbox or request a new verification email.',
+        requiresVerification: true,
+        email: user.email,
+      });
+    }
     console.log('User is suspended:', user.id);
     return jsonResponse({ error: 'Your account has been suspended. Please contact support.' });
   }
@@ -988,7 +997,6 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
   // Update referrer's count
   if (referrerId) {
     await supabaseAdmin.rpc('increment_referral_count', { user_id: referrerId }).catch(() => {
-      // Increment manually if RPC doesn't exist
       supabaseAdmin
         .from('client_users')
         .update({ referral_count: supabaseAdmin.raw('referral_count + 1') })
@@ -998,7 +1006,58 @@ async function handleSignup(supabaseAdmin: any, body: any, req: Request) {
 
   console.log('Signup successful for user:', newUser.id);
 
-  // Generate JWT token
+  // ── Email verification gate ──
+  // If the panel has SMTP configured, require email verification before login
+  const smtpConfigAtSignup = await getPanelSMTPConfig(supabaseAdmin, panelId);
+  if (smtpConfigAtSignup) {
+    const verificationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Mark user as unverified
+    await supabaseAdmin
+      .from('client_users')
+      .update({
+        is_active: false,
+        verification_token: verificationToken,
+        verification_token_expires_at: expiresAt,
+      })
+      .eq('id', newUser.id);
+
+    // Get panel domain for verify link
+    const { data: panelInfo } = await supabaseAdmin
+      .from('panels')
+      .select('name, subdomain, custom_domain, settings')
+      .eq('id', panelId)
+      .single();
+    const panelName = panelInfo?.name || 'SMM Panel';
+    const panelDomain = panelInfo?.custom_domain || (panelInfo?.subdomain ? `${panelInfo.subdomain}.smmpilot.online` : null);
+    const verifyLink = panelDomain
+      ? `https://${panelDomain}/verify-email?token=${verificationToken}&panelId=${panelId}`
+      : null;
+
+    if (verifyLink) {
+      const panelSettings = panelInfo?.settings as any;
+      const bodyTemplate = panelSettings?.smtpVerifyBody
+        || '<h2>Verify Your Email</h2><p>Hi {username},</p><p>Please click the link below to verify your email address:</p><p><a href="{verify_link}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:6px;text-decoration:none;">Verify Email</a></p><p>This link expires in 24 hours.</p><p>— {panel_name}</p>';
+      const subjectTemplate = panelSettings?.smtpVerifySubject || `Verify your email for ${panelName}`;
+      const htmlBody = bodyTemplate
+        .replace(/\{username\}/g, newUser.full_name || newUser.email.split('@')[0])
+        .replace(/\{panel_name\}/g, panelName)
+        .replace(/\{verify_link\}/g, verifyLink)
+        .replace(/\{login_url\}/g, `https://${panelDomain}/auth`);
+
+      const emailResult = await sendSMTPEmail(smtpConfigAtSignup, normalizedEmail, subjectTemplate, htmlBody);
+      console.log(`[handleSignup] Verification email sent=${emailResult.success} to ${normalizedEmail}`);
+    }
+
+    return jsonResponse({
+      success: true,
+      requiresVerification: true,
+      message: 'Registration successful. Please check your email and verify your account before logging in.',
+    });
+  }
+
+  // Generate JWT token (no email verification required)
   const token = await createJWT({
     sub: newUser.id,
     email: newUser.email,

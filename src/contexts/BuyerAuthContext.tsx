@@ -43,7 +43,7 @@ interface BuyerAuthContextType {
   loading: boolean;
   panelId: string;
   signIn: (identifier: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string, username?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, username?: string) => Promise<{ error: any; requiresVerification?: boolean }>;
   signOut: () => void;
   refreshBuyer: () => Promise<void>;
   login: (identifier: string, password: string) => Promise<boolean>;
@@ -247,7 +247,7 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
 
       if (data?.error) {
         console.log('Login error:', data.error);
-        return { error: { message: data.error, reason: data.reason } };
+        return { error: { message: data.error, reason: data.reason, requiresVerification: data.requiresVerification, email: data.email } };
       }
 
       if (!data?.user || !data?.token) {
@@ -344,6 +344,15 @@ export function BuyerAuthProvider({ children, panelId }: { children: ReactNode; 
       if (data?.error) {
         console.log('Signup error:', data.error);
         return { error: { message: data.error } };
+      }
+
+      // Email verification required — panel has SMTP; user must verify before login
+      if (data?.requiresVerification) {
+        toast({
+          title: 'Registration successful!',
+          description: data.message || 'Please check your email and verify your account before logging in.',
+        });
+        return { error: null, requiresVerification: true };
       }
 
       if (!data?.user || !data?.token) {

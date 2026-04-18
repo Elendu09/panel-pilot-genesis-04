@@ -192,6 +192,14 @@ const BuyerAuth = () => {
       // Handle special cases
       const errorMsg = result.error.message || "Login failed";
       const reason = result.error.reason;
+
+      // Email not verified — offer resend link
+      if (result.error.requiresVerification) {
+        toast.error(errorMsg, {
+          description: "Check your inbox or use the resend option on your profile page after verifying.",
+        });
+        return;
+      }
       
       // Check for password reset requirement
       if (reason === 'requiresPasswordReset' || errorMsg.includes('reset your password')) {
@@ -227,8 +235,13 @@ const BuyerAuth = () => {
     const result = await signUp(signupData.email, signupData.password, signupData.username || signupData.email.split('@')[0]);
     
     if (!result.error) {
-      toast.success("Account created successfully!");
-      navigate("/dashboard");
+      if ((result as any).requiresVerification) {
+        // Panel has SMTP — don't navigate; stay on auth page so user can log in after verifying
+        setActiveTab?.("login");
+      } else {
+        toast.success("Account created successfully!");
+        navigate("/dashboard");
+      }
     } else {
       toast.error(result.error.message || "Signup failed");
     }

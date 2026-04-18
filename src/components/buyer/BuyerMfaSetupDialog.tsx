@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -92,8 +92,16 @@ export function BuyerMfaSetupDialog({
     }
   };
 
-  const handleOpen = () => {
-    if (!open) {
+  useEffect(() => {
+    if (open && !isEnabled) {
+      setStep('qr');
+      setCode('');
+      setCopiedSecret(false);
+      setCopiedBackup(false);
+      setSecret('');
+      setOtpauthUri('');
+      handleEnroll();
+    } else if (!open) {
       setStep('qr');
       setCode('');
       setCopiedSecret(false);
@@ -101,15 +109,7 @@ export function BuyerMfaSetupDialog({
       setSecret('');
       setOtpauthUri('');
     }
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    handleOpen();
-    onOpenChange(newOpen);
-    if (newOpen && !isEnabled) {
-      handleEnroll();
-    }
-  };
+  }, [open]);
 
   const copyToClipboard = async (text: string, type: 'secret' | 'backup') => {
     await navigator.clipboard.writeText(text);
@@ -158,7 +158,7 @@ export function BuyerMfaSetupDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export function BuyerMfaSetupDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {loading && step === 'qr' && !secret ? (
+          {step === 'qr' && !secret ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Generating your authenticator setup…</p>
