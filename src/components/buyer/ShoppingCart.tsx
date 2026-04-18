@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -249,7 +248,7 @@ const ShoppingCart = ({
           </TabsList>
 
           {/* Cart Tab */}
-          <TabsContent value="cart" className="flex-1 flex flex-col m-0 data-[state=active]:flex">
+          <TabsContent value="cart" className="flex-1 flex flex-col m-0 min-h-0 data-[state=active]:flex">
             {cart.length === 0 ? (
               <div className="flex-1 flex items-center justify-center px-6">
                 <div className="text-center">
@@ -271,7 +270,7 @@ const ShoppingCart = ({
               </div>
             ) : (
               <>
-                <ScrollArea className="flex-1 px-6">
+                <div className="flex-1 overflow-y-auto min-h-0 px-6">
                   <AnimatePresence mode="popLayout">
                     <div className="space-y-4 py-4">
                       {cart.map((item) => {
@@ -357,9 +356,9 @@ const ShoppingCart = ({
                       })}
                     </div>
                   </AnimatePresence>
-                </ScrollArea>
+                </div>
 
-                <div className="border-t p-6 space-y-4">
+                <div className="border-t p-6 space-y-4 shrink-0">
                   {checkoutLoading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
@@ -395,7 +394,7 @@ const ShoppingCart = ({
                   {!hasEnoughBalance && (
                     <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>Insufficient balance. Please add {formatPrice(cartTotal - buyerBalance)} more.</span>
+                      <span>Insufficient balance. Please add {formatPrice(liveCartTotal - buyerBalance)} more.</span>
                     </div>
                   )}
 
@@ -430,33 +429,29 @@ const ShoppingCart = ({
           </TabsContent>
 
           {/* Bulk Add Tab */}
-          <TabsContent value="bulk" className="h-0 flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1 h-full">
-              <div className="p-6 pt-4">
-                <BulkAddForm
-                  services={services}
-                  getEffectivePrice={getEffectivePrice}
-                  formatPrice={formatPrice}
-                  onAddToCart={handleBulkAdd}
-                  disabled={syncing}
-                />
-              </div>
-            </ScrollArea>
+          <TabsContent value="bulk" className="flex-1 flex flex-col m-0 min-h-0 data-[state=active]:flex">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-6">
+              <BulkAddForm
+                services={services}
+                getEffectivePrice={getEffectivePrice}
+                formatPrice={formatPrice}
+                onAddToCart={handleBulkAdd}
+                disabled={syncing}
+              />
+            </div>
           </TabsContent>
 
           {/* Quick Repeat Tab */}
-          <TabsContent value="repeat" className="h-0 flex-1 flex flex-col m-0 overflow-hidden data-[state=active]:flex">
-            <ScrollArea className="flex-1 h-full">
-              <div className="p-6 pt-4">
-                <QuickRepeatOrder
-                  services={services}
-                  getEffectivePrice={getEffectivePrice}
-                  formatPrice={formatPrice}
-                  onAddToCart={handleBulkAdd}
-                  disabled={syncing}
-                />
-              </div>
-            </ScrollArea>
+          <TabsContent value="repeat" className="flex-1 flex flex-col m-0 min-h-0 data-[state=active]:flex">
+            <div className="flex-1 overflow-y-auto min-h-0 px-6 pt-4 pb-6">
+              <QuickRepeatOrder
+                services={services}
+                getEffectivePrice={getEffectivePrice}
+                formatPrice={formatPrice}
+                onAddToCart={handleBulkAdd}
+                disabled={syncing}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </SheetContent>
