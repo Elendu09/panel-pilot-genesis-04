@@ -110,11 +110,14 @@ const BuyerOrders = () => {
     };
   }, [buyer?.id]);
 
-  const syncWithProviders = async (pid: string) => {
+  const syncWithProviders = async (pid: string): Promise<boolean> => {
     try {
-      await supabase.functions.invoke('sync-orders', { body: { panelId: pid } });
+      const { data, error } = await supabase.functions.invoke('sync-orders', { body: { panelId: pid } });
+      if (error) return false;
+      if (data && data.success === false) return false;
+      return true;
     } catch (_) {
-      // non-fatal — realtime subscription will still reflect any DB changes
+      return false;
     }
   };
 
@@ -125,7 +128,14 @@ const BuyerOrders = () => {
     }
     setSyncing(true);
     try {
-      await syncWithProviders(panel.id);
+      const synced = await syncWithProviders(panel.id);
+      if (!synced) {
+        toast({
+          variant: 'destructive',
+          title: 'Sync incomplete',
+          description: 'Could not reach provider APIs. Order statuses shown may be slightly out of date.',
+        });
+      }
     } finally {
       setSyncing(false);
     }
