@@ -55,14 +55,19 @@ const BuyerOrders = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
-    if (buyer?.id) {
+    if (buyer?.id && panel?.id) {
+      fetchOrders();
+      // Background sync on page load — non-blocking, let realtime subscription pick up changes
+      syncWithProviders(panel.id).catch(() => {});
+    } else if (buyer?.id) {
       fetchOrders();
     }
-  }, [buyer?.id]);
+  }, [buyer?.id, panel?.id]);
 
   useEffect(() => {
     if (!buyer?.id) return;
@@ -104,6 +109,28 @@ const BuyerOrders = () => {
       supabase.removeChannel(channel);
     };
   }, [buyer?.id]);
+
+  const syncWithProviders = async (pid: string) => {
+    try {
+      await supabase.functions.invoke('sync-orders', { body: { panelId: pid } });
+    } catch (_) {
+      // non-fatal — realtime subscription will still reflect any DB changes
+    }
+  };
+
+  const handleRefresh = async () => {
+    if (!panel?.id) {
+      await fetchOrders();
+      return;
+    }
+    setSyncing(true);
+    try {
+      await syncWithProviders(panel.id);
+    } finally {
+      setSyncing(false);
+    }
+    await fetchOrders();
+  };
 
   const fetchOrders = async () => {
     if (!buyer?.id) return;
@@ -264,9 +291,9 @@ const BuyerOrders = () => {
             <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">{t('orders.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('orders.subtitle')}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchOrders} className="gap-2 self-start sm:self-auto">
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('common.refresh')}</span>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={syncing || loading} className="gap-2 self-start sm:self-auto">
+            <RefreshCw className={cn("w-4 h-4", (syncing || loading) && "animate-spin")} />
+            <span className="hidden sm:inline">{syncing ? 'Syncing...' : t('common.refresh')}</span>
           </Button>
         </motion.div>
 

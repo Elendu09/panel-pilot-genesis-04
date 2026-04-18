@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -270,7 +271,7 @@ const ShoppingCart = ({
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto min-h-0 px-6">
+                <ScrollArea className="flex-1 min-h-0 px-6">
                   <AnimatePresence mode="popLayout">
                     <div className="space-y-4 py-4">
                       {cart.map((item) => {
@@ -356,7 +357,7 @@ const ShoppingCart = ({
                       })}
                     </div>
                   </AnimatePresence>
-                </div>
+                </ScrollArea>
 
                 <div className="border-t p-6 space-y-4 shrink-0">
                   {checkoutLoading && (
