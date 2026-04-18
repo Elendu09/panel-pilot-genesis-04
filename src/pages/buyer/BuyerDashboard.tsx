@@ -113,11 +113,15 @@ const BuyerDashboard = () => {
 
   useEffect(() => {
     if (!buyer) return;
+    if (buyer.is_active) {
+      setShowVerifyBanner(false);
+      return;
+    }
     const key = `buyer_verify_dismissed_${buyer.id}`;
     if (!localStorage.getItem(key)) {
       setShowVerifyBanner(true);
     }
-  }, [buyer?.id]);
+  }, [buyer?.id, buyer?.is_active]);
 
   const fetchBuyerData = async () => {
     if (!buyer?.id) return;
@@ -199,7 +203,7 @@ const BuyerDashboard = () => {
     if (!buyer?.email || !panel?.id) return;
     try {
       const { data, error } = await supabase.functions.invoke('buyer-auth', {
-        body: { panelId: panel.id, email: buyer.email, action: 'forgot-password' },
+        body: { panelId: panel.id, buyerId: buyer.id, email: buyer.email, action: 'resend-verification' },
       });
       if (error || data?.error) {
         toast({ title: 'Could not send email', description: data?.error || 'Please try again later.', variant: 'destructive' });

@@ -116,6 +116,7 @@ const RobotsTxt = lazy(() => import('./RobotsTxt'));
 const TeamAuth = lazy(() => import('./buyer/TeamAuth'));
 const TeamDashboard = lazy(() => import('./panel/TeamDashboard'));
 const BuyerAbout = lazy(() => import('./buyer/BuyerAbout'));
+const BuyerVerifyEmail = lazy(() => import('./buyer/BuyerVerifyEmail'));
 
 // Minimal loader for lazy routes - optimized for performance
 const PageLoader = memo(() => (
@@ -393,6 +394,9 @@ const TenantContent = () => {
                             
                             {/* About page */}
                             <Route path="/about" element={<BuyerAbout />} />
+
+                            {/* Email verification landing page - public, no login required */}
+                            <Route path="/verify-email" element={<BuyerVerifyEmail />} />
 
                             {/* Sitemap and robots.txt routes */}
                             <Route path="/sitemap.xml" element={<Sitemap />} />

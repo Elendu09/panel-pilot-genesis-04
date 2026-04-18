@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// @ts-ignore — npm: specifier supported by Supabase Edge Runtime (Deno)
+import nodemailer from "npm:nodemailer@6";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -563,6 +565,8 @@ serve(async (req) => {
         return await handleMfaDisable(supabaseAdmin, body);
       case 'mfa-status':
         return await handleMfaStatus(supabaseAdmin, body);
+      case 'verify-email-token':
+        return await handleVerifyEmailToken(supabaseAdmin, body);
       default:
         return jsonResponse({ error: 'Invalid action' });
     }
@@ -1239,12 +1243,46 @@ async function handleForgotPassword(supabaseAdmin: any, body: any, req: Request)
 
   console.log('Temp password set for user:', user.id, 'expires at:', tempExpiresAt);
 
-  // TODO: If panel has SMTP configured, send email with temp password
-  // For now, return the temp password to show in the UI
+  // Attempt SMTP delivery if panel has it configured
+  const smtpConfig = await getPanelSMTPConfig(supabaseAdmin, panelId);
+  let emailSent = false;
+
+  if (smtpConfig) {
+    const { data: panelData } = await supabaseAdmin
+      .from('panels')
+      .select('name, subdomain, custom_domain, settings')
+      .eq('id', panelId)
+      .single();
+
+    const panelName = panelData?.name || 'SMM Panel';
+    const panelDomain = panelData?.custom_domain || (panelData?.subdomain ? `${panelData.subdomain}.smmpilot.online` : '');
+    const panelSettings = panelData?.settings as any;
+
+    const subjectTemplate = panelSettings?.smtpResetSubject || 'Password Reset - {panel_name}';
+    const bodyTemplate = panelSettings?.smtpResetBody
+      || '<h2>Password Reset</h2><p>Hi {username},</p><p>Your temporary password is: <strong>{temp_password}</strong></p><p>This password expires in 24 hours. Please log in and change it immediately.</p><p>— {panel_name}</p>';
+
+    const subject = subjectTemplate.replace(/\{panel_name\}/g, panelName);
+    const htmlBody = bodyTemplate
+      .replace(/\{username\}/g, user.full_name || user.email.split('@')[0])
+      .replace(/\{panel_name\}/g, panelName)
+      .replace(/\{temp_password\}/g, newPassword)
+      .replace(/\{login_url\}/g, panelDomain ? `https://${panelDomain}/auth` : '');
+
+    const result = await sendSMTPEmail(smtpConfig, user.email, subject, htmlBody);
+    emailSent = result.success;
+    if (!result.success) {
+      console.warn('Password reset email SMTP error:', result.error);
+    }
+  }
+
   return jsonResponse({ 
     success: true, 
-    tempPassword: newPassword,
-    message: 'Your temporary password has been generated. Your original password still works. The temporary password expires in 24 hours.'
+    tempPassword: emailSent ? undefined : newPassword,
+    email_sent: emailSent,
+    message: emailSent
+      ? 'A temporary password has been sent to your email address.'
+      : 'Your temporary password has been generated. Your original password still works. The temporary password expires in 24 hours.'
   });
 }
 
@@ -1405,7 +1443,74 @@ async function handleGenerateApiKey(supabaseAdmin: any, body: any) {
   return jsonResponse({ success: true, api_key: apiKey });
 }
 
-// Handle resend verification email action
+// ========= SMTP EMAIL HELPER =========
+
+interface SMTPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  fromEmail: string;
+  fromName: string;
+  secure?: boolean;
+}
+
+async function sendSMTPEmail(
+  smtp: SMTPConfig,
+  to: string,
+  subject: string,
+  htmlBody: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure ?? (smtp.port === 465),
+      auth: {
+        user: smtp.username,
+        pass: smtp.password,
+      },
+      tls: { rejectUnauthorized: false },
+    });
+
+    await transporter.sendMail({
+      from: `"${smtp.fromName}" <${smtp.fromEmail}>`,
+      to,
+      subject,
+      html: htmlBody,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('SMTP send error:', err?.message || err);
+    return { success: false, error: err?.message || 'SMTP send failed' };
+  }
+}
+
+async function getPanelSMTPConfig(supabaseAdmin: any, panelId: string): Promise<SMTPConfig | null> {
+  const { data: panel } = await supabaseAdmin
+    .from('panels')
+    .select('settings')
+    .eq('id', panelId)
+    .single();
+
+  const settings = panel?.settings as any;
+  if (!settings?.smtpHost || !settings?.smtpUsername || !settings?.smtpPassword) {
+    return null;
+  }
+
+  return {
+    host: settings.smtpHost,
+    port: parseInt(settings.smtpPort || '587', 10),
+    username: settings.smtpUsername,
+    password: settings.smtpPassword,
+    fromEmail: settings.smtpFromEmail || settings.smtpUsername,
+    fromName: settings.smtpFromName || 'SMM Panel',
+  };
+}
+
+// ========= RESEND VERIFICATION =========
+
 async function handleResendVerification(supabaseAdmin: any, body: any) {
   const { panelId, buyerId, email } = body;
   
@@ -1416,7 +1521,7 @@ async function handleResendVerification(supabaseAdmin: any, body: any) {
   }
 
   // Fetch buyer data
-  let buyer;
+  let buyer: any;
   if (buyerId) {
     const { data, error } = await supabaseAdmin
       .from('client_users')
@@ -1425,9 +1530,7 @@ async function handleResendVerification(supabaseAdmin: any, body: any) {
       .eq('panel_id', panelId)
       .single();
     
-    if (error || !data) {
-      return jsonResponse({ error: 'User not found' });
-    }
+    if (error || !data) return jsonResponse({ error: 'User not found' });
     buyer = data;
   } else {
     const { data, error } = await supabaseAdmin
@@ -1437,58 +1540,138 @@ async function handleResendVerification(supabaseAdmin: any, body: any) {
       .eq('panel_id', panelId)
       .single();
     
-    if (error || !data) {
-      return jsonResponse({ error: 'User not found' });
-    }
+    if (error || !data) return jsonResponse({ error: 'User not found' });
     buyer = data;
   }
 
-  // Check if already verified
   if (buyer.is_active) {
     return jsonResponse({ error: 'Email is already verified' });
   }
 
-  // Get panel info for email
+  // Get panel info
   const { data: panel } = await supabaseAdmin
     .from('panels')
-    .select('name, subdomain, custom_domain')
+    .select('name, subdomain, custom_domain, settings')
     .eq('id', panelId)
     .single();
 
   const panelName = panel?.name || 'SMM Panel';
-  const panelDomain = panel?.custom_domain || `${panel?.subdomain}.smmpilot.online`;
+  const panelDomain = panel?.custom_domain || (panel?.subdomain ? `${panel.subdomain}.smmpilot.online` : null);
 
-  // Generate verification token
+  // Generate and store verification token (24-hour expiry)
   const verificationToken = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-  // Store verification token (you can add a verification_tokens table or use a temp field)
-  // For now, we'll log it and simulate sending
-  console.log(`Verification token generated for ${buyer.email}: ${verificationToken}`);
-  console.log(`Verification link: https://${panelDomain}/verify-email?token=${verificationToken}`);
+  await supabaseAdmin
+    .from('client_users')
+    .update({
+      verification_token: verificationToken,
+      verification_token_expires_at: expiresAt,
+    })
+    .eq('id', buyer.id);
 
-  // Log the email send attempt
+  const verifyLink = panelDomain
+    ? `https://${panelDomain}/verify-email?token=${verificationToken}&panelId=${panelId}`
+    : `[verification-link-unavailable-no-domain-configured]`;
+
+  console.log(`Verification link for ${buyer.email}: ${verifyLink}`);
+
+  // Attempt SMTP send if panel has SMTP configured
+  const panelSettings = panel?.settings as any;
+  const smtpConfig = await getPanelSMTPConfig(supabaseAdmin, panelId);
+
+  let emailSent = false;
+  let emailError: string | undefined;
+
+  if (smtpConfig && panelDomain) {
+    // Use panel's custom verify body template if set, otherwise default
+    const bodyTemplate = panelSettings?.smtpVerifyBody
+      || '<h2>Verify Your Email</h2><p>Hi {username},</p><p>Please click the link below to verify your email address:</p><p><a href="{verify_link}">Verify Email</a></p><p>This link expires in 24 hours.</p><p>— {panel_name}</p>';
+
+    const subjectTemplate = panelSettings?.smtpVerifySubject || 'Verify your email address';
+
+    const htmlBody = bodyTemplate
+      .replace(/\{username\}/g, buyer.full_name || buyer.email.split('@')[0])
+      .replace(/\{panel_name\}/g, panelName)
+      .replace(/\{verify_link\}/g, verifyLink)
+      .replace(/\{login_url\}/g, `https://${panelDomain}/auth`);
+
+    const result = await sendSMTPEmail(smtpConfig, buyer.email, subjectTemplate, htmlBody);
+    emailSent = result.success;
+    emailError = result.error;
+  }
+
+  // Log the send attempt
   await supabaseAdmin
     .from('email_send_logs')
     .insert({
       email: buyer.email,
       email_action_type: 'verification',
       user_id: buyer.id,
-      metadata: { 
+      metadata: {
         panel_id: panelId,
         panel_name: panelName,
-        sent_at: new Date().toISOString()
+        email_sent: emailSent,
+        smtp_error: emailError || null,
+        sent_at: new Date().toISOString(),
       }
+    })
+    .catch(() => {});
+
+  if (!smtpConfig) {
+    return jsonResponse({
+      success: true,
+      message: 'Verification token generated. Email delivery requires SMTP configuration in your panel settings.',
+      email_sent: false,
+      no_smtp: true,
     });
+  }
 
-  // In production, integrate with an email service (Resend, SendGrid, etc.)
-  // For now, return success to indicate the flow is working
-  console.log(`Verification email queued for ${buyer.email}`);
+  if (!emailSent) {
+    return jsonResponse({
+      success: false,
+      error: `Failed to send email: ${emailError || 'Unknown SMTP error'}. Please check your panel SMTP settings.`,
+    });
+  }
 
-  return jsonResponse({ 
-    success: true, 
-    message: 'Verification email sent successfully'
-  });
+  return jsonResponse({ success: true, message: 'Verification email sent successfully', email_sent: true });
+}
+
+// ========= VERIFY EMAIL TOKEN =========
+
+async function handleVerifyEmailToken(supabaseAdmin: any, body: any) {
+  const { token, panelId } = body;
+  if (!token || !panelId) return jsonResponse({ error: 'Missing token or panelId' });
+
+  const { data: user, error } = await supabaseAdmin
+    .from('client_users')
+    .select('id, email, is_active, verification_token, verification_token_expires_at')
+    .eq('panel_id', panelId)
+    .eq('verification_token', token)
+    .single();
+
+  if (error || !user) {
+    return jsonResponse({ error: 'Invalid or already used verification link' });
+  }
+
+  if (user.is_active) {
+    return jsonResponse({ success: true, message: 'Email is already verified' });
+  }
+
+  if (user.verification_token_expires_at && new Date(user.verification_token_expires_at) < new Date()) {
+    return jsonResponse({ error: 'This verification link has expired. Please request a new one.' });
+  }
+
+  await supabaseAdmin
+    .from('client_users')
+    .update({
+      is_active: true,
+      verification_token: null,
+      verification_token_expires_at: null,
+    })
+    .eq('id', user.id);
+
+  return jsonResponse({ success: true, message: 'Email verified successfully' });
 }
 
 // Handle transactions history for buyer

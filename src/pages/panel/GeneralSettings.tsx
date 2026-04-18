@@ -580,9 +580,34 @@ const GeneralSettings = () => {
                       <Megaphone className="w-4 h-4" />
                       Email Templates
                     </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Customize the emails sent to your users. Use variables: <code className="bg-muted px-1 rounded">{'{username}'}</code>, <code className="bg-muted px-1 rounded">{'{panel_name}'}</code>, <code className="bg-muted px-1 rounded">{'{temp_password}'}</code> (reset only), <code className="bg-muted px-1 rounded">{'{verify_link}'}</code> (verify only)
-                    </p>
+                    <div className="rounded-lg bg-muted/40 border border-border/50 p-3 space-y-2">
+                      <p className="text-xs font-medium text-foreground">Available template variables:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-muted-foreground">
+                        <div className="flex items-start gap-1.5">
+                          <code className="bg-muted px-1 rounded shrink-0 text-primary">{'{username}'}</code>
+                          <span>Buyer's display name or email prefix</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <code className="bg-muted px-1 rounded shrink-0 text-primary">{'{panel_name}'}</code>
+                          <span>Your panel's brand name</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <code className="bg-muted px-1 rounded shrink-0 text-amber-500">{'{verify_link}'}</code>
+                          <span>Verification URL — <em>verification email only</em></span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <code className="bg-muted px-1 rounded shrink-0 text-amber-500">{'{temp_password}'}</code>
+                          <span>One-time password — <em>password reset only</em></span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <code className="bg-muted px-1 rounded shrink-0 text-primary">{'{login_url}'}</code>
+                          <span>Direct link to your panel login page</span>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/70 border-t border-border/40 pt-2 mt-1">
+                        Bodies accept full HTML. SMTP must be configured above for emails to be delivered.
+                      </p>
+                    </div>
 
                     {/* Password Reset Template */}
                     <div className="space-y-2 p-3 rounded-lg bg-muted/30">

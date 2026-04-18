@@ -5,8 +5,9 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Shield, Loader2, Copy, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Shield, Loader2, Copy, CheckCircle, AlertTriangle, Smartphone } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface BuyerMfaSetupDialogProps {
   open: boolean;
@@ -93,12 +94,12 @@ export function BuyerMfaSetupDialog({
 
   const handleOpen = () => {
     if (!open) {
-      // Reset state
       setStep('qr');
       setCode('');
       setCopiedSecret(false);
       setCopiedBackup(false);
       setSecret('');
+      setOtpauthUri('');
     }
   };
 
@@ -121,7 +122,6 @@ export function BuyerMfaSetupDialog({
     }, 2000);
   };
 
-  // If MFA is already enabled, show disable option
   if (isEnabled) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,7 +166,7 @@ export function BuyerMfaSetupDialog({
             {step === 'backup' ? 'Save Backup Codes' : step === 'verify' ? 'Verify Setup' : 'Set Up Two-Factor Authentication'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'qr' && 'Scan the QR code or enter the secret key in your authenticator app.'}
+            {step === 'qr' && 'Scan the QR code with your authenticator app, or enter the key manually.'}
             {step === 'verify' && 'Enter the 6-digit code from your authenticator app to confirm setup.'}
             {step === 'backup' && 'Save these backup codes in a safe place. Each code can only be used once.'}
           </DialogDescription>
@@ -174,39 +174,60 @@ export function BuyerMfaSetupDialog({
 
         <div className="space-y-4 py-4">
           {loading && step === 'qr' && !secret ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex flex-col items-center justify-center py-8 gap-3">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Generating your authenticator setup…</p>
             </div>
           ) : step === 'qr' && secret ? (
             <>
-              {/* QR Code placeholder - show manual entry */}
-              <div className="text-center space-y-3">
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-2">Manual entry key:</p>
-                  <div className="flex items-center justify-center gap-2">
-                    <code className="font-mono text-sm bg-background px-3 py-1.5 rounded border break-all">
-                      {secret}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => copyToClipboard(secret, 'secret')}
-                    >
-                      {copiedSecret ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
+              {/* QR Code */}
+              <div className="flex flex-col items-center gap-4">
+                <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-sm">
+                  {otpauthUri ? (
+                    <QRCodeSVG
+                      value={otpauthUri}
+                      size={180}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  ) : (
+                    <div className="w-[180px] h-[180px] flex items-center justify-center bg-muted/30 rounded">
+                      <Smartphone className="w-10 h-10 text-muted-foreground/50" />
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Open your authenticator app (Google Authenticator, Authy, etc.) and add this key manually.
+                <p className="text-xs text-muted-foreground text-center">
+                  Scan with Google Authenticator, Authy, or any TOTP app
                 </p>
               </div>
+
+              {/* Manual key fallback */}
+              <div className="rounded-lg bg-muted/40 border border-border/60 p-3 space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Can't scan? Enter this key manually:</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 font-mono text-sm bg-background px-3 py-1.5 rounded border break-all select-all">
+                    {secret}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() => copyToClipboard(secret, 'secret')}
+                  >
+                    {copiedSecret ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+
               <Button onClick={() => setStep('verify')} className="w-full">
-                I've added the key → Next
+                I've scanned the code → Next
               </Button>
             </>
           ) : step === 'verify' ? (
             <>
+              <p className="text-sm text-center text-muted-foreground">
+                Open your authenticator app and enter the 6-digit code shown for this account.
+              </p>
               <div className="flex justify-center">
                 <InputOTP maxLength={6} value={code} onChange={setCode}>
                   <InputOTPGroup>
@@ -221,11 +242,20 @@ export function BuyerMfaSetupDialog({
               </div>
               <Button onClick={handleVerify} disabled={loading || code.length !== 6} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Verify & Enable
+                Verify & Enable 2FA
+              </Button>
+              <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setStep('qr')}>
+                ← Back to QR code
               </Button>
             </>
           ) : step === 'backup' ? (
             <>
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  Store these codes safely. If you lose access to your authenticator app, you'll need one of these to log in.
+                </p>
+              </div>
               <ScrollArea className="h-48">
                 <div className="grid grid-cols-2 gap-2 p-1">
                   {backupCodes.map((c, i) => (

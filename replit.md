@@ -1,5 +1,6 @@
 # HOME OF SMM - SMM Panel SaaS Platform
 
+
 ## Overview
 
 Multi-tenant SMM (Social Media Marketing) panel SaaS platform. Panel owners can create and sell social media marketing services (followers, likes, views, etc.) to buyers. The platform handles white-label storefronts, provider API integration, payment processing, and admin management.
@@ -145,3 +146,10 @@ Seven buyer-facing homepage themes available: `default`, `alipanel`, `flysmm`, `
 4. **vite.config.ts** — Replit-compatible config (host 0.0.0.0, port 5000, allowedHosts: true)
 5. **server/index.ts** — Express server replacing Supabase Edge Functions + admin-data endpoint
 6. **package.json** — Dev script uses `concurrently` to run both servers
+
+## Buyer Auth & Security Features
+
+- **Email Verification**: Buyers registered on tenant panels use a custom auth flow (not Supabase Auth). Email verification uses tokens stored in `client_users.verification_token` (expires 24h). The edge function `buyer-auth` handles `resend-verification` and `verify-email-token` actions. Verification link: `https://{panel-domain}/verify-email?token=...&panelId=...`
+- **SMTP**: Panel owners configure SMTP (host/port/user/pass/from) in `panels.settings`. The `buyer-auth` edge function uses `npm:nodemailer` to send both verification and password-reset emails via panel SMTP. Templates are customizable via `smtpVerifyBody`, `smtpResetBody` (HTML) with variables: `{username}`, `{panel_name}`, `{verify_link}`, `{temp_password}`, `{login_url}`.
+- **MFA (2FA)**: TOTP-based. Enrollment returns `secret` + `otpauth_uri`. The `BuyerMfaSetupDialog` renders a live QR code using `qrcode.react` (`QRCodeSVG`). MFA requires email verified first (`buyer.is_active === true`).
+- **Dashboard verify banner**: Only shown when `buyer.is_active === false`; hidden for verified buyers.
